@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Annotated PDF result</title>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+</head>
+
+<body>
+Your PDF has been submitted successfully.
+<h3 id="info">Please wait...</h3>
+<a id="result" href=""></a>
+<div id="list_id" data-list_id="{{list_id}}"></div>
+<script>
+    "use strict";
+    let list_id = document.getElementById("list_id").getAttribute("data-list_id");
+
+    let start_time_stamp = new Date().getTime();
+
+    let wait_cycle = ["Please wait.", "Please wait..", "Please wait..."];
+    let wait_cycle_index = 0;
+
+
+    let calculation_time = 0.0;
+
+    function query(){
+        let request_URL = "./retrieve?list_ids=" + JSON.stringify([list_id]);
+        jQuery.getJSON(request_URL, function (d){
+            let tmp = d[0];
+
+            // in ms
+            let time_lapsed = new Date().getTime() - start_time_stamp;
+
+            if (tmp.finished){
+                calculation_time = Math.floor(tmp.result["runtime"]);
+                addDownloadButton();
+            }
+            else{
+                wait_cycle_index += 1;
+                wait_cycle_index = wait_cycle_index % 3;
+
+                let additional_message = "";
+                if (time_lapsed > 10*1000){
+                    // Takes more than 10 seconds after submission
+                    additional_message = "It might take longer for large file. "
+                }
+
+                let info = document.getElementById("info");
+                info.innerText = additional_message + wait_cycle[wait_cycle_index];
+
+                setTimeout(query, 500)
+            }
+        })
+    }
+
+    function addDownloadButton(){
+        let info = document.getElementById("info");
+        let a = document.getElementById("result");
+
+        info.innerText = "Finished! (After " + calculation_time + "s)";
+        a.href = "./file_download?list_id=" + list_id;
+        a.innerText = "Click me!";
+    }
+
+    query();
+
+
+</script>
+
+
+</body>
+</html>
