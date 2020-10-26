@@ -1,5 +1,5 @@
 
-from APIFramework import APIFrameWork
+from APIFramework import APIFramework
 
 import os
 import sys
@@ -8,13 +8,12 @@ import random
 import hashlib
 import multiprocessing
 
-
-class ReferenceAPIParaBased(APIFrameWork):
+class ReferenceAPIParaBased(APIFramework):
     pass
 
 
 import subprocess
-class ReferenceAPIFileBased(APIFrameWork):
+class ReferenceAPIFileBased(APIFramework):
 
     def form_task(self, p):
         res = {}
