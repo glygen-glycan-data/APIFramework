@@ -39,7 +39,7 @@ class APIParameterError(APIErrorBase):
     pass
 
 
-class APIFrameWork:
+class APIFramework:
 
     def __init__(self):
 
@@ -69,6 +69,8 @@ class APIFrameWork:
         self._template_folder = None
         self._home_html = None
         self._file_upload_finished_html = None
+
+        self._status_saving_location = None
 
 
     # Proper APIs for changing config
@@ -114,11 +116,19 @@ class APIFrameWork:
     def set_input_file_folder(self, fp):
         self._input_file_folder = self.abspath(fp)
 
+    # set_status_saving_location
+
     # def output_file_folder(self):
     #     return self._output_file_folder
 
     # def set_output_file_folder(self, fp):
     #     self._output_file_folder = self.abspath(fp)
+
+    def status_saving_location(self):
+        return self._status_saving_location
+
+    def set_status_saving_location(self, fp):
+        self._status_saving_location = self.abspath(fp)
 
     def allowed_file_ext(self):
         return self._allowed_file_ext
@@ -145,6 +155,12 @@ class APIFrameWork:
         base = os.path.dirname(os.path.abspath(sys.argv[0]))
         res = os.path.join(base, fp)
         return res
+
+    def bool(self, s):
+        if s.lower() in ["y","yes","true",]:
+            return True
+        else:
+            return False
 
     def parse_config(self, config_file_name):
         config_path = self.abspath(config_file_name)
@@ -175,16 +191,19 @@ class APIFrameWork:
                 self.set_worker_num(int(res["basic"]["cpu_core"]))
 
             if "clean_start" in res["basic"]:
-                self._clean_start = bool(res["basic"]["clean_start"])
+                self._clean_start = self.bool(res["basic"]["clean_start"])
 
             if "file_based_job" in res["basic"]:
-                self._file_based_job = bool(res["basic"]["file_based_job"])
+                self._file_based_job = self.bool(res["basic"]["file_based_job"])
 
             if "input_file_folder" in res["basic"]:
                 self.set_input_file_folder(res["basic"]["input_file_folder"])
 
             # if "output_file_folder" in res["basic"]:
             #     self.set_output_file_folder(res["basic"]["output_file_folder"])
+
+            if "status_saving_location" in res["basic"]:
+                self.set_status_saving_location(res["basic"]["status_saving_location"])
 
             if "template_folder" in res["basic"]:
                 self._template_folder = res["basic"]["template_folder"]
@@ -424,19 +443,20 @@ class APIFrameWork:
 
 
     def manipulate_dirs(self):
-        if not os.path.exists(self.input_file_folder()):
-            os.makedirs(self.input_file_folder())
-        """
-        if not os.path.exists(self.output_file_folder()):
-            os.makedirs(self.output_file_folder())
-
-        if self._clean_start:
-            for folder in [self.input_file_folder(), self.output_file_folder()]:
-                for fn in os.listdir(folder):
-                    # Clean up the input and output folder
-                    fp = os.path.join(folder, fn)
-                    os.remove(fp)
-        """
+        if self._file_based_job:
+            if not os.path.exists(self.input_file_folder()):
+                os.makedirs(self.input_file_folder())
+            """
+            if not os.path.exists(self.output_file_folder()):
+                os.makedirs(self.output_file_folder())
+    
+            if self._clean_start:
+                for folder in [self.input_file_folder(), self.output_file_folder()]:
+                    for fn in os.listdir(folder):
+                        # Clean up the input and output folder
+                        fp = os.path.join(folder, fn)
+                        os.remove(fp)
+            """
         return
 
 
@@ -444,6 +464,10 @@ class APIFrameWork:
     def start(self):
         self.load_route()
         self.manipulate_dirs()
+
+        if not self._clean_start and self.status_saving_location() != None:
+            if os.path.exists(self.status_saving_location()):
+                self.result_cache = json.load(open(self.status_saving_location()))
 
         self._deamon_process_pool = []
         for i in range(self._worker_num):
@@ -459,11 +483,22 @@ class APIFrameWork:
 
     def cleanup(self):
         atexit.register(self.terminate_all)
+        atexit.register(self.dump_status)
 
 
     def terminate_all(self):
         for p in self._deamon_process_pool:
             p.terminate()
+
+    def dump_status(self):
+        if self.status_saving_location() != None:
+            json.dump(
+                self.result_cache,
+                open(self.status_saving_location(), "w"),
+                indent=2
+            )
+
+
 
 
 if __name__ == '__main__':
