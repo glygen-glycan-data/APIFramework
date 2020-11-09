@@ -35,35 +35,32 @@ class ExactLookup(APIFramework):
 
         gie = pygly.alignment.GlycanEqual()
 
-        glycans = {}
+        wurcss = {}
         glycan_by_mass = {}
 
-
         for line in open(glycan_file_path):
-            acc, s = line.strip().split()
-            g = wp.toGlycan(s)
-
-            try:
-                mass = round2str(g.underivitized_molecular_weight())
-            except:
-                mass = None
+            acc, mass, s = line.strip().split()
 
             if mass not in glycan_by_mass:
                 glycan_by_mass[mass] = []
 
             glycan_by_mass[mass].append(acc)
-            glycans[acc] = g
+            wurcss[acc] = s
+
+        glycan_by_mass[None] = []
+
 
 
         while True:
             task_detail = task_queue.get(block=True)
+            print(task_detail)
 
             error = []
             calculation_start_time = time.time()
 
 
             list_id = task_detail["id"]
-            seq = task_detail["seq"]
+            seq = str(task_detail["seq"])
             result = []
 
             query_glycan = None
@@ -81,18 +78,21 @@ class ExactLookup(APIFramework):
                 for e in error:
                     pass
 
-            else:
+            if len(error) == 0:
                 try:
                     query_glycan_mass = round2str(query_glycan.underivitized_molecular_weight())
                 except:
-                    query_glycan_mass = None
+                    error.append("Error in calculating mass")
 
-                potential_accs = glycan_by_mass[None]
-                if query_glycan_mass in glycan_by_mass:
-                    potential_accs = list(set(potential_accs + glycan_by_mass[query_glycan_mass]))
+            if len(error) == 0:
+                if query_glycan_mass not in glycan_by_mass:
+                    error.append("The mass is not supported")
+
+            if len(error) == 0:
+                potential_accs = glycan_by_mass[query_glycan_mass]
 
                 for acc in potential_accs:
-                    glycan = glycans[acc]
+                    glycan = wp.toGlycan(wurcss[acc])
                     if gie.eq(query_glycan, glycan):
                         result.append(acc)
 

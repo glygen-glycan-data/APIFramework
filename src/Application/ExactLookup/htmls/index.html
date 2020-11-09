@@ -52,7 +52,7 @@
         var para = {};
         para["seq"] = document.getElementById("sequence").value;
 
-        var requestURL = "./submit?tasks="+JSON.stringify([para]);
+        var requestURL = "./submit?tasks="+encodeURIComponent(JSON.stringify([para]));
 
         jQuery.getJSON(requestURL).then(function (d) {
             d = d[0]

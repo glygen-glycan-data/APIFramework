@@ -10,6 +10,7 @@ import flask
 import werkzeug
 import atexit
 import hashlib
+import requests
 import multiprocessing
 
 try:
@@ -36,6 +37,10 @@ class APIErrorBase(RuntimeError):
 
 
 class APIParameterError(APIErrorBase):
+    pass
+
+
+class APIUnfinishedError(APIErrorBase):
     pass
 
 
@@ -261,11 +266,16 @@ class APIFramework:
         else:
             return flask.jsonify("METHOD %s is not suppoted" % flask.request.method)
 
-        if "tasks" not in p:
+        if "tasks" not in p and "task" not in p and "q" not in p:
             return flask.jsonify("Please submit with actual tasks")
 
-        # Suppose to be a list
-        raw_tasks = json.loads(p["tasks"])
+        if "tasks" in p:
+            raw_tasks = json.loads(p["tasks"])
+        elif "task" in p:
+            raw_tasks = [json.loads(p["task"])]
+        elif "q" in p:
+            raw_tasks = json.loads(p["q"])
+
         res = []
         for raw_task in raw_tasks:
             task_detail = self.form_task(raw_task)
@@ -299,13 +309,18 @@ class APIFramework:
         else:
             return flask.jsonify("METHOD %s is not suppoted" % flask.request.method)
 
-        if "list_ids" not in p:
+        if "list_ids" not in p and "list_id" not in p and "q" not in p:
             return flask.jsonify("Please provide with list_id(s)")
 
         self.update_results(getall=True)
 
-        # Suppose to be a list
-        list_ids = json.loads(p["list_ids"])
+        if "list_ids" in p:
+            list_ids = json.loads(p["list_ids"])
+        elif "list_id" in p:
+            list_ids = [json.loads(p["list_id"])]
+        elif "q" in p:
+            list_ids = json.loads(p["q"])
+
         res = []
         for list_id in list_ids:
             thing = {"Error": "list_id (%s) not found" % list_id}
@@ -492,11 +507,121 @@ class APIFramework:
 
     def dump_status(self):
         if self.status_saving_location() != None:
+            useful_result = {}
+            for list_id, task in self.result_cache.items():
+                if task["finished"]:
+                    useful_result[list_id] = task
+
             json.dump(
-                self.result_cache,
+                useful_result,
                 open(self.status_saving_location(), "w"),
                 indent=2
             )
+
+
+class APIFrameworkClient:
+
+    def __init__(self):
+        self._protocol = "http"
+        self._host = "localhost"
+        self._port = 10980
+
+        self._max_retry = 3
+        self._interval = 0.5
+
+        # wait maximum 2 minutes
+        self._max_retry_for_unfinished_task = 240
+
+
+    def host(self):
+        return self._host
+
+    def set_host(self, h):
+        self._host = h
+
+    def port(self):
+        return self._port
+
+    def set_port(self, p):
+        if isinstance(p, int):
+            self._port = p
+        else:
+            raise APIParameterError("Port number requires integer, %s is not acceptable")
+
+    def protocol(self):
+        return self._protocol
+
+    def set_protocol(self, p):
+        assert p in ["http", "https"]
+        self._protocol = p
+
+    def main_URL(self):
+        main_URL = self.protocol() + "://" + self.host()
+        if self.port() not in [22, "22"]:
+            main_URL += ":" + str(self.port())
+        return main_URL
+
+    def abspath(self, fp):
+        base = os.path.dirname(os.path.abspath(sys.argv[0]))
+        res = os.path.join(base, fp)
+        return res
+
+    def parse_config(self, config_file_name):
+        config_path = self.abspath(config_file_name)
+
+        config = configparser.ConfigParser()
+        config.read_file(open(config_path))
+
+        res = {}
+        for each_section in config.sections():
+            res[each_section] = {}
+            for (each_key, each_val) in config.items(each_section):
+                if each_val != "":
+                    res[each_section][each_key] = each_val
+
+        if "basic" in res:
+
+            if "host" in res["basic"]:
+                self.set_host(res["basic"]["host"])
+
+            if "port" in res["basic"]:
+                self.set_port(int(res["basic"]["port"]))
+
+
+    def request(self, sub, params):
+
+        for i in range(self._max_retry):
+            try:
+                response = requests.post(self.main_URL() + "/" + sub, params)
+                return response
+            except:
+                pass
+
+            time.sleep(self._interval)
+
+    def submit(self):
+        raise NotImplemented
+
+    def retrieve_once(self):
+        raise NotImplemented
+
+    def retrieve(self, list_id):
+
+        for i in range(self._max_retry_for_unfinished_task):
+            time.sleep(self._interval)
+            try:
+                res = self.retrieve_once(list_id)
+                return res
+            except APIUnfinishedError:
+                continue
+
+        raise APIUnfinishedError("The task %s is not finished yet" % list_id)
+
+    def get(self, *args, **kwargs):
+        list_id = self.submit(*args, **kwargs)
+        resjson = self.retrieve(list_id)
+        res = resjson[u"result"]
+        return res
 
 
 
