@@ -10,7 +10,6 @@ import flask
 import werkzeug
 import atexit
 import hashlib
-import requests
 import multiprocessing
 
 try:
@@ -64,6 +63,7 @@ class APIFramework:
         # self._output_file_folder = self.abspath("output")
 
         self._allowed_file_ext = ["txt", "doc", "docx", "pdf", "jpg", "png"]
+        self._allow_cors = False
 
         self._worker_para = {}
 
@@ -167,11 +167,31 @@ class APIFramework:
         else:
             return False
 
+    def find_config(self, config_file_name):
+
+        inside_docker = False
+        try:
+            inside_docker = "docker" in open("/proc/self/cgroup").read()
+        except:
+            pass
+
+        config_current_path = self.abspath(config_file_name)
+        config_docker_path  = "/root/appconfig" + config_file_name
+
+        if inside_docker:
+            if os.path.exists(config_docker_path):
+                self.parse_config(config_docker_path)
+            else:
+                self.parse_config(config_current_path)
+
+            self.environmental_variable()
+        else:
+            self.parse_config(config_current_path)
+
     def parse_config(self, config_file_name):
-        config_path = self.abspath(config_file_name)
 
         config = configparser.ConfigParser()
-        config.read_file(open(config_path))
+        config.read_file(open(config_file_name))
 
         res = {}
         for each_section in config.sections():
@@ -226,11 +246,32 @@ class APIFramework:
                     ext = ext.strip()
                     self.add_allowed_file_ext(ext)
 
+            if "allow_cors" in res["basic"]:
+                self._allow_cors = self.bool(res["basic"]["allow_cors"])
+
+
             if "app_name" in res["basic"]:
                 self.set_app_name(res["basic"]["app_name"])
 
                 if res["basic"]["app_name"] in res:
                     self._worker_para = res[res["basic"]["app_name"]]
+
+
+            #if "" in res["docker"]:
+            #    self._xxxxx = res["docker"][""]
+
+    def environmental_variable(self):
+
+        if "WEBSERVICE_BASIC_HOST" in os.environ:
+            self.set_host(os.environ["WEBSERVICE_BASIC_HOST"])
+
+        if "WEBSERVICE_BASIC_PORT" in os.environ:
+            self.set_port(int(os.environ["WEBSERVICE_BASIC_PORT"]))
+
+        if "WEBSERVICE_BASIC_CPU_CORE" in os.environ:
+            self.set_worker_num(int(os.environ["WEBSERVICE_BASIC_CPU_CORE"]))
+
+        return
 
 
     # Worker function
@@ -258,16 +299,29 @@ class APIFramework:
     def get_unfinished_job_count(self):
         self.update_results(getall=True)
         n = len(list(filter(lambda x: not x["finished"], self.result_cache.values())))
-        return flask.jsonify(n)
+
+        response = flask.jsonify(n)
+        if self._allow_cors:
+            response.headers.add("Access-Control-Allow-Origin", "*")
+        return response
 
     def submit(self):
         if flask.request.method in ['GET', 'POST']:
             p = self.api_para()
         else:
-            return flask.jsonify("METHOD %s is not suppoted" % flask.request.method)
+            response = flask.jsonify("METHOD %s is not suppoted" % flask.request.method)
+            if self._allow_cors:
+                response.headers.add("Access-Control-Allow-Origin", "*")
+
+            return response
 
         if "tasks" not in p and "task" not in p and "q" not in p:
-            return flask.jsonify("Please submit with actual tasks")
+            response = flask.jsonify("Please submit with actual tasks")
+
+            if self._allow_cors:
+                response.headers.add("Access-Control-Allow-Origin", "*")
+
+            return response
 
         if "tasks" in p:
             raw_tasks = json.loads(p["tasks"])
@@ -288,8 +342,10 @@ class APIFramework:
             list_id = task_detail["id"]
             status = {
                 "id": list_id,
+                "submission_original": raw_task,
                 "submission_detail": task_detail,
                 "finished": False,
+                "stat": {},
                 "result": {}
             }
 
@@ -300,14 +356,22 @@ class APIFramework:
                 self.result_cache[list_id] = status
             self.output(1, "Job received by API: %s" % (task_detail))
 
-        return flask.jsonify(res)
+        response = flask.jsonify(res)
+        if self._allow_cors:
+            response.headers.add("Access-Control-Allow-Origin", "*")
+
+        return response
 
 
     def retrieve(self):
         if flask.request.method in ['GET', 'POST']:
             p = self.api_para()
         else:
-            return flask.jsonify("METHOD %s is not suppoted" % flask.request.method)
+            response = flask.jsonify("METHOD %s is not suppoted" % flask.request.method)
+            if self._allow_cors:
+                response.headers.add("Access-Control-Allow-Origin", "*")
+
+            return response
 
         if "list_ids" not in p and "list_id" not in p and "q" not in p:
             return flask.jsonify("Please provide with list_id(s)")
@@ -328,7 +392,10 @@ class APIFramework:
                 thing = self.result_cache[list_id]
             res.append(thing)
 
-        return flask.jsonify(res)
+        response = flask.jsonify(res)
+        if self._allow_cors:
+            response.headers.add("Access-Control-Allow-Origin", "*")
+        return response
 
 
     def upload_file(self):
@@ -341,7 +408,11 @@ class APIFramework:
             filename = werkzeug.utils.secure_filename(file.filename)
 
             if file.filename == '':
-                return flask.jsonify('No selected file')
+                response = flask.jsonify('No selected file')
+                if self._allow_cors:
+                    response.headers.add("Access-Control-Allow-Origin", "*")
+
+                return response
 
             task_detail = self.form_task({"original_file_name": file.filename})
             list_id = task_detail["id"]
@@ -349,12 +420,18 @@ class APIFramework:
             if file and self.allow_file_ext(file.filename):
                 file.save(os.path.join(self.input_file_folder(), list_id))
             else:
-                return flask.jsonify('File extension is not supported')
+                response = flask.jsonify('File extension is not supported')
+                if self._allow_cors:
+                    response.headers.add("Access-Control-Allow-Origin", "*")
+
+                return response
 
             status = {
                 "id": list_id,
+                "submission_original": {},
                 "submission_detail": task_detail,
                 "finished": False,
+                "stat": {},
                 "result": {}
             }
 
@@ -372,15 +449,28 @@ class APIFramework:
         if flask.request.method in ['GET', 'POST']:
             p = self.api_para()
         else:
-            return flask.jsonify("METHOD %s is not suppoted" % flask.request.method)
+            response = flask.jsonify("METHOD %s is not suppoted" % flask.request.method)
+            if self._allow_cors:
+                response.headers.add("Access-Control-Allow-Origin", "*")
+
+            return response
+
 
         if "list_id" not in p:
-            return flask.jsonify("Please provide with list_id(s)")
+            response = flask.jsonify("Please provide with list_id(s)")
+            if self._allow_cors:
+                response.headers.add("Access-Control-Allow-Origin", "*")
+
+            return response
 
         list_id = p["list_id"]
 
         if not self.result_cache[list_id]["finished"]:
-            return flask.jsonify("The computation haven't finished yet")
+            response = flask.jsonify("The computation haven't finished yet")
+            if self._allow_cors:
+                response.headers.add("Access-Control-Allow-Origin", "*")
+
+            return response
 
         target_file_path = self.result_cache[list_id]["result"]["output_file_abs_path"]
 
@@ -433,7 +523,16 @@ class APIFramework:
 
             try:
                 res = self.result_queue.get_nowait()
-                self.result_cache[res["id"]]["result"] = res
+
+                self.result_cache[res["id"]]["stat"] = {
+                    "start time": res["start time"],
+                    "end time": res["end time"],
+                    "runtime": res["runtime"]
+                }
+
+                self.result_cache[res["id"]]["error"] = res["error"]
+                self.result_cache[res["id"]]["result"] = res["result"]
+
                 self.result_cache[res["id"]]['finished'] = True
             except queue.Empty:
                 break
@@ -517,112 +616,6 @@ class APIFramework:
                 open(self.status_saving_location(), "w"),
                 indent=2
             )
-
-
-class APIFrameworkClient:
-
-    def __init__(self):
-        self._protocol = "http"
-        self._host = "localhost"
-        self._port = 10980
-
-        self._max_retry = 3
-        self._interval = 0.5
-
-        # wait maximum 2 minutes
-        self._max_retry_for_unfinished_task = 240
-
-
-    def host(self):
-        return self._host
-
-    def set_host(self, h):
-        self._host = h
-
-    def port(self):
-        return self._port
-
-    def set_port(self, p):
-        if isinstance(p, int):
-            self._port = p
-        else:
-            raise APIParameterError("Port number requires integer, %s is not acceptable")
-
-    def protocol(self):
-        return self._protocol
-
-    def set_protocol(self, p):
-        assert p in ["http", "https"]
-        self._protocol = p
-
-    def main_URL(self):
-        main_URL = self.protocol() + "://" + self.host()
-        if self.port() not in [22, "22"]:
-            main_URL += ":" + str(self.port())
-        return main_URL
-
-    def abspath(self, fp):
-        base = os.path.dirname(os.path.abspath(sys.argv[0]))
-        res = os.path.join(base, fp)
-        return res
-
-    def parse_config(self, config_file_name):
-        config_path = self.abspath(config_file_name)
-
-        config = configparser.ConfigParser()
-        config.read_file(open(config_path))
-
-        res = {}
-        for each_section in config.sections():
-            res[each_section] = {}
-            for (each_key, each_val) in config.items(each_section):
-                if each_val != "":
-                    res[each_section][each_key] = each_val
-
-        if "basic" in res:
-
-            if "host" in res["basic"]:
-                self.set_host(res["basic"]["host"])
-
-            if "port" in res["basic"]:
-                self.set_port(int(res["basic"]["port"]))
-
-
-    def request(self, sub, params):
-
-        for i in range(self._max_retry):
-            try:
-                response = requests.post(self.main_URL() + "/" + sub, params)
-                return response
-            except:
-                pass
-
-            time.sleep(self._interval)
-
-    def submit(self):
-        raise NotImplemented
-
-    def retrieve_once(self):
-        raise NotImplemented
-
-    def retrieve(self, list_id):
-
-        for i in range(self._max_retry_for_unfinished_task):
-            time.sleep(self._interval)
-            try:
-                res = self.retrieve_once(list_id)
-                return res
-            except APIUnfinishedError:
-                continue
-
-        raise APIUnfinishedError("The task %s is not finished yet" % list_id)
-
-    def get(self, *args, **kwargs):
-        list_id = self.submit(*args, **kwargs)
-        resjson = self.retrieve(list_id)
-        res = resjson[u"result"]
-        return res
-
 
 
 
