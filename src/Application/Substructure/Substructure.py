@@ -9,7 +9,7 @@ from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat
 
 
 
-class SubstructureSearch(APIFramework):
+class Substructure(APIFramework):
 
     def form_task(self, p):
         res = {}
@@ -115,9 +115,9 @@ class SubstructureSearch(APIFramework):
 if __name__ == '__main__':
     multiprocessing.freeze_support()
 
-    ss_app = SubstructureSearch()
-    ss_app.parse_config("SubstructureSearch.ini")
-    ss_app.start()
+    substructure_app = Substructure()
+    substructure_app.find_config("Substructure.ini")
+    substructure_app.start()
 
 
 

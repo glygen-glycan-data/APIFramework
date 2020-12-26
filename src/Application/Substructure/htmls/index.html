@@ -97,9 +97,9 @@
     function display_results() {
         var d = this_result;
 
-        var runtime = d["result"]["runtime"];
-        var matches = d["result"]["result"];
-        var rterror = d["result"]["error"];
+        var runtime = d["stat"]["runtime"];
+        var matches = d["result"];
+        var rterror = d["error"];
 
         if (rterror.length > 0){
             document.getElementById("result").innerHTML = "ERROR: "+rterror;
