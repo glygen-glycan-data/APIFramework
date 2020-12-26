@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Glycan Exact Lookup</title>
+    <title>Glycan Lookup</title>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 </head>
 <body>
@@ -82,9 +82,10 @@
     function display_results() {
         var d = this_result;
 
-        var runtime = d["result"]["runtime"];
-        var matches = d["result"]["result"];
-        var rterror = d["result"]["error"];
+        console.log(d);
+        var runtime = d["stat"]["runtime"];
+        var matches = d["result"];
+        var rterror = d["error"];
 
         if (rterror.length > 0){
             document.getElementById("result").innerHTML = "ERROR: "+rterror;

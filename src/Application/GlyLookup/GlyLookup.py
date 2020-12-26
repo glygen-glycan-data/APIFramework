@@ -12,7 +12,7 @@ def round2str(n):
     return str(round(n, 2))
 
 
-class ExactLookup(APIFramework):
+class GlyLookup(APIFramework):
 
     def form_task(self, p):
         res = {}
@@ -117,9 +117,9 @@ class ExactLookup(APIFramework):
 if __name__ == '__main__':
     multiprocessing.freeze_support()
 
-    exact_lookup_app = ExactLookup()
-    exact_lookup_app.parse_config("ExactLookup.ini")
-    exact_lookup_app.start()
+    glylookup_app = GlyLookup()
+    glylookup_app.find_config("GlyLookup.ini")
+    glylookup_app.start()
 
 
 
