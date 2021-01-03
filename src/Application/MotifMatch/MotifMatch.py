@@ -35,10 +35,11 @@ class MotifMatch(APIFramework):
 
         motif_match_connected_nodes_cache = pygly.alignment.ConnectedNodesCache()
 
-        normal_motif_matcher = pygly.alignment.GlyTouCanMotif(connected_nodes_cache=motif_match_connected_nodes_cache)
-        nonred_motif_matcher = pygly.alignment.GlyTouCanMotif(connected_nodes_cache=motif_match_connected_nodes_cache)
-        gtc_motif_matcher = pygly.alignment.GlyTouCanMotif(connected_nodes_cache=motif_match_connected_nodes_cache)
+        loose_matcher = pygly.alignment.MotifInclusive(connected_nodes_cache=motif_match_connected_nodes_cache)
+        loose_nred_matcher = pygly.alignment.NonReducingEndMotifInclusive(connected_nodes_cache=motif_match_connected_nodes_cache)
 
+        strict_matcher = pygly.alignment.MotifStrict(connected_nodes_cache=motif_match_connected_nodes_cache)
+        strict_nred_matcher = pygly.alignment.NonReducingEndMotifStrict(connected_nodes_cache=motif_match_connected_nodes_cache)
 
         motifs = {}
         names = {}
@@ -46,7 +47,7 @@ class MotifMatch(APIFramework):
             acc, name, s = line.strip().split("\t")
             motifs[acc] = wp.toGlycan(s)
             names[acc] = name
-
+        print "FI"
         while True:
             task_detail = task_queue.get(block=True)
 
@@ -81,23 +82,34 @@ class MotifMatch(APIFramework):
                 #    if motif_node_num != len(list(glycan.all_nodes())):
                 #        continue
 
-                if normal_motif_matcher.leq(motif, glycan, rootOnly=True, anywhereExceptRoot=False):
-                    # result.append(acc)
-                    result.append([acc, names[acc], "Core"])
+                for mode in ["Inclusive", "Strict"]:
 
-                if normal_motif_matcher.leq(motif, glycan, rootOnly=False, anywhereExceptRoot=True):
-                    # result.append(acc)
-                    result.append([acc, names[acc], "Substructure"])
+                    if mode == "Inclusive":
+                        matcher = loose_matcher
+                        nred_matcher = loose_nred_matcher
+                        und_link = True
 
-                if nonred_motif_matcher.leq(motif, glycan):
-                    # result.append(acc)
-                    result.append([acc, names[acc], "Non-Reducing"])
+                    else:
+                        matcher = strict_matcher
+                        nred_matcher = strict_nred_matcher
+                        und_link = False
 
-                if len(list(motif.all_nodes())) == len(list(glycan.all_nodes())):
-                    if gtc_motif_matcher.leq(motif, glycan, rootOnly=True, anywhereExceptRoot=False):
+                    if matcher.leq(motif, glycan, rootOnly=True, anywhereExceptRoot=False, underterminedLinkage=und_link):
                         # result.append(acc)
-                        result.append([acc, names[acc], "Whole"])
+                        result.append([acc, names[acc], mode, "Core"])
 
+                    if matcher.leq(motif, glycan, rootOnly=False, anywhereExceptRoot=True, underterminedLinkage=und_link):
+                        # result.append(acc)
+                        result.append([acc, names[acc], mode, "Substructure"])
+
+                    if nred_matcher.leq(motif, glycan):
+                        # result.append(acc)
+                        result.append([acc, names[acc], mode, "Non-Reducing"])
+
+                    if len(list(motif.all_nodes())) == len(list(glycan.all_nodes())):
+                        if matcher.leq(motif, glycan, rootOnly=True, anywhereExceptRoot=False, underterminedLinkage=und_link):
+                            # result.append(acc)
+                            result.append([acc, names[acc], mode, "Whole"])
 
 
             calculation_end_time = time.time()
