@@ -47,7 +47,7 @@ class MotifMatch(APIFramework):
             acc, name, s = line.strip().split("\t")
             motifs[acc] = wp.toGlycan(s)
             names[acc] = name
-        print "FI"
+
         while True:
             task_detail = task_queue.get(block=True)
 
