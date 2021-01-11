@@ -8,11 +8,11 @@ if [ -z "$1" ]
 fi
 
 
-cp -r ../../Application/MotifMatch/htmls ./htmls
-cp ../../Application/MotifMatch/MotifMatch.* ./
+cp -r ../../Application/Substructure/htmls ./htmls
+cp ../../Application/Substructure/Substructure.* ./
 
 
-docker build -t glyomics/motifmatch:$1 -t glyomics/motifmatch:latest ./
+docker build -t glyomics/substructure:$1 -t glyomics/substructure:latest ./
 
 :'
 docker run \
@@ -26,12 +26,12 @@ docker run \
 # --mount type=bind,source=/.../.../.../ConfigFileFolder,target=/root/appconfig
 '
 
-docker push glyomics/motifmatch:$1
-docker push glyomics/motifmatch:latest
+docker push glyomics/substructure:$1
+docker push glyomics/substructure:latest
 
 
 rm -rf htmls
-rm MotifMatch.*
+rm Substructure.*
 
 
 

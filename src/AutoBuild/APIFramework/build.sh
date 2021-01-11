@@ -16,7 +16,7 @@ rm PyGly.zip
 
 cp ../../APIFramework.py ./APIFramework.py
 
-docker build -t glyomics/apiframework:$1 ./
+docker build -t glyomics/apiframework:$1 -t glyomics/apiframework:latest ./
 
 :'
 # Test Run
@@ -30,6 +30,10 @@ docker build -t glyomics/apiframework:$1 ./
 '
 
 docker push glyomics/apiframework:$1
+docker push glyomics/apiframework:latest
+
+rm -rf pygly
+rm APIFramework.py
 
 
 

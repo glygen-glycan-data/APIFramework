@@ -4,4 +4,4 @@ ADD . /code
 
 WORKDIR /code
 
-CMD python MotifMatch.py
+CMD python Substructure.py

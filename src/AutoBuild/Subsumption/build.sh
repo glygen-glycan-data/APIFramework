@@ -10,10 +10,9 @@ fi
 
 cp -r ../../Application/Subsumption/htmls ./htmls
 cp ../../Application/Subsumption/Subsumption.* ./
-cp ../../Application/Subsumption/glycans.tsv ./
 
 
-docker build -t glyomics/subsumption:$1 ./
+docker build -t glyomics/subsumption:$1 -t glyomics/subsumption:latest ./
 
 :'
 docker run \
@@ -28,9 +27,11 @@ docker run \
 '
 
 docker push glyomics/subsumption:$1
+docker push glyomics/subsumption:latest
 
 
-
+rm -rf htmls
+rm Subsumption.*
 
 
 

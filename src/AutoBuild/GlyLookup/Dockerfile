@@ -1,4 +1,4 @@
-FROM glyomics/apiframework:0.0.1
+FROM glyomics/apiframework:latest
 
 ADD . /code
 
