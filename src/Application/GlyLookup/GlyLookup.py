@@ -1,4 +1,5 @@
 
+import os
 import sys
 import time
 import hashlib
@@ -6,6 +7,7 @@ import multiprocessing
 from APIFramework import APIFramework
 
 import pygly.alignment
+from pygly.GlycanResource.GlyTouCan import GlyTouCanNoCache
 from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat
 
 def round2str(n):
@@ -110,6 +112,27 @@ class GlyLookup(APIFramework):
                 "result": result
             }
             result_queue.put(res)
+
+
+    def pre_start(self, para):
+
+        gtc = GlyTouCanNoCache()
+        wp = WURCS20Format()
+
+        file_path = self.abspath(para["glycan_file_path"])
+        f1 = open(file_path, "w")
+        for acc, f, s in gtc.allseq(format="wurcs"):
+
+            try:
+                g = wp.toGlycan(s)
+                mass = round2str(g.underivitized_molecular_weight())
+            except:
+                continue
+
+
+            f1.write("%s\t%s\t%s\n" % (acc, mass, s))
+
+        f1.close()
 
 
 

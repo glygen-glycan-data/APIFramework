@@ -43,7 +43,7 @@ class APIUnfinishedError(APIErrorBase):
     pass
 
 
-class APIFramework:
+class APIFramework(object):
 
     def __init__(self):
 
@@ -270,6 +270,13 @@ class APIFramework:
 
         if "WEBSERVICE_BASIC_CPU_CORE" in os.environ:
             self.set_worker_num(int(os.environ["WEBSERVICE_BASIC_CPU_CORE"]))
+
+        for k, v in os.environ.items():
+            if k.startswith("WEBSERVICE_APP_"):
+                newk = k[15:].lower()
+
+                self._worker_para[newk] = v
+
 
         return
 
@@ -546,6 +553,9 @@ class APIFramework:
     # Load route and handler to flask app
     def load_route(self):
         # TODO custom route?
+
+        # TODO client script
+        # TODO service up?
         self._flask_app.add_url_rule("/", "home", self.home, methods=["GET", "POST"])
         self._flask_app.add_url_rule("/retrieve", "retrieve", self.retrieve, methods=["GET", "POST"])
         if self._file_based_job:
@@ -574,8 +584,14 @@ class APIFramework:
         return
 
 
+    def pre_start(self, worker_para):
+        # Function for downloading necessary data and others.
+        # Execute before everything else starts
+        return None
+
 
     def start(self):
+        self.pre_start(self._worker_para)
         self.load_route()
         self.manipulate_dirs()
 

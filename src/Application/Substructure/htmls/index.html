@@ -12,13 +12,6 @@
 </div>
 <div id="compute">
     <textarea rows = "40" cols = "150" id="sequence">WURCS=2.0/4,7,6/[u2122h_2*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5]/1-2-3-4-4-4-4/a4-b1_b4-c1_c3-d1_c6-e1_e3-f1_e6-g1</textarea><br>
-    <tr>Alignment Options:</tr>
-        <tr>
-            <td>Motif Position</td>
-            <td>:</td>
-            <td><input type="radio" name="motif_match_position" value="anywhere" checked>Anywhere</td>
-            <td><input type="radio" name="motif_match_position" value="reo">Reducing-end Only</td>
-        </tr>
     <button id="submit-sequence" onclick="compute()">Submit</button>
     <br><br><br>
     <div id="result"></div>
@@ -57,14 +50,6 @@
     var this_result = {};
     function compute(){
         var para = {};
-        for (var pk of ["motif_match_position"]){
-            var elemts = document.getElementsByName(pk);
-            for (var elemt of elemts){
-                if (elemt.checked){
-                    para[pk] = elemt.value;
-                }
-            }
-        }
         para["seq"] = document.getElementById("sequence").value;
 
         var requestURL = "./submit?tasks="+encodeURIComponent(JSON.stringify([para]));
@@ -108,10 +93,17 @@
 
         document.getElementById("result").innerHTML = "Alignment Calculation Time: " + runtime.toFixed(5) + "s<br> Matched glycan count: " + matches.length + "<br>";
 
-        for (var acc of matches){
+        for (var pair of matches){
+            var acc = pair[0];
+            var strict = pair[1];
+
+            var strict_str = "";
+            if (strict) {
+                strict_str = " (strict)"
+            }
 
             var ele = document.createElement("a");
-            ele.innerText = acc;
+            ele.innerText = acc + strict_str;
             document.getElementById("result").appendChild(ele);
             document.getElementById("result").appendChild(space());
 

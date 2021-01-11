@@ -7,19 +7,21 @@ from APIFramework import APIFramework
 import pygly.alignment
 from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat
 
+import pygly.GlycanResource.GlyGen
+import pygly.GlycanResource.GlyTouCan
+
 
 
 class Substructure(APIFramework):
 
     def form_task(self, p):
         res = {}
-        task_str = p["seq"] + "_" + p["motif_match_position"]
+        task_str = p["seq"]
         task_str.encode("utf-8")
         list_id = hashlib.sha256(task_str).hexdigest()
 
         res["id"] = list_id
         res["seq"] = p["seq"]
-        res["motif_match_position"] = p["motif_match_position"]
 
         return res
 
@@ -27,7 +29,7 @@ class Substructure(APIFramework):
     def worker(pid, task_queue, result_queue, params):
         print(pid, "Start")
 
-        structure_list_file_path = params["glycan_set"]
+        structure_list_file_path = params["glycan_list"]
         max_motif_size = int(params["max_motif_size"])
 
 
@@ -35,7 +37,8 @@ class Substructure(APIFramework):
         wp = WURCS20Format()
 
         motif_match_connected_nodes_cache = pygly.alignment.ConnectedNodesCache()
-        motif_matcher = pygly.alignment.GlyTouCanMotif(connected_nodes_cache=motif_match_connected_nodes_cache)
+        loose_motif_matcher = pygly.alignment.MotifInclusive(connected_nodes_cache=motif_match_connected_nodes_cache)
+        strict_motif_matcher = pygly.alignment.MotifStrict(connected_nodes_cache=motif_match_connected_nodes_cache)
 
         glycans = {}
         for line in open(structure_list_file_path):
@@ -53,16 +56,6 @@ class Substructure(APIFramework):
             list_id = task_detail["id"]
             seq = task_detail["seq"]
 
-            motif_match_position = task_detail["motif_match_position"]
-
-            rootOnly = False
-            anywhereExceptRoot = False
-            if motif_match_position == "anywhere":
-                pass
-            elif motif_match_position == "reo":
-                rootOnly = True
-            else:
-                pass
 
             try:
                 if "RES" in seq:
@@ -79,7 +72,6 @@ class Substructure(APIFramework):
                 if motif_node_num > max_motif_size:
                     error.append("Motif is too big")
 
-            # TODO time out mechanism to avoid running for too long
             for acc, glycan in glycans.items():
 
                 if len(error) != 0:
@@ -87,12 +79,11 @@ class Substructure(APIFramework):
                         print("Processor-%s: Issues (%s) is found with task %s" % (pid, e, task_detail["id"]))
                     break
 
-                # if fullstructure:
-                #    if motif_node_num != len(list(glycan.all_nodes())):
-                #        continue
-
-                if motif_matcher.leq(motif, glycan, rootOnly=rootOnly, anywhereExceptRoot=anywhereExceptRoot):
-                    result.append(acc)
+                strict = False
+                loose = loose_motif_matcher.leq(motif, glycan, underterminedLinkage=True)
+                if loose:
+                    strict = strict_motif_matcher.leq(motif, glycan, underterminedLinkage=False)
+                    result.append([acc, strict])
 
 
 
@@ -110,7 +101,42 @@ class Substructure(APIFramework):
             result_queue.put(res)
 
 
+    def pre_start(self, worker_para):
 
+        data_file_path = self.abspath(worker_para["glycan_list"])
+
+        glygen = False
+        if "glycan_set" in worker_para and worker_para["glycan_set"] == "glygen":
+            glygen = True
+
+        glygen_set = set()
+
+        if glygen:
+            gg = pygly.GlycanResource.GlyGen()
+            for acc in gg.allglycans():
+                glygen_set.add(acc.strip())
+
+
+        wp = WURCS20Format()
+        gtc = pygly.GlycanResource.GlyTouCanNoCache()
+
+        f1 = open(data_file_path, "w")
+
+        for acc, f, s in gtc.allseq(format="wurcs"):
+
+            try:
+                g = wp.toGlycan(s)
+            except:
+                continue
+
+            if glygen and acc in glygen_set:
+                f1.write("%s\t%s\n" % (acc, s))
+
+            elif not glygen:
+                f1.write("%s\t%s\n" % (acc, s))
+
+
+        f1.close()
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()

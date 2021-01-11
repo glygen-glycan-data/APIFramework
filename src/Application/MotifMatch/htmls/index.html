@@ -11,7 +11,21 @@
     <p id="server-status"></p>
 </div>
 <div id="compute">
-    <textarea rows = "40" cols = "150" id="sequence">WURCS=2.0/4,7,6/[u2122h_2*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5]/1-2-3-4-4-4-4/a4-b1_b4-c1_c3-d1_c6-e1_e3-f1_e6-g1</textarea><br>
+    <textarea rows = "40" id="sequence" style="width: 100%; max-width: 100%">WURCS=2.0/4,7,6/[u2122h_2*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5]/1-2-3-4-4-4-4/a4-b1_b4-c1_c3-d1_c6-e1_e3-f1_e6-g1</textarea><br>
+    <form id="collection">
+        <input type="radio" name="collection" value="GM" checked>All motifs
+        <input type="radio" name="collection" value="GGM">GlyGen
+        <input type="radio" name="collection" value="CCRC">CCRC
+        <input type="radio" name="collection" value="GD">Glydin
+        <input type="radio" name="collection" value="GDB">Glydin - BiOligo
+        <input type="radio" name="collection" value="GDC">Glydin - Cummings
+        <input type="radio" name="collection" value="GDH">Glydin - Hayes
+        <input type="radio" name="collection" value="GDSB">Glydin - SugarBind
+        <input type="radio" name="collection" value="GDV">Glydin - Cermav
+        <input type="radio" name="collection" value="GE">GlycoEpitope Epitopes
+        <input type="radio" name="collection" value="GTC">GlyTouCan
+        <input type="radio" name="collection" value="UCM">UniCarbKB
+    </form>
     <button id="submit-sequence" onclick="compute()">Submit</button>
     <br><br><br>
     <div id="result"></div>
@@ -50,7 +64,20 @@
     var this_result = {};
     function compute(){
         var para = {};
+
+        var collection = "GM";
+        var radios = document.getElementById("collection");
+        for (var radio of radios.getElementsByTagName("input")){
+
+            if (radio.name != "collection"){
+                continue
+            }
+            if( radio.checked){
+                collection = radio.value;
+            }
+        }
         para["seq"] = document.getElementById("sequence").value;
+        para["collection"] = collection;
 
         var requestURL = "./submit?tasks="+encodeURIComponent(JSON.stringify([para]));
 
@@ -95,38 +122,37 @@
 
         var tableEle = document.createElement("table");
         tableEle.style = "width: 100%; text_align: center;";
-        tableEle.innerHTML = "<tr><th>Motif Accession</th><th>Motif Name</th><th>Alignment Type</th><th>Inclusive</th><th>Strict</th></tr>";
+        tableEle.innerHTML = "<tr><th>GlycoMotif</th><th>GlyTouCan</th><th>Name</th><th>Alignment Type</th><th>Strict</th></tr>";
 
         var tableRows = {};
 
         for (var match of matches){
-            var acc = match[0];
-            var name = match[1];
-            var mode = match[2];
-            var alignment_type = match[3];
+            //[collection, pageacc, acc, name, "Non-Reducing", nred_strict]
+            var collection = match[0];
+            var pageacc = match[1];
+            var gtcacc = match[2];
+            var name = match[3];
+            var alignment_type = match[4];
+            var strict = match[5];
 
-
-
-            var key = JSON.stringify([acc, name, alignment_type]);
-            if (Object.keys(tableRows).includes(key)){
-                var ele = tableRows[key];
+            var strict_str = ""
+            if (strict){
+                strict_str = "Y"
             }
-            else {
-                var ele = document.createElement("tr");
-                ele.innerHTML = "<tr><td>"+acc+"</td><td>"+name+"</td><td>"+alignment_type+"</td><td></td><td></td></tr>";
-                tableRows[key] = ele;
-            }
+            //"+collection+"."+pageacc+"
 
-            var tds = ele.getElementsByTagName("td");
+            var key = collection+"."+pageacc ;
+            var ele = document.createElement("tr");
+            ele.innerHTML =
+                "<tr>" +
+                "<td><a href='https://glycomotif.glyomics.org/glycomotifdev/"+collection+"."+pageacc+"'>"+collection+"."+pageacc+"</a></td>" +
+                "<td><a href='https://glytoucan.org/Structures/Glycans/"+gtcacc+"'>"+gtcacc+"</a></td>" +
+                "<td><img src='https://image.glycosmos.org/snfg/png/"+gtcacc+"'><br>"+name+"</td>" +
+                "<td>"+alignment_type+"</td>" +
+                "<td>"+strict_str+"</td>" +
+                "</tr>";
 
-
-            if (mode == "Inclusive"){
-                tds[3].innerText = "Y";
-            }
-
-            if (mode == "Strict"){
-                tds[4].innerText = "Y";
-            }
+            tableRows[key] = ele;
 
 
         }

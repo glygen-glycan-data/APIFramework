@@ -1,9 +1,12 @@
 
+import os
+import re
 import sys
 import time
 import json
 import copy
 import base64
+import urllib
 import hashlib
 import multiprocessing
 from APIFramework import APIFramework
@@ -11,6 +14,7 @@ from APIFramework import APIFramework
 import pygly.alignment
 import pygly.GNOme
 import pygly.GlycanImage
+import pygly.GlycanResource.GlyTouCan
 from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat
 
 def round2str(n):
@@ -262,7 +266,65 @@ class Subsumption(APIFramework):
             }
             result_queue.put(res)
 
+    def pre_start(self, worker_para):
 
+        data_file_path = self.abspath(worker_para["glycan_file_path"])
+        output_file = open(data_file_path, "w")
+
+        gtc_acc_pattern = re.compile(r"^G\d{5}\w{2}$")
+
+        mass_lut = {}
+        header = True
+        for line in urllib.urlopen(
+                "https://raw.githubusercontent.com/glygen-glycan-data/GNOme/master/data/mass_lookup_2decimal"):
+            l = line.strip()
+            if header:
+                header = False
+                continue
+
+            mid, mass = l.split()
+            mass_lut[mid] = mass
+
+        all_wurcs = {}
+
+        wp = WURCS20Format()
+        gtc = pygly.GlycanResource.GlyTouCanNoCache()
+        for acc, f, s in gtc.allseq(format="wurcs"):
+            try:
+                wp.toGlycan(s)
+            except:
+                continue
+
+            all_wurcs[acc] = s
+
+        lines = []
+
+        gnome = pygly.GNOme.GNOme()
+        accs = set()
+        for acc in gnome.nodes():
+            if acc == "00000001":
+                continue
+
+            if gtc_acc_pattern.findall(acc):
+                accs.add(acc)
+            else:
+                assert acc in mass_lut
+
+                for gacc in gnome.descendants(acc):
+                    if gacc not in all_wurcs:
+                        print gacc, "wurcs issue!"
+                        continue
+
+                    lvl = gnome.level(gacc)
+                    # print gacc, lvl
+                    assert lvl
+
+                    lines.append("%s\t%s\t%s\t%s\n" % (gacc, mass_lut[acc], lvl, all_wurcs[gacc]))
+
+        for l in sorted(lines):
+            output_file.write(l)
+
+        print "Preparation finished"
 
 
 if __name__ == '__main__':
