@@ -23,6 +23,11 @@ for i in lines:
 f.close()
 
 
+f = open(".gtccred", "w")
+f.write("fake@gmail.com xxxx")
+f.close()
+
+
 
 
 
