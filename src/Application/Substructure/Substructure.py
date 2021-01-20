@@ -16,9 +16,9 @@ class Substructure(APIFramework):
 
     def form_task(self, p):
         res = {}
-        task_str = p["seq"]
+        task_str = p["seq"].strip()
         task_str.encode("utf-8")
-        list_id = hashlib.sha256(task_str).hexdigest()
+        list_id = hashlib.md5(task_str).hexdigest()
 
         res["id"] = list_id
         res["seq"] = p["seq"]

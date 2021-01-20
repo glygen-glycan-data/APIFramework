@@ -16,15 +16,14 @@ class MotifMatch(APIFramework):
 
     def form_task(self, p):
         res = {}
-
-        seq = p["seq"]
+        seq = p["seq"].strip()
         collection = "GM"
         if "collection" in p:
             collection = p["collection"]
 
         task_str = seq + "_" + collection
         task_str.encode("utf-8")
-        list_id = hashlib.sha256(task_str).hexdigest()
+        list_id = hashlib.md5(task_str).hexdigest()
 
         res["id"] = list_id
         res["seq"] = seq
