@@ -10,6 +10,8 @@ import flask
 import werkzeug
 import atexit
 import hashlib
+import random
+import string
 import multiprocessing
 
 try:
@@ -167,13 +169,18 @@ class APIFramework(object):
         else:
             return False
 
-    def find_config(self, config_file_name):
-
+    def inside_docker(self):
         inside_docker = False
         try:
             inside_docker = "docker" in open("/proc/self/cgroup").read()
         except:
             pass
+        return inside_docker
+
+
+    def find_config(self, config_file_name):
+
+        inside_docker = self.inside_docker()
 
         config_current_path = self.abspath(config_file_name)
         config_docker_path  = "/root/appconfig" + config_file_name
@@ -287,6 +294,20 @@ class APIFramework(object):
         # Params are key value pairs from configuration file, section app_name
         raise NotImplemented
 
+    @staticmethod
+    def unavailable_status(name, host, port):
+        app = flask.Flask(name)
+
+        @app.route("/")
+        def home():
+            return "Service temporarily unavailable, please come back in 10 minutes", 503
+
+        @app.route("/status")
+        def somefunction():
+            return flask.jsonify(False)
+
+        app.run(host, port)
+
     # FLASK related functions starts here
 
     # FLASK handlers, need to be overwrite for your own app
@@ -311,6 +332,10 @@ class APIFramework(object):
         if self._allow_cors:
             response.headers.add("Access-Control-Allow-Origin", "*")
         return response
+
+    @staticmethod
+    def random_str():
+        return ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(20))
 
     def submit(self):
         if flask.request.method in ['GET', 'POST']:
@@ -338,8 +363,10 @@ class APIFramework(object):
             raw_tasks = json.loads(p["q"])
 
         res = []
+        userid = self.random_str()
         for raw_task in raw_tasks:
             task_detail = self.form_task(raw_task)
+
             if "id" not in task_detail:
                 raise APIParameterError(
                     "No id provided for your job(%s), probably check the form_task method"
@@ -349,6 +376,7 @@ class APIFramework(object):
             list_id = task_detail["id"]
             status = {
                 "id": list_id,
+                "initial_user_id": userid,
                 "submission_original": raw_task,
                 "submission_detail": task_detail,
                 "finished": False,
@@ -362,6 +390,9 @@ class APIFramework(object):
                 self.task_queue.put(task_detail)
                 self.result_cache[list_id] = status
             self.output(1, "Job received by API: %s" % (task_detail))
+
+        for r in res:
+            r["id"] = r["id"] + userid
 
         response = flask.jsonify(res)
         if self._allow_cors:
@@ -388,16 +419,43 @@ class APIFramework(object):
         if "list_ids" in p:
             list_ids = json.loads(p["list_ids"])
         elif "list_id" in p:
-            list_ids = [json.loads(p["list_id"])]
+            list_ids = [str(p["list_id"])]
         elif "q" in p:
             list_ids = json.loads(p["q"])
 
         res = []
-        for list_id in list_ids:
-            thing = {"Error": "list_id (%s) not found" % list_id}
+        for tmp in list_ids:
+            # Assume MD5
+            list_id = tmp[:32]
+            user_id = tmp[32:]
+
             if list_id in self.result_cache:
-                thing = self.result_cache[list_id]
-            res.append(thing)
+                r = copy.deepcopy(self.result_cache[list_id])
+            else:
+                res.append({"Error": "list_id (%s) not found" % list_id})
+                continue
+
+            cached = True
+            if r["initial_user_id"] == user_id:
+                cached = False
+            r["stat"]["cached"] = cached
+
+            r["task"] = r["submission_detail"]
+
+            del r["submission_original"]
+            del r["submission_detail"]
+            del r["initial_user_id"]
+
+            r["id"] = tmp
+            r["task"]["id"] = tmp
+
+            try:
+                del r["stat"]["start time"]
+                del r["stat"]["end time"]
+            except:
+                pass
+
+            res.append(r)
 
         response = flask.jsonify(res)
         if self._allow_cors:
@@ -550,13 +608,19 @@ class APIFramework(object):
     def allow_file_ext(self, filename):
         return '.' in filename and filename.rsplit('.', 1)[1].lower() in self.allowed_file_ext()
 
+    def status(self):
+        response = flask.jsonify(True)
+        if self._allow_cors:
+            response.headers.add("Access-Control-Allow-Origin", "*")
+
+        return response
+
+
     # Load route and handler to flask app
     def load_route(self):
-        # TODO custom route?
 
-        # TODO client script
-        # TODO service up?
         self._flask_app.add_url_rule("/", "home", self.home, methods=["GET", "POST"])
+        self._flask_app.add_url_rule("/status", "status", self.status, methods=["GET", "POST"])
         self._flask_app.add_url_rule("/retrieve", "retrieve", self.retrieve, methods=["GET", "POST"])
         if self._file_based_job:
             self._flask_app.add_url_rule("/file_upload", "upload_file", self.upload_file, methods=["GET", "POST"])
@@ -591,6 +655,11 @@ class APIFramework(object):
 
 
     def start(self):
+
+        # Temporary webservice...
+        webservice_process_tmp = multiprocessing.Process(target=self.unavailable_status, args=(self._app_name, self.host(), self.port() ))
+        webservice_process_tmp.start()
+
         self.pre_start(self._worker_para)
         self.load_route()
         self.manipulate_dirs()
@@ -609,6 +678,7 @@ class APIFramework(object):
 
         self.cleanup()
 
+        webservice_process_tmp.terminate()
         self._flask_app.run(self.host(), self.port(), False)
 
     def cleanup(self):

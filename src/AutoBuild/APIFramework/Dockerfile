@@ -7,8 +7,6 @@ WORKDIR /code
 ENV WEBSERVICE_BASIC_HOST=0.0.0.0
 
 RUN pip install -r requirement.txt
-
-RUN chmod 0777 ./
-RUN python fixenv.py
+RUN ./environment.sh
 
 CMD python test.py

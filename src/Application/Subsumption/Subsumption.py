@@ -33,7 +33,6 @@ class Subsumption(APIFramework):
 
     def form_task(self, p):
         res = {}
-        p["seqs"] = p["seqs"].strip()
         task_str = json.dumps(p["seqs"], sort_keys=True).encode("utf-8")
         list_id = hashlib.md5(task_str).hexdigest()
 
