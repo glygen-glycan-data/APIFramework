@@ -1,8 +1,9 @@
+import os
 import sys
 import time
 import hashlib
 import multiprocessing
-from APIFramework import APIFramework
+from APIFramework import APIFramework, queue
 
 import pygly.alignment
 from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat
@@ -25,9 +26,10 @@ class Substructure(APIFramework):
 
         return res
 
-    @staticmethod
-    def worker(pid, task_queue, result_queue, params):
-        print(pid, "Start")
+
+    def worker(self, pid, task_queue, result_queue, params):
+
+        self.output(2, "Worker-%s is starting up" % (pid))
 
         structure_list_file_path = params["glycan_list"]
         max_motif_size = int(params["max_motif_size"])
@@ -45,8 +47,16 @@ class Substructure(APIFramework):
             acc, s = line.strip().split()
             glycans[acc] = wp.toGlycan(s)
 
+        self.output(2, "Worker-%s is ready to take job" % (pid))
+
         while True:
-            task_detail = task_queue.get(block=True)
+            try:
+                task_detail = task_queue.get_nowait()
+            except queue.Empty:
+                time.sleep(1)
+                continue
+
+            self.output(1, "Worker-%s is computing task: %s" % (pid, task_detail))
 
             result = []
             error = []
@@ -90,6 +100,8 @@ class Substructure(APIFramework):
             calculation_end_time = time.time()
             calculation_time_cost = calculation_end_time - calculation_start_time
 
+            self.output(2, "Worker-%s finished computing job (%s)" % (pid, list_id))
+
             res = {
                 "id": list_id,
                 "start time": calculation_start_time,
@@ -98,6 +110,9 @@ class Substructure(APIFramework):
                 "error": error,
                 "result": result
             }
+
+            self.output(2, "Job (%s): %s" % (list_id, res))
+
             result_queue.put(res)
 
 
@@ -120,7 +135,7 @@ class Substructure(APIFramework):
         wp = WURCS20Format()
         gtc = pygly.GlycanResource.GlyTouCanNoCache()
 
-        f1 = open(data_file_path, "w")
+        f1 = open("tmp.txt", "w")
 
         for acc, f, s in gtc.allseq(format="wurcs"):
 
@@ -137,6 +152,12 @@ class Substructure(APIFramework):
 
 
         f1.close()
+
+        if os.path.exists(data_file_path):
+            os.remove(data_file_path)
+        os.rename("tmp.txt", data_file_path)
+
+
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()

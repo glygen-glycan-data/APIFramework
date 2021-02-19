@@ -1,9 +1,11 @@
+
+import os
 import sys
 import time
 import flask
 import hashlib
 import multiprocessing
-from APIFramework import APIFramework
+from APIFramework import APIFramework, queue
 
 import pygly.alignment
 from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat
@@ -31,9 +33,10 @@ class MotifMatch(APIFramework):
 
         return res
 
-    @staticmethod
-    def worker(pid, task_queue, result_queue, params):
-        print(pid, "Start")
+
+    def worker(self, pid, task_queue, result_queue, params):
+
+        self.output(2, "Worker-%s is starting up" % (pid))
 
         motif_file_path = params["motif_set"]
 
@@ -58,9 +61,16 @@ class MotifMatch(APIFramework):
             motifs[acc] = wp.toGlycan(s)
             GlycoMotifPages.append([collection, pageacc, acc, name])
 
+        self.output(2, "Worker-%s is ready to take job" % (pid))
 
         while True:
-            task_detail = task_queue.get(block=True)
+            try:
+                task_detail = task_queue.get_nowait()
+            except queue.Empty:
+                time.sleep(1)
+                continue
+
+            self.output(2, "Worker-%s is computing task: %s" % (pid, task_detail))
 
             result = []
             error = []
@@ -137,6 +147,8 @@ class MotifMatch(APIFramework):
             calculation_end_time = time.time()
             calculation_time_cost = calculation_end_time - calculation_start_time
 
+            self.output(2, "Worker-%s finished computing job (%s)" % (pid, list_id))
+
             res = {
                 "id": list_id,
                 "start time": calculation_start_time,
@@ -145,6 +157,9 @@ class MotifMatch(APIFramework):
                 "error": error,
                 "result": result
             }
+
+            self.output(2, "Job (%s): %s" % (list_id, res))
+
             result_queue.put(res)
 
 
@@ -182,7 +197,7 @@ class MotifMatch(APIFramework):
         ORDER BY ?collection ?accession
         """
 
-        data_file_handle = open(data_file_path, "w")
+        data_file_handle = open("tmp.txt", "w")
         for i in gm.queryts(q2):
             res = list(i[:])
 
@@ -195,7 +210,8 @@ class MotifMatch(APIFramework):
                 try:
                     res[3] = str(res[3])
                 except:
-                    print res[3]
+                    # print res[3]
+                    # Contains UTF-8 char...
                     res[3] = ""
 
             else:
@@ -214,6 +230,11 @@ class MotifMatch(APIFramework):
                 continue
 
             data_file_handle.write(l+"\n")
+
+
+        if os.path.exists(data_file_path):
+            os.remove(data_file_path)
+        os.rename("tmp.txt", data_file_path)
 
 
 if __name__ == '__main__':

@@ -10,6 +10,7 @@ fi
 
 cp -r ../../Application/Subsumption/htmls ./htmls
 cp ../../Application/Subsumption/Subsumption.* ./
+cp ../../Application/Subsumption/glycans.tsv ./
 
 
 docker build -t glyomics/subsumption:$1 -t glyomics/subsumption:latest ./
@@ -32,6 +33,7 @@ docker push glyomics/subsumption:latest
 
 rm -rf htmls
 rm Subsumption.*
+# TODO delete glycans.tsv
 
 
 

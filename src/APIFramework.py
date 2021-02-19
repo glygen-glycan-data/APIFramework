@@ -12,6 +12,7 @@ import atexit
 import hashlib
 import random
 import string
+import datetime
 import multiprocessing
 
 try:
@@ -59,7 +60,7 @@ class APIFramework(object):
         self._file_based_job = False
 
         self._app_name = "testing"
-        self._flask_app = flask.Flask(self._app_name)
+        # self._flask_app = flask.Flask(self._app_name)
 
         self._input_file_folder  = self.abspath("input")
         # self._output_file_folder = self.abspath("output")
@@ -72,12 +73,17 @@ class APIFramework(object):
         self.result_cache = {}
         self.task_queue   = multiprocessing.Queue()
         self.result_queue = multiprocessing.Queue()
+        self.flask_queue  = multiprocessing.Queue()
 
         self._template_folder = None
         self._home_html = None
         self._file_upload_finished_html = None
 
         self._status_saving_location = None
+
+        self._worker_started = False
+        self._last_worker_process_id = 0
+
 
 
     # Proper APIs for changing config
@@ -112,10 +118,6 @@ class APIFramework(object):
 
     def set_app_name(self, an):
         self._app_name = an
-        if self._template_folder is None:
-            self._flask_app = flask.Flask(self._app_name)
-        else:
-            self._flask_app = flask.Flask(self._app_name, template_folder=self.abspath(self._template_folder))
 
     def input_file_folder(self):
         return self._input_file_folder
@@ -155,7 +157,8 @@ class APIFramework(object):
 
     def output(self, lvl, msg):
         if lvl <= self.verbose_level():
-            print(msg, file=sys.stderr)
+            t = datetime.datetime.now()
+            print("[%s %s %s] %s" % (t.strftime("%x"), t.strftime("%X"), lvl, msg), file=sys.stderr)
 
 
     def abspath(self, fp):
@@ -289,24 +292,21 @@ class APIFramework(object):
 
 
     # Worker function
-    @staticmethod
     def worker(pid, task_queue, result_queue, params):
         # Params are key value pairs from configuration file, section app_name
         raise NotImplemented
 
-    @staticmethod
-    def unavailable_status(name, host, port):
-        app = flask.Flask(name)
+    def flask_start(self, pid, task_queue, result_queue, params):
+        self.output(1, "FLASK service started at %s:%s" % (self.host(), self.port()) )
 
-        @app.route("/")
-        def home():
-            return "Service temporarily unavailable, please come back in 10 minutes", 503
+        flask_app = flask.Flask(self._app_name)
+        if not self._template_folder is None:
+            flask_app = flask.Flask(self._app_name, template_folder=self.abspath(self._template_folder))
 
-        @app.route("/status")
-        def somefunction():
-            return flask.jsonify(False)
+        self.load_route(flask_app)
 
-        app.run(host, port)
+        flask_app.run(self.host(), self.port(), False)
+
 
     # FLASK related functions starts here
 
@@ -438,7 +438,9 @@ class APIFramework(object):
             cached = True
             if r["initial_user_id"] == user_id:
                 cached = False
-            r["stat"]["cached"] = cached
+
+            if r["finished"]:
+                r["stat"]["cached"] = cached
 
             r["task"] = r["submission_detail"]
 
@@ -460,6 +462,7 @@ class APIFramework(object):
         response = flask.jsonify(res)
         if self._allow_cors:
             response.headers.add("Access-Control-Allow-Origin", "*")
+        self.output(1, "Retrieve json: %s" % res)
         return response
 
 
@@ -567,14 +570,26 @@ class APIFramework(object):
         """
         raise NotImplemented
 
-    @staticmethod
-    def api_para():
+    # @staticmethod
+    def api_para(self):
         if flask.request.method == "GET":
             return flask.request.args
         elif flask.request.method == "POST":
             return flask.request.form
         else:
             raise APIErrorBase
+        self.result_cache_clear()
+
+
+    def result_cache_clear(self):
+        # result_cache lives with FLASK process, so simple result_cache = {} in main process doen't work
+        try:
+            res = self.flask_queue.get_nowait()
+            l = len(self.result_cache)
+            self.result_cache = {}
+            self.output(1, "Clear result cache, previously stored %s record(s)" % l)
+        except queue.Empty:
+            pass
 
     def update_results(self, getall=False):
 
@@ -617,16 +632,16 @@ class APIFramework(object):
 
 
     # Load route and handler to flask app
-    def load_route(self):
+    def load_route(self, app):
 
-        self._flask_app.add_url_rule("/", "home", self.home, methods=["GET", "POST"])
-        self._flask_app.add_url_rule("/status", "status", self.status, methods=["GET", "POST"])
-        self._flask_app.add_url_rule("/retrieve", "retrieve", self.retrieve, methods=["GET", "POST"])
+        app.add_url_rule("/", "home", self.home, methods=["GET", "POST"])
+        app.add_url_rule("/status", "status", self.status, methods=["GET", "POST"])
+        app.add_url_rule("/retrieve", "retrieve", self.retrieve, methods=["GET", "POST"])
         if self._file_based_job:
-            self._flask_app.add_url_rule("/file_upload", "upload_file", self.upload_file, methods=["GET", "POST"])
-            self._flask_app.add_url_rule("/file_download", "download_file", self.download_file, methods=["GET", "POST"])
+            app.add_url_rule("/file_upload", "upload_file", self.upload_file, methods=["GET", "POST"])
+            app.add_url_rule("/file_download", "download_file", self.download_file, methods=["GET", "POST"])
         else:
-            self._flask_app.add_url_rule("/submit", "submit", self.submit, methods=["GET", "POST"])
+            app.add_url_rule("/submit", "submit", self.submit, methods=["GET", "POST"])
 
 
 
@@ -656,30 +671,71 @@ class APIFramework(object):
 
     def start(self):
 
-        # Temporary webservice...
-        webservice_process_tmp = multiprocessing.Process(target=self.unavailable_status, args=(self._app_name, self.host(), self.port() ))
-        webservice_process_tmp.start()
+        self.output(0, "Host: %s" % self._host)
+        self.output(0, "Port: %s" % self._port)
+        self.output(0, "Worker_num: %s" % self._worker_num)
 
-        self.pre_start(self._worker_para)
-        self.load_route()
+        for k,v in self._worker_para.items():
+            self.output(0, "%s(worker para): %s" % (k,v))
+
+        flask_process = multiprocessing.Process(target=self.flask_start, args=(0, self.task_queue, self.result_queue, self._worker_para))
+        flask_process.start()
+
+        self._worker_started = True
         self.manipulate_dirs()
 
         if not self._clean_start and self.status_saving_location() != None:
             if os.path.exists(self.status_saving_location()):
                 self.result_cache = json.load(open(self.status_saving_location()))
 
-        self._deamon_process_pool = []
-        for i in range(self._worker_num):
-            p = multiprocessing.Process(target=self.worker, args=(i, self.task_queue, self.result_queue, self._worker_para ))
-            self._deamon_process_pool.append(p)
+        self.output(0, "Starting workers")
+        self._deamon_process_pool = self.new_worker_processes()
 
-        for p in self._deamon_process_pool:
+        if self._clean_start:
+
+            self.output(0, "Downloading necessary data... please wait")
+            self.pre_start(self._worker_para)
+            self.output(0, "Download phase finished")
+
+            self.flask_queue.put("CLEAR")
+
+            self.output(0, "Terminating previous workers with outdated data")
+            self.terminate_all()
+
+            self.output(0, "Starting workers with updated data")
+            self._deamon_process_pool = self.new_worker_processes()
+        else:
+            pass
+
+
+        self.monitor()
+
+    def new_worker_processes(self):
+
+        process_pool = {}
+        for i in range(self._worker_num):
+
+            self._last_worker_process_id += 1
+            pid = self._last_worker_process_id
+
+            p = multiprocessing.Process(target=self.worker,
+                                        args=(pid, self.task_queue, self.result_queue, self._worker_para))
+            process_pool[pid] = p
+
+        for p in process_pool.values():
             p.start()
 
+        return process_pool
+
+
+    def monitor(self):
+        # Function 1: Keeps master process alive
+        # Function 2: We may add functions checking how everything works in while loop
         self.cleanup()
 
-        webservice_process_tmp.terminate()
-        self._flask_app.run(self.host(), self.port(), False)
+        while True:
+            time.sleep(100)
+
 
     def cleanup(self):
         atexit.register(self.terminate_all)
@@ -687,8 +743,10 @@ class APIFramework(object):
 
 
     def terminate_all(self):
-        for p in self._deamon_process_pool:
+        for i, p in self._deamon_process_pool.items():
+            self.output(0, "Worker-%s is terminated" % (i))
             p.terminate()
+            del self._deamon_process_pool[i]
 
     def dump_status(self):
         if self.status_saving_location() != None:

@@ -29,6 +29,11 @@ do
     # Build base docker image before everything else
     continue
   fi
+  if [ $d = ".//Glymage" ]; then
+    # Build base docker image before everything else
+    ECHO "SKIPPING Glymage"
+    continue
+  fi
 
   echo "BUILDING:" $d
 

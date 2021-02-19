@@ -9,7 +9,7 @@ import base64
 import urllib
 import hashlib
 import multiprocessing
-from APIFramework import APIFramework
+from APIFramework import APIFramework, queue
 
 import pygly.alignment
 import pygly.GNOme
@@ -41,9 +41,10 @@ class Subsumption(APIFramework):
 
         return res
 
-    @staticmethod
-    def worker(pid, task_queue, result_queue, params):
-        print(pid, "Start")
+
+    def worker(self, pid, task_queue, result_queue, params):
+
+        self.output(2, "Worker-%s is starting up" % (pid))
 
         glycan_file_path = params["glycan_file_path"]
 
@@ -73,10 +74,16 @@ class Subsumption(APIFramework):
 
         glycan_by_mass[None] = []
 
+        self.output(2, "Worker-%s is ready to take job" % (pid))
 
         while True:
-            task_detail = task_queue.get(block=True)
-            print(task_detail)
+            try:
+                task_detail = task_queue.get_nowait()
+            except queue.Empty:
+                time.sleep(1)
+                continue
+
+            self.output(1, "Worker-%s is computing task: %s" % (pid, task_detail))
 
             error = []
             calculation_start_time = time.time()
@@ -256,6 +263,9 @@ class Subsumption(APIFramework):
                 "subsumption_level": subsumption_levels_calc,
                 "buttonconfig": ButtonConfigs
             }
+
+            self.output(2, "Worker-%s finished computing job (%s)" % (pid, list_id))
+
             res = {
                 "id": list_id,
                 "start time": calculation_start_time,
@@ -264,12 +274,14 @@ class Subsumption(APIFramework):
                 "error": error,
                 "result": combined_result
             }
+
+            self.output(2, "Job (%s): %s" % (list_id, res))
+
             result_queue.put(res)
 
     def pre_start(self, worker_para):
 
         data_file_path = self.abspath(worker_para["glycan_file_path"])
-        output_file = open(data_file_path, "w")
 
         gtc_acc_pattern = re.compile(r"^G\d{5}\w{2}$")
 
@@ -321,10 +333,16 @@ class Subsumption(APIFramework):
 
                     lines.append("%s\t%s\t%s\t%s\n" % (gacc, mass_lut[acc], lvl, all_wurcs[gacc]))
 
+
+        output_file = open("tmp.txt", "w")
         for l in sorted(lines):
             output_file.write(l)
+        output_file.close()
 
-        print "Preparation finished"
+        if os.path.exists(data_file_path):
+            os.remove(data_file_path)
+        os.rename("tmp.txt", data_file_path)
+
 
 
 if __name__ == '__main__':

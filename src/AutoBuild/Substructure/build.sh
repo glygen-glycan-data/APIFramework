@@ -10,6 +10,7 @@ fi
 
 cp -r ../../Application/Substructure/htmls ./htmls
 cp ../../Application/Substructure/Substructure.* ./
+cp ../../Application/Substructure/glycan_set.tsv ./
 
 
 docker build -t glyomics/substructure:$1 -t glyomics/substructure:latest ./

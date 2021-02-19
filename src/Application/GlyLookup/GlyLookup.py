@@ -4,7 +4,7 @@ import sys
 import time
 import hashlib
 import multiprocessing
-from APIFramework import APIFramework
+from APIFramework import APIFramework, queue
 
 import pygly.alignment
 from pygly.GlycanResource.GlyTouCan import GlyTouCanNoCache, GlyTouCan
@@ -28,9 +28,10 @@ class GlyLookup(APIFramework):
 
         return res
 
-    @staticmethod
-    def worker(pid, task_queue, result_queue, params):
-        print(pid, "Start")
+
+    def worker(self, pid, task_queue, result_queue, params):
+
+        self.output(2, "Worker-%s is starting up" % (pid))
 
         glycan_file_path = params["glycan_file_path"]
 
@@ -46,30 +47,35 @@ class GlyLookup(APIFramework):
 
 
         for line in open(glycan_file_path):
-            acc, s = line.strip().split()
-            s = s.replace("\\n", "\n")
 
-            h = hashlib.md5(s).hexdigest()
-            hash2seq[h] = (acc, s)
+            acc, mass, wseq, gseq, xxx = line.strip().split("\t")
+            gseq = gseq.replace("\\n", "\n")
 
-            try:
-                g = wp.toGlycan(s)
-                mass = round2str(g.underivitized_molecular_weight())
-            except:
+            for s in [wseq, gseq]:
+                if s != "":
+                    h = hashlib.md5(s).hexdigest()
+                    hash2seq[h] = acc
+
+            if mass == "":
                 continue
-
-            if mass not in glycan_by_mass:
+            elif mass not in glycan_by_mass:
                 glycan_by_mass[mass] = []
 
             glycan_by_mass[mass].append(acc)
-            wurcss[acc] = s
+            wurcss[acc] = wseq
 
         glycan_by_mass[None] = []
 
+        self.output(2, "Worker-%s is ready to take job" % (pid))
 
         while True:
-            task_detail = task_queue.get(block=True)
-            print(task_detail)
+            try:
+                task_detail = task_queue.get_nowait()
+            except queue.Empty:
+                time.sleep(1)
+                continue
+
+            self.output(2, "Worker-%s is computing task: %s" % (pid, task_detail))
 
             error = []
             calculation_start_time = time.time()
@@ -81,7 +87,7 @@ class GlyLookup(APIFramework):
 
             h = hashlib.md5(seq).hexdigest()
             if h in hash2seq:
-                acc = hash2seq[h][0]
+                acc = hash2seq[h]
                 result.append(acc)
 
             if len(result) == 0:
@@ -123,6 +129,8 @@ class GlyLookup(APIFramework):
             calculation_end_time = time.time()
             calculation_time_cost = calculation_end_time - calculation_start_time
 
+            self.output(2, "Worker-%s finished computing job (%s)" % (pid, list_id))
+
             res = {
                 "id": list_id,
                 "start time": calculation_start_time,
@@ -131,6 +139,9 @@ class GlyLookup(APIFramework):
                 "error": error,
                 "result": result
             }
+
+            self.output(2, "Job (%s): %s" % (list_id, res))
+
             result_queue.put(res)
 
 
@@ -140,7 +151,8 @@ class GlyLookup(APIFramework):
         wp = WURCS20Format()
 
         file_path = self.abspath(para["glycan_file_path"])
-        f1 = open(file_path, "w")
+
+        data = {}
         for acc, f, s in gtc.allseq():
 
             if f not in ["wurcs", "glycoct"]:
@@ -157,9 +169,30 @@ class GlyLookup(APIFramework):
                 # print acc
                 continue
 
-            f1.write("%s\t%s\n" % (acc, s))
+            if acc not in data:
+                data[acc] = ["", "", ""]
 
+            if f == "glycoct":
+                data[acc][2] = s
+            elif f == "wurcs":
+                data[acc][1] = s
+
+                try:
+                    g = wp.toGlycan(s)
+                    mass = round2str(g.underivitized_molecular_weight())
+                    data[acc][0] = mass
+                except:
+                    continue
+
+        f1 = open("tmp.txt", "w")
+        for acc, d in data.items():
+            line = "\t".join([acc] + d + ["END"])
+            f1.write("%s\n" % (line))
         f1.close()
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        os.rename("tmp.txt", file_path)
 
 
 
