@@ -34,6 +34,6 @@ docker push glyomics/glylookup:latest
 
 rm -rf htmls
 rm GlyLookup.*
-
+rm glycans.tsv
 
 

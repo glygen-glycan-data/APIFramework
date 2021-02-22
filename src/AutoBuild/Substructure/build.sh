@@ -10,7 +10,7 @@ fi
 
 cp -r ../../Application/Substructure/htmls ./htmls
 cp ../../Application/Substructure/Substructure.* ./
-cp ../../Application/Substructure/glycan_set.tsv ./
+cp ../../Application/Substructure/*.tsv ./
 
 
 docker build -t glyomics/substructure:$1 -t glyomics/substructure:latest ./
@@ -27,12 +27,12 @@ docker run \
 # --mount type=bind,source=/.../.../.../ConfigFileFolder,target=/root/appconfig
 '
 
-docker push glyomics/substructure:$1
-docker push glyomics/substructure:latest
+#docker push glyomics/substructure:$1
+#docker push glyomics/substructure:latest
 
 
 rm -rf htmls
 rm Substructure.*
-
+rm *.tsv
 
 

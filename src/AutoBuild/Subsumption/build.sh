@@ -33,7 +33,7 @@ docker push glyomics/subsumption:latest
 
 rm -rf htmls
 rm Subsumption.*
-# TODO delete glycans.tsv
+rm glycans.tsv
 
 
 

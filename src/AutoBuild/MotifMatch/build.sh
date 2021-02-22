@@ -33,6 +33,6 @@ docker push glyomics/motifmatch:latest
 
 rm -rf htmls
 rm MotifMatch.*
-
+rm motif.tsv
 
 

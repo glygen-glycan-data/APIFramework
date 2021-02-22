@@ -75,6 +75,9 @@ class APIFramework(object):
         self.result_queue = multiprocessing.Queue()
         self.flask_queue  = multiprocessing.Queue()
 
+        self._static_folder = None
+        self._static_url = None
+
         self._template_folder = None
         self._home_html = None
         self._file_upload_finished_html = None
@@ -243,6 +246,12 @@ class APIFramework(object):
             if "template_folder" in res["basic"]:
                 self._template_folder = res["basic"]["template_folder"]
 
+            if "static_folder" in res["basic"]:
+                self._static_folder = res["basic"]["static_folder"]
+
+            if "static_url" in res["basic"]:
+                self._static_url = res["basic"]["static_url"]
+
             if "home_page" in res["basic"]:
                 self._home_html = res["basic"]["home_page"]
 
@@ -299,9 +308,21 @@ class APIFramework(object):
     def flask_start(self, pid, task_queue, result_queue, params):
         self.output(1, "FLASK service started at %s:%s" % (self.host(), self.port()) )
 
-        flask_app = flask.Flask(self._app_name)
-        if not self._template_folder is None:
-            flask_app = flask.Flask(self._app_name, template_folder=self.abspath(self._template_folder))
+        if self._template_folder is None:
+            tf = None
+        else:
+            tf = self.abspath(self._template_folder)
+
+        if self._static_folder is None:
+            sf = None
+        else:
+            sf = self.abspath(self._static_folder)
+
+
+        flask_app = flask.Flask(self._app_name,
+                                template_folder = tf,
+                                static_folder   = sf,
+                                static_url_path = self._static_url)
 
         self.load_route(flask_app)
 
@@ -329,8 +350,6 @@ class APIFramework(object):
         n = len(list(filter(lambda x: not x["finished"], self.result_cache.values())))
 
         response = flask.jsonify(n)
-        if self._allow_cors:
-            response.headers.add("Access-Control-Allow-Origin", "*")
         return response
 
     @staticmethod
@@ -342,17 +361,10 @@ class APIFramework(object):
             p = self.api_para()
         else:
             response = flask.jsonify("METHOD %s is not suppoted" % flask.request.method)
-            if self._allow_cors:
-                response.headers.add("Access-Control-Allow-Origin", "*")
-
             return response
 
         if "tasks" not in p and "task" not in p and "q" not in p:
             response = flask.jsonify("Please submit with actual tasks")
-
-            if self._allow_cors:
-                response.headers.add("Access-Control-Allow-Origin", "*")
-
             return response
 
         if "tasks" in p:
@@ -395,9 +407,6 @@ class APIFramework(object):
             r["id"] = r["id"] + userid
 
         response = flask.jsonify(res)
-        if self._allow_cors:
-            response.headers.add("Access-Control-Allow-Origin", "*")
-
         return response
 
 
@@ -406,9 +415,6 @@ class APIFramework(object):
             p = self.api_para()
         else:
             response = flask.jsonify("METHOD %s is not suppoted" % flask.request.method)
-            if self._allow_cors:
-                response.headers.add("Access-Control-Allow-Origin", "*")
-
             return response
 
         if "list_ids" not in p and "list_id" not in p and "q" not in p:
@@ -460,8 +466,6 @@ class APIFramework(object):
             res.append(r)
 
         response = flask.jsonify(res)
-        if self._allow_cors:
-            response.headers.add("Access-Control-Allow-Origin", "*")
         self.output(1, "Retrieve json: %s" % res)
         return response
 
@@ -477,8 +481,6 @@ class APIFramework(object):
 
             if file.filename == '':
                 response = flask.jsonify('No selected file')
-                if self._allow_cors:
-                    response.headers.add("Access-Control-Allow-Origin", "*")
 
                 return response
 
@@ -489,8 +491,6 @@ class APIFramework(object):
                 file.save(os.path.join(self.input_file_folder(), list_id))
             else:
                 response = flask.jsonify('File extension is not supported')
-                if self._allow_cors:
-                    response.headers.add("Access-Control-Allow-Origin", "*")
 
                 return response
 
@@ -518,16 +518,12 @@ class APIFramework(object):
             p = self.api_para()
         else:
             response = flask.jsonify("METHOD %s is not suppoted" % flask.request.method)
-            if self._allow_cors:
-                response.headers.add("Access-Control-Allow-Origin", "*")
 
             return response
 
 
         if "list_id" not in p:
             response = flask.jsonify("Please provide with list_id(s)")
-            if self._allow_cors:
-                response.headers.add("Access-Control-Allow-Origin", "*")
 
             return response
 
@@ -535,8 +531,6 @@ class APIFramework(object):
 
         if not self.result_cache[list_id]["finished"]:
             response = flask.jsonify("The computation haven't finished yet")
-            if self._allow_cors:
-                response.headers.add("Access-Control-Allow-Origin", "*")
 
             return response
 
@@ -572,13 +566,13 @@ class APIFramework(object):
 
     # @staticmethod
     def api_para(self):
+        self.result_cache_clear()
         if flask.request.method == "GET":
             return flask.request.args
         elif flask.request.method == "POST":
             return flask.request.form
         else:
             raise APIErrorBase
-        self.result_cache_clear()
 
 
     def result_cache_clear(self):
@@ -625,9 +619,6 @@ class APIFramework(object):
 
     def status(self):
         response = flask.jsonify(True)
-        if self._allow_cors:
-            response.headers.add("Access-Control-Allow-Origin", "*")
-
         return response
 
 
@@ -643,7 +634,16 @@ class APIFramework(object):
         else:
             app.add_url_rule("/submit", "submit", self.submit, methods=["GET", "POST"])
 
+        if self._allow_cors:
+            @app.after_request
+            def cors(response):
+                response.headers.add('Access-Control-Allow-Origin', '*')
+                return response
 
+        self.load_additional_route(app)
+
+    def load_additional_route(self, app):
+        return
 
     def manipulate_dirs(self):
         if self._file_based_job:
