@@ -195,23 +195,6 @@ class Subsumption(APIFramework):
                         break
 
 
-            # Generating images for glycans not in GlyTouCan
-            images = {}
-            for name, s in seqs.items():
-
-                if name in equivalents:
-                    continue
-
-                try:
-                    tmp = hashlib.sha256(s).hexdigest()
-                    ge.writeImage(s, tmp)
-                    b64image = base64.b64encode(open(tmp, "rb").read())
-                    images[name] = b64image
-
-                except:
-                    error.append("Could not generate images for " + name)
-
-
             # Computing subsumption level
             subsumption_levels_calc = {}
             for name, query_glycan in query_glycans.items():
@@ -259,7 +242,6 @@ class Subsumption(APIFramework):
             combined_result = {
                 "relationship": relationship,
                 "equivalent": equivalents,
-                "image": images,
                 "subsumption_level": subsumption_levels_calc,
                 "buttonconfig": ButtonConfigs
             }

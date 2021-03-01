@@ -177,6 +177,9 @@ LIN
 
         result_container.innerHTML += "<br><img src='"+imgurl+"'><p>Query glycan (motif)</p>";
 
+        if (result.length == 0){
+            return
+        }
 
         let sub_table = "<br><table style='width: 100%; border: black solid 3px; font-size: 15px;'>";
         sub_table += "" +
