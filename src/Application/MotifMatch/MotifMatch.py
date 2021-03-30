@@ -3,9 +3,8 @@ import os
 import sys
 import time
 import flask
-import hashlib
 import multiprocessing
-from APIFramework import APIFramework, queue
+from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 
 import pygly.alignment
 from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat
@@ -14,7 +13,7 @@ import pygly.GlycanResource.GlycoMotif
 
 
 
-class MotifMatch(APIFramework):
+class MotifMatch(APIFrameworkWithFrontEnd):
 
     def form_task(self, p):
         res = {}
@@ -25,7 +24,7 @@ class MotifMatch(APIFramework):
 
         task_str = seq + "_" + collection
         task_str.encode("utf-8")
-        list_id = hashlib.md5(task_str).hexdigest()
+        list_id = self.str2hash(task_str)
 
         res["id"] = list_id
         res["seq"] = seq
@@ -38,7 +37,7 @@ class MotifMatch(APIFramework):
 
         self.output(2, "Worker-%s is starting up" % (pid))
 
-        motif_file_path = params["motif_set"]
+        motif_file_path = self.autopath(params["motif_set"])
 
 
         gp = GlycoCTFormat()
@@ -166,7 +165,7 @@ class MotifMatch(APIFramework):
 
     def pre_start(self, worker_para):
 
-        data_file_path = self.abspath(worker_para["motif_set"])
+        data_file_path = self.autopath(worker_para["motif_set"])
 
         site = ""
         if "glycomotif_version" in worker_para:
@@ -197,7 +196,7 @@ class MotifMatch(APIFramework):
         ORDER BY ?collection ?accession
         """
 
-        data_file_handle = open("tmp.txt", "w")
+        data_file_handle = open(self.autopath("tmp.txt", newfile=True), "w")
         for i in gm.queryts(q2):
             res = list(i[:])
 
@@ -234,7 +233,7 @@ class MotifMatch(APIFramework):
 
         if os.path.exists(data_file_path):
             os.remove(data_file_path)
-        os.rename("tmp.txt", data_file_path)
+        os.rename(self.autopath("tmp.txt"), data_file_path)
 
 
 if __name__ == '__main__':

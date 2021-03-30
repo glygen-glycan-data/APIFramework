@@ -2,9 +2,8 @@
 import os
 import sys
 import time
-import hashlib
 import multiprocessing
-from APIFramework import APIFramework, queue
+from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 
 import pygly.alignment
 from pygly.GlycanResource.GlyTouCan import GlyTouCanNoCache, GlyTouCan
@@ -14,14 +13,14 @@ def round2str(n):
     return str(round(n, 2))
 
 
-class GlyLookup(APIFramework):
+class GlyLookup(APIFrameworkWithFrontEnd):
 
     def form_task(self, p):
         res = {}
 
         p["seq"] = p["seq"].strip()
         task_str = p["seq"].encode("utf-8")
-        list_id = hashlib.md5(task_str).hexdigest()
+        list_id = self.str2hash(task_str)
 
         res["id"] = list_id
         res["seq"] = p["seq"]
@@ -33,7 +32,7 @@ class GlyLookup(APIFramework):
 
         self.output(2, "Worker-%s is starting up" % (pid))
 
-        glycan_file_path = params["glycan_file_path"]
+        glycan_file_path = self.autopath(params["glycan_file_path"])
 
         gp = GlycoCTFormat()
         wp = WURCS20Format()
@@ -53,7 +52,7 @@ class GlyLookup(APIFramework):
 
             for s in [wseq, gseq]:
                 if s != "":
-                    h = hashlib.md5(s).hexdigest()
+                    h = self.str2hash(s)
                     hash2seq[h] = acc
 
             if mass == "":
@@ -85,7 +84,7 @@ class GlyLookup(APIFramework):
             seq = str(task_detail["seq"])
             result = []
 
-            h = hashlib.md5(seq).hexdigest()
+            h = self.str2hash(seq)
             if h in hash2seq:
                 acc = hash2seq[h]
                 result.append(acc)
@@ -150,7 +149,7 @@ class GlyLookup(APIFramework):
         gtc = GlyTouCanNoCache()
         wp = WURCS20Format()
 
-        file_path = self.abspath(para["glycan_file_path"])
+        file_path = self.autopath(para["glycan_file_path"])
 
         data = {}
         for acc, f, s in gtc.allseq():
@@ -184,7 +183,7 @@ class GlyLookup(APIFramework):
                 except:
                     continue
 
-        f1 = open("tmp.txt", "w")
+        f1 = open(self.autopath("tmp.txt", newfile=True), "w")
         for acc, d in data.items():
             line = "\t".join([acc] + d + ["END"])
             f1.write("%s\n" % (line))
@@ -192,7 +191,7 @@ class GlyLookup(APIFramework):
 
         if os.path.exists(file_path):
             os.remove(file_path)
-        os.rename("tmp.txt", file_path)
+        os.rename(self.autopath("tmp.txt", newfile=True), file_path)
 
 
 

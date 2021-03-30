@@ -2,1618 +2,213 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Subsumption</title>
+    <title>{{app_name}}</title>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-
-        <style>
-        * {
-            font-size: 100%;
-            font-family: Arial;
-        }
-    </style>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
-
+    <script src="/renderer.js"></script>
 </head>
-<body>
-<div id="basic">
-    <p id="time"></p>
-    <p id="server-status"></p>
+
+<body style='margin: 0; font-family: "adobe-caslon-pro",Georgia,"Times New Roman",serif; '>
+<div style="position: relative; min-height: 100vh; ">
+<div id="header"></div>
+
+<br>
+
+<div id="content" style="margin: 5px; padding-bottom: 150px; ">
+    <div id="input_container" style="width: 70%; margin: auto">
+        <textarea id="input_seq" rows="18" style="width: 100%; max-width: 100%; height: 50%; display: block; ">RES
+1b:x-dglc-HEX-x:x
+2b:b-dgal-HEX-1:5
+3b:a-dgal-HEX-1:5
+4b:b-dgal-HEX-1:5
+5s:n-acetyl
+LIN
+1:1o(4+1)2d
+2:2o(3+1)3d
+3:3o(3+1)4d
+4:4d(2+1)5n
+        </textarea>
+        <div id="submitoption"></div>
+        <br>
+        <button style="width: 80px; text-align: center; margin-left: 47%; margin-right: 47%; " onclick="submit()">Submit</button>
+        <p style="width: 100%; ">
+            Input: Glycan in GlycoCT or WURCS sequence.<br>
+        </p>
+    </div>
+    <div id="loading_container" style="width: 70%; height: 100%; margin: auto; text-align: center">
+        <p id="submit_status" style="font-size: 25px;"></p>
+        <p id="loading"></p>
+    </div>
+    <div id="result_container" style="width: 70%; margin: auto; text-align: center">
+        <div id="result_container_status"></div>
+        <div id="result_container_stat"></div><br>
+        <div id="result_container_json" style="text-align: left"></div>
+        <div id="result_container_additional"></div>
+    </div>
 </div>
-<div id="compute">
-    <textarea rows = "40" cols = "150" id="sequence">WURCS=2.0/2,2,1/[u2122h_2*NCC/3=O][a2122h-1x_1-5_2*NCC/3=O]/1-2/a?-b1
-WURCS=2.0/2,2,1/[u2122h_2*NCC/3=O][a2122h-1x_1-5_2*NCC/3=O]/1-2/a3-b1</textarea><br>
-    <button id="submit-sequence" onclick="compute()">Submit</button>
-    <br><br><br>
-    <div id="result"></div>
-    <div id="hgv" style="width: 100%; height: calc((100vw - 20px) * 0.5625); border: solid lightgray"></div>
+
+<div id="footer" style="position: absolute; bottom: 0; width: 100%; height: 150px;"></div>
 </div>
+
 <script>
+    "use strict";
 
-    function updateServerStatus(){
-        jQuery.getJSON("./queue").then(function (d) {
-            const s_p = " motifs are waiting for aligning";
-            var s_s = "1 motif is waiting for aligning";
-            var s_empty = "Empty load on the server";
-            var s = "";
+    // get common elements
 
-            if (d == 0) {
-                s = s_empty;
-            }
-            else if (d == 1) {
-                s = s_s;
-            }
-            else {
-                s = d + s_p;
-            }
-            document.getElementById("server-status").innerHTML = s;
-        })
-    }
-    // updateServerStatus();
+    jQuery.get("./header", function (d){
+        document.getElementById("header").innerHTML = d;
+    })
 
-    function space(){
-        var space = document.createElement("span");
-        space.innerHTML = '&nbsp&nbsp';
-        return space
-    }
+    jQuery.get("./submitoption", function (d){
+        document.getElementById("submitoption").innerHTML = d;
+    })
 
-    var list_id = "";
-    var query_counter = 0;
-    var this_result = {};
-    function compute(){
-        var para = {};
+    jQuery.get("./footer", function (d){
+        document.getElementById("footer").innerHTML = d;
+    })
+</script>
 
-        var seqs = {};
-        var i = 1;
-        for (var s of document.getElementById("sequence").value.split("\n")){
-            var xxx = "Query_" + i.toString();
-            seqs[xxx] = s;
-            i += 1;
-        }
-        para["seqs"] = seqs;
+<script>
+    "use strict";
 
-        var requestURL = "./submit?tasks="+encodeURIComponent(JSON.stringify([para]));
+    let job_id;
+    let retrieve_result;
 
-        jQuery.getJSON(requestURL).then(function (d) {
-            d = d[0]
-            list_id = d.id;
-            query_counter = 0;
-            //document.getElementById("result").innerHTML = "<a href='./retrieve?list_id="+d.list_id+"'>"+"Click me to see result"+"</a>";
-            document.getElementById("result").innerHTML = "Submitted successfully";
-            get_results();
-        })
-    }
+    let submitURL, retrieveURL;
 
-    function get_results() {
-        var requestURL = "./retrieve?list_ids=" + JSON.stringify([list_id]);
-        query_counter += 1;
-        jQuery.getJSON(requestURL).then(function (d) {
-            d = d[0];
-            if (d.finished){
-                this_result = d;
-                display_results();
-            }else{
-                setTimeout(get_results, 1000);
-                document.getElementById("result").innerHTML = "Checked for the "+query_counter+" times, haven't completed yet";
-            }
-        })
-    }
-
-    function display_results() {
-        var d = this_result;
-
-        var runtime = d["stat"]["runtime"];
-        var rterror = d["error"];
-
-        var matches = d["result"]["relationship"];
-        var sameas = d["result"]["equivalent"];
-
-        if (rterror.length > 0){
-            document.getElementById("result").innerHTML = "ERROR: " + rterror;
-            return
-        }
-
-        document.getElementById("result").innerHTML = "Alignment Calculation Time: " + runtime.toFixed(5) + "s<br>";
-        // document.getElementById("result").innerText += matches.toString();
-        SubsumptionData = matches;
-        EqTranslation = d["result"]["equivalent"];
-        ImageBase64Str = {};
-
-        for (var tmp_name of Object.keys(d["task"]["seqs"])){
-            var tmp_seq = d["task"]["seqs"][tmp_name];
-            console.log(tmp_name, tmp_seq)
-
-            ImageBase64Str[tmp_name] = "https://glymage.glyomics.org/getimage?notation=snfg&display=extended&format=png&seq=" + encodeURIComponent(tmp_seq);
-        }
-
-        if (false) {
-            // eq
-            document.getElementById("result").innerHTML += "Your glycan is equivalent to " + sameas + "<br>";
-            document.getElementById("result").innerHTML += "<a href='https://gnome.glyomics.org/restrictions/GlyGen.StructureBrowser.html?focus=" + sameas + "'>Click me to see more in GNOme structure browser</a><br>";
-            document.getElementById("result").innerHTML += "<a href='https://gnome.glyomics.org/restrictions/GlyGen.CompositionBrowser.html?focus=" + sameas + "'>Click me to see more in GNOme composition browser</a><br>";
-            document.getElementById("hgv").innerHTML = "";
-        }
-        else{
-            rendering("Query_1");
-        }
-
-    }
-
-    let glycanviewer = {
-    // The "global variables" are declared here
-    // It is not necessary to do so
-    // It is just a reminder of I can use this "things" directly
-
-    firstInit: true,
-    // A list of div in HTML page. save the trouble of document.getElement blah blah
-    div_root: 0,
-    div_header: 0,
-    div_img: 0,
-    div_network: 0,
-    div_navi: 0,
-
-    // Parameters from HTML file
-    para: 0,
-    // A portion of json file that will be used to build the network
-    component: 0,
-    // Things related to the network
-    rootname: 0,
-    topoonly: 0,
-    rootlevel: 0,
-    displaynodes: 0,
-    verticalSpace: 0,
-    horizontalSpace: 0,
-
-    // Image cache
-    resourceStatus: {},
-    nodeImg: {},
-    imageWidth: [],
-    imageHeight: [],
+    let retrieve_counter = 0;
+    let retrieve_interval = 1000;
 
 
-    // Network canvas
-    naviNetwork: 0,
-
-
-
-    // Constant
-    brokenImageSubstituentBase64: "",
-
-    init: function (parameters) {
-        if (this.IEQuestionMark())
-        {
-            this.compatibleDraw(parameters);
-        }
-        else {
-            this.para = this.paraCheck(parameters);
-            this.allocateDiv();
-            this.dataPreProcessing();
-        }
-    },
-
-    // Check the integrity and legitimacy of the parameters
-    paraCheck : function (para){
-        var checked = para;
-        if (!para.display.naviOption.size){
-            checked.display.naviOption.size = 0.15;
-        }
-        if (!para.display.naviOption.postion){
-            checked.display.naviOption.postion = 4;
-        }
-        if (![1,2,3,4].includes(para.display.naviOption.postion)){
-            checked.display.naviOption.postion = 4;
-        }
-        if (para.essentials.useGlyTouCanAsImageSource){
-            if (!["extended","normal","compact"].includes(para.essentials.GlyTouCanImagePara.style)){
-                checked.essentials.GlyTouCanImagePara.style = "extended";
-            }
-            if (!["png","jpg"].includes(para.essentials.GlyTouCanImagePara.format)){
-                checked.essentials.GlyTouCanImagePara.format = "png";
-            }
-            if (!["cfg","cfgbw","uoxf","uoxf-color","cfg-uoxf","iupac"].includes(para.essentials.GlyTouCanImagePara.notation)){
-                checked.essentials.GlyTouCanImagePara.notation = "cfg";
-            }
-        }
-        if (![1,2,3,4].includes(para.display.orientation)){
-            checked.display.orientation = 1;
-        }
-        return checked
-    },
-
-    // Allocate the DIV
-    allocateDiv: function () {
-        var thisLib = this;
-
-        // This variable stands for the prefix of the div id.
-        var id = this.para.essentials.div_ID + "_glycanviewer_";
-
-        //Locate the div && pre allocate space for each gadgets
-        this.div_root = document.getElementById(thisLib.para.essentials.div_ID);
-        while (thisLib.div_root.firstChild){
-            thisLib.div_root.removeChild(thisLib.div_root.firstChild);
-        }
-        this.div_root.style.overflow = "hidden";
-
-        this.div_header = document.createElement("div");
-        this.div_header.setAttribute("id",id+"header");
-
-        this.div_realStuff = document.createElement("div");
-        this.div_realStuff.setAttribute("id",id+"realStuff");
-        this.div_realStuff.style = "width: 100%; height: 100%; position: relative; left: 0; top: 0;";
-
-        this.div_network = document.createElement("div");
-        this.div_network.setAttribute("id",id+"container");
-        this.div_network.setAttribute("id",id+"container");
-        this.div_network.style = "width: 100%; height: 100%;position: relative; left: 0; top: 0;";
-        this.div_navi = document.createElement("div");
-        this.div_navi.setAttribute("id",id+"navi");
-        //this.div_navi.style = "position: absolute; left: 0; top: 0; float: right; width: 100%; height: 100%";
-        this.div_contextMenu = document.createElement("div");
-        this.div_contextMenu.setAttribute("id",id+"contextMenu");
-
-        this.div_realStuff.appendChild(this.div_network);
-        this.div_realStuff.appendChild(this.div_navi);
-        this.div_realStuff.appendChild(this.div_contextMenu);
-
-        this.div_root.appendChild(this.div_header);
-        this.div_root.appendChild(this.div_realStuff);
-    },
-
-
-    dataPreProcessing: function(){
-        var thisLib = this;
-
-        this.component = this.para.essentials.component;
-        var topoonly = this.para.essentials.topoOnly;
-
-        var component = this.component;
-        var rootname = component.root;
-        this.rootname = rootname;
-
-
-        if (this.para.essentials.viewRoot){
-            rootname = this.para.essentials.viewRoot;
-        }
-
-        this.levelCalculation(component, rootname);
-        this.network = new vis.Network(thisLib.div_network);
-
-
-        // After all images are cached (allow some of them not found), the rest pipeline are proceed by resourceSync
-        this.cacheImage();
-
-    },
-
-    levelCalculation: function(component, rootname){
-        var rootlevel = 0;
-        var thisLevel = 0;
-        var thisLevelNodes = [ rootname ];
-        var nextLevelNodes = [];
-        var displaynodes = {};
-
-        // Change all nodes level to undefined
-        for (var node in component.nodes){
-            var a = component.nodes[node].level;
-            component.nodes[node].level = 1;
-            var b = component.nodes[node].level;
-        }
-
-        while (thisLevelNodes.length > 0){
-            for(var i=0; i < thisLevelNodes.length; i++){
-                var currentNode = thisLevelNodes[i];
-                var edgesOfCurrentNode = component.edges[currentNode];
-                if ( edgesOfCurrentNode != undefined ){
-                    for (var currentEdgeIndex in edgesOfCurrentNode){
-                        var currentEdge = edgesOfCurrentNode[currentEdgeIndex];
-                        nextLevelNodes.push(currentEdge.to);
-                        component.nodes[ currentNode ].level = thisLevel;
-                        if (thisLevel < 10001 ){
-                            displaynodes[ currentNode ] = 1;
-                        }
-                        else{
-                            displaynodes[ currentNode ] = 0;
-                        }
-                    }
-                }
-                else{
-                    component.nodes[ currentNode ].level = thisLevel;
-
-                    if (thisLevel < 10000 ){
-                        displaynodes[ currentNode ] = 1;
-                    }
-                    else {
-                        displaynodes[currentNode] = 0;
-                    }
-                }
-                //var debug = "Node: " +currentNode + " is set to level-" + thisLevel;
-                //console.log(debug);
-
-            }
-
-
-
-            thisLevelNodes = nextLevelNodes;
-            nextLevelNodes = [];
-            thisLevel += 1;
-        }
-
-        for (var node of Object.keys(component.nodes)){
-            if (node.includes("3dots")){
-                component.nodes[node].level -= 0.33;
-            }
-        }
-
-        this.rootlevel = rootlevel;
-        this.displaynodes = displaynodes;
-        this.component = component;
-    },
-
-    getImageURL: function(acc){
-        var imgURL = "";
-
-        if (this.para.essentials.useGlyTouCanAsImageSource){
-            imgURL = "https://glytoucan.org/glycans/" + acc + "/image?";
-            imgURL += "style=" + this.para.essentials.GlyTouCanImagePara.style;
-            imgURL += "&format=" + this.para.essentials.GlyTouCanImagePara.format;
-            imgURL += "&notation=" + this.para.essentials.GlyTouCanImagePara.notation;
-        }else {
-            imgURL = this.para.essentials.imgURL1 + acc + this.para.essentials.imgURL2;
-        }
-        return imgURL
-    },
-
-    cacheImage: function(){
-        var thisLib = this;
-        var component = this.component;
-        var nodes = component.nodes;
-
-        for (var node in component.nodes) {
-            var nodeAcc = component.nodes[node].name;
-            this.resourceStatus[nodeAcc] = false;
-        }
-
-        for (var node in component.nodes) {
-
-            var nodeContent = component.nodes[node];
-            var nodeAcc = component.nodes[node].name;
-
-            var imageURL = "";
-            if (nodeContent.alternativeImageURL){
-                imageURL = nodeContent.alternativeImageURL;
+    function show(index){
+        for (let eleid of ["input_container", "loading_container", "result_container", ]){
+            let ele = document.getElementById(eleid);
+            if (index == eleid){
+                ele.style.display = "";
             }
             else {
-                imageURL = this.getImageURL(nodeAcc);
-            }
-            nodeContent.imageURL = imageURL;
-
-            var imgEle = document.createElement("img");
-            imgEle.name = nodeAcc;
-            imgEle.src = imageURL;
-            imgEle.onload = function(){
-                thisLib.imageHeight.push(this.height);
-                thisLib.imageWidth.push(this.width);
-
-                thisLib.resourceStatus[this.name] = true;
-                thisLib.resourceSync();
-            };
-            imgEle.onerror = function(){
-                // Do something while image can not be found?
-                thisLib.imageHeight.push(undefined);
-                thisLib.imageWidth.push(undefined);
-
-                thisLib.resourceStatus[this.name] = true;
-                thisLib.resourceSync();
-            };
-
-        }
-
-
-    },
-
-    resourceSync: function(){
-        var thisLib = this;
-
-        var proceed = true;
-        for (var key in this.resourceStatus){
-            if (!this.resourceStatus[key]){
-                proceed = false;
+                ele.style.display = "none";
             }
         }
-
-        if (proceed){
-            this.displayTitle();
-            this.layoutCalculation();
-            var options = this.visOptionGenerate();
-            var data = this.createNodeAndEdges();
-            this.data = data;
-            this.options = options;
-
-            this.network.setOptions(options);
-
-            this.forceRedraw(true);
+    }
 
 
-            this.doubleClickEvent();
+    function submit(){
+        let para = {};
+        let seq = document.getElementById("input_seq").value.trim();
+        para["seqs"] = {"Query": seq};
 
-            if (this.para.contextMenu.enable){
-                if (this.para.contextMenu.defaultMenu){
-                    this.defaultContextMenu();
+        let submitoptions = document.getElementById("submitoption");
+        for (let formEle of submitoptions.getElementsByTagName("form")){
+            let parakey = formEle.name;
+            for (let radioButton of formEle.getElementsByTagName("input")){
+                if (radioButton.name != parakey){
+                    throw "Issue"
                 }
-                else{
-                    this.customizedContextMenu();
+                if (radioButton.checked){
+                    para[parakey] = radioButton.value;
                 }
             }
         }
-    },
 
-    displayTitle: function(){
-        var rootname = this.rootname;
-        var component = this.component;
 
-        if (this.para.display.enableTitle){
-            var header = document.createElement("h2");
-            header.style = "margin: 1px;";
-            this.div_header.appendChild(header);
-            header.innerHTML = rootname + " (" + component.mw + ") - " + "Level " + component.nodes[rootname].level;
-        }
-    },
+        retrieve_counter = 0;
 
-    layoutCalculation: function(){
-        var allWidth = this.imageWidth;
-        var allHeight = this.imageHeight;
+        submitURL = "./submit?tasks=" + encodeURIComponent(JSON.stringify([para]));
+        jQuery.getJSON(submitURL).then(function (d) {
+            job_id = d[0].id;
+            show("loading_container");
+            document.getElementById("submit_status").innerHTML = "<br><br><br>Submitted successfully!";
 
-        allWidth.sort(function(a, b){return b-a});
-        allHeight.sort(function(a, b){return b-a});
-        var greatestWidth = allWidth[0];
-        var greatestHeight = allHeight[0];
+            setTimeout(retrieve, retrieve_interval)
+        })
+    }
 
-        // vertical space is the distance between 2 level
-        // horizontal space is the distance between the center of 2 image
-        var horizontalSpace, verticalSpace;
+    function retrieve(){
 
-        if (greatestWidth != undefined && greatestHeight != undefined ){
-            if ([2,4].includes(this.para.display.orientation)){
-                verticalSpace = greatestWidth * 1.3;
-                horizontalSpace = greatestHeight * 1.3 + 30; // Extra 35 is for the label
+        retrieve_counter += 1;
+
+        retrieveURL = "./retrieve?list_ids="+encodeURIComponent(JSON.stringify([job_id]));
+        jQuery.getJSON(retrieveURL).then(function (d) {
+
+            if (retrieve_counter > 5){
+                retrieve_interval = 3000;
             }
-            else{
-                horizontalSpace = greatestWidth * 1.05;
-                verticalSpace = greatestHeight * 1.3 + 30; // Extra 35 is for the label
-            }
-        }
-        else{
-
-            verticalSpace = 220;
-            horizontalSpace = 400;
-        }
-
-        // console.log(greatestHeight, greatestWidth);
-        // console.log(verticalSpace, horizontalSpace);
-
-        this.verticalSpace = verticalSpace;
-        this.horizontalSpace = horizontalSpace;
-    },
-
-    visOptionGenerate: function(){
-        var thisLib = this;
-        var option_template = {
-            layout: {
-                hierarchical: {
-                    direction: 'UD',
-                    enabled: true,
-                    levelSeparation: thisLib.verticalSpace, // the default value is 150
-                    nodeSpacing: thisLib.horizontalSpace // might be affected by physics engine, default value 100
-                }
-            },
-            manipulation: {
-                enabled: false,
-                initiallyActive: true,
-                addNode: false,
-                addEdge:  function(edgeData,callback) {
-                    console.log(JSON.stringify(edgeData,null,4));
-                    var lvl = nodes._data[edgeData.from].level;
-                    Object.values(edges._data).forEach(function (e) {
-                        if ((e.to == edgeData.to) && (e.id != edgeData.id)) {
-                            if (nodes._data[e.from].level > lvl) {
-                                lvl = nodes._data[e.from].level;
-                            }
-                        }
-                    });
-                    nodes._data[edgeData.to].level = (lvl + 1);
-                    callback(edgeData);
-                    forceredraw(false);
-                },
-                editEdge: function(edgeData,callback) {
-                    console.log(JSON.stringify(edgeData,null,4));
-                    var lvl = nodes._data[edgeData.from].level;
-                    Object.values(edges._data).forEach(function (e) {
-                        if ((e.to == edgeData.to) && (e.id != edgeData.id)) {
-                            if (nodes._data[e.from].level > lvl) {
-                                lvl = nodes._data[e.from].level;
-                            }
-                        }
-                    });
-                    nodes._data[edgeData.to].level = (lvl + 1);
-                    callback(edgeData);
-                    forceredraw(false);
-                },
-                deleteEdge: function(edgeData,callback){
-                    callback(edgeData);
-                    forceredraw(false);
-                }
-            },
-            physics: {
-                enabled: false,
-                hierarchicalRepulsion: {
-                    springConstant: 0.3,
-                    nodeDistance: thisLib.horizontalSpace
-                }
-            },
-            interaction: {
-                dragNodes: true,
-            },
-            nodes: {
-                borderWidth: 2,
-                borderWidthSelected: 2,
-                chosen: true,
-                color: {
-                    border: '#FFFFFF',
-                    background: '#FFFFFF',
-                    highlight: {
-                        border: '#2B7CE9',
-                        background: '#FFFFFF'
-                    },
-                    hover: {
-                        border: '#2B7CE9',
-                        background: '#FFFFFF'
-                    }
-                }
-            }
-        };
-
-
-        var orientationDict = {1:"UD", 2:"LR", 3:"DU", 4:"RL"};
-        var orientationValue = orientationDict[this.para.display.orientation];
-        option_template.layout.hierarchical.direction = orientationValue;
-
-        return option_template
-    },
-
-    createNodeAndEdges: function(){
-        var thisLib = this;
-        var component = this.component;
-        var rootlevel = this.rootlevel;
-        var displaynodes = this.displaynodes;
-
-        var nodes = new vis.DataSet();
-        Object.keys(component.nodes).forEach(function (k) {
-            var d = component.nodes[k];
-            //d.id = d.id;
-            //d.label = d.label;
-            d.level -= rootlevel;
-            d.shape = 'image';
-
-            d.id = d.name;
-
-            if (d.label){}
-            else{
-                d.label = d.name;
+            else if (retrieve_counter > 10) {
+                retrieve_interval = 5000;
             }
 
-            d.borderColor = "#FFFFFF";
-            d.shapeProperties = {
-                useBorderWithImage: true,
-                useImageSize: true
-            };
-
-            d.image = d.imageURL;
-
-            //d.brokenImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII";
-
-            if (d.name == "Pseudo"){
-                d.label = "";
-                d.hidden = true;
-            }
+            let dotnum = retrieve_counter % 3 + 1;
+            let dotstr = ".".repeat(dotnum);
+            document.getElementById("submit_status").innerHTML = "<br><br><br>Searching your glycan sequence" + dotstr;
+            document.getElementById("loading").innerHTML = "The page refreshes every " + parseInt(retrieve_interval/1000) + "s.<br>" +
+                            "Please wait.";
 
 
-            if (displaynodes[k] != 1) {
-                // d.hidden = true;
-            } else {
-                // d.hidden = false;
-                if (d.name != "Pseudo"){
-                    nodes.update(d);
-                }
-            }
-        });
-
-        var edges = new vis.DataSet();
-        Object.keys(component.edges).forEach(function (k) {
-            component.edges[k].forEach(function(e) {
-                if (k == "Pseudo"){
-                    e.hidden = true;
-                }
-                e.arrows = 'middle';
-                if (e.type == 'equals') {
-                    e.color = {color:'red'};
-                } else if (e.type == 'contains') {
-                    e.color = {color: 'blue'};
-                }else{
-                    e.color = {};
-                }
-                if ((e.to in displaynodes) && (e.from in displaynodes)){
-                    if (k != "Pseudo"){
-                        edges.update(e);
-                    }
-
-                }
-            });
-        });
-
-        this.nodes = nodes;
-        this.edges = edges;
-
-        // create a data set for network
-        var data = {
-            nodes: nodes,
-            edges: edges
-        };
-
-        return data
-    },
-
-    forceRedraw: function(init){
-        var thisLib = this;
-        thisLib.network.setData(thisLib.data);
-        function drawNavi(){
-            if (init){
-                thisLib.network.fit(thisLib.naviInitial());
-            }
-            else {
-                thisLib.naviInitial();
-            }
-        }
-        function temp(){
-            setTimeout(drawNavi,50);
-        }
-        if (thisLib.para.display.enableNavi ){
-            thisLib.network.once('afterDrawing', temp, false);
-        }
-    },
-
-
-    // *********************************************************
-    // ******* Function for interacting with the canvas ********
-    // *********************************************************
-
-    doubleClickEvent: function(){
-        var thisLib = this;
-
-        thisLib.network.on("doubleClick", function (clickData) {
-            zoomWhenDoubleClicked(clickData, thisLib.para)
-        });
-        function zoomWhenDoubleClicked(data, para) {
-            var selectnode = data.nodes;
-
-            if (selectnode.length>0){
-                if (!selectnode[0].includes("dot")){
-                    //para.cbtn.showLower(selectnode[0], true);
-                    rendering(selectnode[0])
-                }
-            }
-        }
-    },
-
-    doubleClickEventOld: function(){
-        var thisLib = this;
-
-        thisLib.network.on("doubleClick",zoomWhenDoubleClicked);
-        function zoomWhenDoubleClicked(data){
-            var selectnode = data.nodes;
-            var connectednode = [];
-            if (selectnode.length > 0){
-                connectednode = thisLib.network.getConnectedNodes(selectnode);
-                connectednode.push(selectnode);
-            }
-
-            if (connectednode.length > 1) {
-                thisLib.network.fit({
-                    nodes: connectednode,
-                    animation: true
-                });
-            }
-
-            function w1() {
-                thisLib.whereAmI();
-            }
-            setTimeout(w1,1500);
-        }
-
-        thisLib.network.on("doubleClick",highlightWhenDoubleClicked);
-        function highlightWhenDoubleClicked(data){
-            var selectnode = data.nodes;
-            if (selectnode == undefined){
-                selectnode = [];
-            }
-            if (selectnode.length > 0){
-                var highLightNodes = [];
-                selectnode.forEach(function(node){
-                    var connectedNodes = thisLib.network.getConnectedNodes(node);
-                    highLightNodes = highLightNodes.concat(connectedNodes);
-                    highLightNodes.push(node);
-                });
-
-                highLightNodes.forEach(function(nodeID){
-                    // Alternative way to highlight the node - Enlarge the node
-                    //nodes._data[nodeID].size = nodes._data[nodeID].size * 1.5;
-                });
-
-                thisLib.network.selectNodes(highLightNodes);
-
-                //forceredraw(false);
-
-            }
-        }
-    },
-
-    defaultContextMenu: function(){
-        var thisLib = this;
-        // Context menu, pop-up when you right click
-        // The default context menu give you to chance to change to sub graph view
-        thisLib.div_network.addEventListener("contextmenu",rightClickMenuGenerator,false);
-
-        function rightClickMenuGenerator(clickData){
-            //console.log(clickData);
-            document.addEventListener("click",clearEverythingInContextMenu,{once: true});
-
-            // boolDisplayAll = true;
-
-            var menuELE = thisLib.div_contextMenu;
-            var menuList = document.createElement("dl");
-
-            clearEverythingInContextMenu();
-            //var x = clickData.pointer.DOM.x;
-            //var y = clickData.pointer.DOM.y;
-            var x = clickData.layerX;
-            var y = clickData.layerY;
-            clickData.preventDefault();
-
-            var root = thisLib.rootname;
-            //var selectedNodes = thisLib.network.getSelectedNodes();
-            var selectedNode = thisLib.network.getNodeAt({x:x,y:y});
-            var selectedNodes = [ selectedNode ];
-            var connectedNodes = [];
-
-            //updateList("Close Menu","dt");
-            menuELE.style = "margin: 0; padding: 0; overflow: hidden; position: absolute; left: "+x+"px; top: "+y+"px; background-color: #333333; border: none; ";//width: 100px; height: 100px
-
-            updateList("Jump to Composition:", "dt");
-            updateList(root, "dd");
-
-            if (selectedNode !== undefined){
-                selectedNodes.forEach(function(nodeID){
-                    var c0 = thisLib.network.getConnectedNodes(nodeID);
-                    connectedNodes = connectedNodes.concat(c0);
-                });
-
-                updateList("Jump to Selected Nodes:","dt");
-                selectedNodes.forEach(function(nodeID){
-                    updateList(nodeID,"dd");
-                });
-
-                if (connectedNodes.length > 0){
-                    updateList("Jump to Connected Nodes:","dt");
-                    connectedNodes.forEach(function(nodeID){
-                        updateList(nodeID,"dd");
-                    });
-                }
-            }
-
-            menuELE.appendChild(menuList);
-
-            function updateList(id,DOMType){
-                // dds are used to call functions
-                // dts are just descriptive words
-
-                var entry = document.createElement(DOMType);
-                entry.style = "display: block; color: white; text-align: left; padding: 5px; text-decoration: none;";
-                entry.onmouseover = function(d){
-                    entry.style = "display: block; color: white; text-align: left; padding: 5px; text-decoration: none; background-color: #111111";
-                };
-                entry.onmouseout = function(d){
-                    entry.style = "display: block; color: white; text-align: left; padding: 5px; text-decoration: none; background-color: #333333";
-                };
-                entry.innerHTML = id;
-                if(id == "Close Menu"){
-                    entry.onclick = function(){
-                        clearEverythingInContextMenu();
-                    }
-                }
-                else if (DOMType == "dd"){
-                    entry.onclick = function(){
-                        var para = thisLib.para;
-                        para.essentials.viewRoot = id;
-                        thisLib.init(para)
-                    }
-                }
-                menuList.appendChild(entry);
-                return 0;
-
-            }
-
-
-        }
-
-        function clearEverythingInContextMenu(){
-            //console.log("closing");
-            var menuELE = thisLib.div_contextMenu;
-            while (menuELE.firstChild){
-                menuELE.removeChild(menuELE.firstChild);
-            }
-            menuELE.style = "";
-        }
-    },
-
-    customizedContextMenu: function(){
-        var thisLib = this;
-        // Context menu, pop-up when you right click
-        // The default context menu give you to chance to change to sub graph view
-        thisLib.div_network.addEventListener("contextmenu", function (clickData){
-            rightClickMenuGenerator(clickData, thisLib.para);
-        }, false);
-
-        function CreateEntry() {
-            var entry = document.createElement("dt");
-            entry.style = "cursor: default; display: block; color: white; text-align: left; padding: 5px; text-decoration: none;";
-            entry.onmouseover = function(d){
-                this.style = "cursor: default; display: block; color: white; text-align: left; padding: 5px; text-decoration: none; background-color: #111111";
-            };
-            entry.onmouseout = function(d){
-                this.style = "cursor: default; display: block; color: white; text-align: left; padding: 5px; text-decoration: none; background-color: #333333";
-            };
-            return entry
-        }
-
-        function ToClipBoard(str) {
-            const el = document.createElement('textarea');
-            el.value = str;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-        }
-
-        function rightClickMenuGenerator(clickData, para){
-            //console.log(clickData);
-            document.addEventListener("click",clearEverythingInContextMenu,{once: true});
-
-            var menuELE = thisLib.div_contextMenu;
-            var menuList = document.createElement("dl");
-
-            clearEverythingInContextMenu();
-
-            var x = clickData.layerX;
-            var y = clickData.layerY;
-            clickData.preventDefault();
-            menuELE.style = "margin: 0; padding: 0; overflow: hidden; position: absolute; left: "+x+"px; top: "+y+"px; background-color: #333333; border: none; ";//width: 100px; height: 100px
-
-
-            var selectedNode = thisLib.network.getNodeAt({x:x,y:y});
-            if (selectedNode !== undefined && selectedNode !== "Topology" && !selectedNode.startsWith("fake") && !selectedNode.endsWith("3dots")){
-
-            }else{
+            if (!d[0].finished){
+                setTimeout(retrieve, retrieve_interval)
                 return
             }
 
-            var pureGTCre = /^G\d{5}\w{2}$/;
-            var pureGTCres = selectedNode.match(pureGTCre);
-            if (Array.isArray(pureGTCres) && pureGTCres.length == 1){
-                var entry = CreateEntry();
-                entry.innerHTML = "Copy accession"; //change the description
-                entry.name = selectedNode;
+            retrieve_result = d[0];
+            renderResult();
 
-                entry.onclick = function(){
-                    ToClipBoard(this.name);
-                };
-                menuList.appendChild(entry);
-            }
-
-            var things = [
-                ["ancestors", thisLib.para.GNOmeBrowser.GetAncestorsForCopy(selectedNode)],
-                ["descendants", thisLib.para.GNOmeBrowser.GetDescendantsForCopy(selectedNode)]
-            ];
-
-            for (var thing of things){
-                var title = thing[0];
-                var targets = thing[1];
-
-                if (targets.length > 1){
-                    var entry = CreateEntry();
-                    entry.innerHTML = "Copy "+title;
-
-                    var strx = "";
-                    for (var x of targets){
-                        strx += x + "\n";
-                    }
-                    entry.name = strx;
-
-                    entry.onclick = function(){
-                        ToClipBoard(this.name);
-                    };
-                    menuList.appendChild(entry);
-                }
-            }
-
-
-            var nojumpflag = true;
-            var externalLinks = para["contextMenu"]["externalLinks"];
-            for (var externalLink of externalLinks){
-                var title = externalLink["name"] || "";
-                var prefix = externalLink["url_prefix"] || "";
-                var suffix = externalLink["url_suffix"] || "";
-                var accs = externalLink["glycan_set"];
-
-                var entry = CreateEntry();
-                entry.innerHTML = "&nbsp&#x2192;&nbsp" + title; //change the description
-                entry.name = selectedNode;
-                entry.setAttribute("data-prefix", prefix);
-                entry.setAttribute("data-suffix", suffix);
-
-                entry.onclick = function(){
-                    var nodeID = this.name;
-                    var pre = this.getAttribute("data-prefix");
-                    var suf = this.getAttribute("data-suffix");
-                    var externalURL = pre + nodeID + suf;
-                    window.open(externalURL);
-                };
-
-                var existFlag = false;
-                if (accs == undefined){
-                    existFlag = true;
-                }
-                else if (accs.includes(selectedNode)){
-                    existFlag = true;
-                }
-
-                if (existFlag){
-                    nojumpflag = false;
-                    menuList.appendChild(entry);
-                }
-            }
-
-            menuELE.appendChild(menuList);
-
-        }
-
-        function clearEverythingInContextMenu(){
-            //console.log("closing");
-            var menuELE = thisLib.div_contextMenu;
-            while (menuELE.firstChild){
-                menuELE.removeChild(menuELE.firstChild);
-            }
-            menuELE.style = "";
-        }
-
-    },
-
-    // *********************************************************
-    // ******************* Mini Map Function *******************
-    // *********************************************************
-
-    // The "global variables" for Mini-map are declared here
-    fitScale : 0,
-    fitPos : 0,
-    rectPointer : 0,
-    naviWindowWidth : 0,
-    naviWindowHeight : 0,
-
-    naviInitial : function (){
-        var thisLib = this;
-        var currentScale = this.network.getScale();
-        var currentPos = this.network.getViewPosition();
-
-        while(thisLib.div_navi.firstChild){
-            thisLib.div_navi.remove(thisLib.div_navi.firstChild)
-        }
-
-        var css = thisLib.naviWindowPos() + " background-color: #f2ffff; height: "+ thisLib.naviWindowHeight + "px; width: " + thisLib.naviWindowWidth + "px;";
-        thisLib.div_navi.style = css;
-
-        var naviNetworkContainer = document.createElement("div");
-        naviNetworkContainer.style = "position: absolute; border: 1px solid lightgray; height: 100%; width: 100%";
-
-        thisLib.div_navi.appendChild(naviNetworkContainer);
-        var naviNetwork = new vis.Network(naviNetworkContainer);
-        var data, nodes, edges, options;
-        data = thisLib.data;
-        options = thisLib.options;
-        naviNetwork.setOptions(options);
-        naviNetwork.setData(data);
-        thisLib.network.selectNodes(thisLib.para.essentials.highLightedNodes);
-
-        thisLib.naviNetwork = naviNetwork;
-
-
-        thisLib.rectPointer = document.createElement("canvas");
-        thisLib.rectPointer.setAttribute("style","position: absolute; border: 1px solid lightgray;"); // border: 1px solid lightgray
-        thisLib.rectPointer.setAttribute("width",thisLib.naviWindowWidth);
-        thisLib.rectPointer.setAttribute("height",thisLib.naviWindowHeight);
-        thisLib.rectPointer.setAttribute("id","glycanviewer_rect");
-
-        thisLib.div_navi.appendChild(thisLib.rectPointer);
-
-        thisLib.fitScale = thisLib.network.getScale();
-        thisLib.fitPos = thisLib.network.getViewPosition();
-
-        thisLib.whereAmI();
-
-
-        //this.network.fit(capture());
-
-
-        thisLib.naviNetwork.moveTo({
-            position: {x:currentPos.x, y:currentPos.y},
-            scale: currentScale * thisLib.para.display.naviOption.size * 0.95,
-            offset: {x:0, y:0}
-        });
-
-        function capture(){
-            var networkCanvas = thisLib.div_network.getElementsByTagName("canvas")[0];
-            var image,
-                dataURI = networkCanvas.toDataURL();
-            thisLib.naviWindowSizeCalc();
-            image = document.createElement('img');
-            image.src = dataURI;
-            image.width = thisLib.naviWindowWidth;
-            image.height = thisLib.naviWindowHeight;
-            image.setAttribute("style","position: absolute; background-color: #f2ffff; border: 1px solid lightgray;"); // border: 1px solid lightgray
-
-            var navi = thisLib.div_navi;
-            navi.setAttribute("style",thisLib.naviWindowPos());
-            while (navi.childElementCount > 0) {
-                navi.removeChild(navi.children[0]);
-            }
-            navi.appendChild(image);
-
-            thisLib.rectPointer = document.createElement("canvas");
-            thisLib.rectPointer.setAttribute("style","position: absolute; border: 1px solid lightgray;"); // border: 1px solid lightgray
-            thisLib.rectPointer.setAttribute("width",thisLib.naviWindowWidth);
-            thisLib.rectPointer.setAttribute("height",thisLib.naviWindowHeight);
-            thisLib.rectPointer.setAttribute("id","glycanviewer_rect");
-
-            navi.appendChild(thisLib.rectPointer);
-            thisLib.fitScale = thisLib.network.getScale();
-            thisLib.fitPos = thisLib.network.getViewPosition();
-            moveBack();
-
-        }
-
-        function moveBack(){
-            thisLib.network.moveTo(
-                {
-                    position: {x:0, y:0},
-                    scale: currentScale,
-                    offset: {x:0, y:0}
-                },thisLib.whereAmI()
-            );
-            //console.log(currentPos);
-            return 0;
-        }
-    },
-
-    naviRefresh: function (movedNodes){
-
-        var thisLib = this;
-        var data = thisLib.createNodeAndEdges();
-
-        thisLib.naviNetwork.setData(data);
-        var pos =thisLib.network.getPositions();
-
-        for (var id in pos){
-            var x = pos[id]["x"];
-            var y = pos[id]["y"];
-            data.nodes.update([{id: id, x: x, y: y}]);
-        }
-
-        thisLib.naviNetwork.moveTo({
-            position: {x:0, y:0},
-            scale: 0.95 * thisLib.para.display.naviOption.size * thisLib.fitScale,
-            offset: {x:0, y:0}
-        });
-
-    },
-
-    whereAmI : function (){
-        var thisLib = this;
-
-        function wrapper1(x){
-            //console.log(x.nodes);
-            if (x.nodes.length>0){
-                //thisLib.naviRefresh(x.nodes);
-            }
-        }
-
-        working();
-        //thisLib.div_network.eventListeners = null;
-        thisLib.div_network.addEventListener('click', working);
-        thisLib.div_network.addEventListener('wheel', working);
-        thisLib.div_network.addEventListener('touchend', working);
-        thisLib.network.on("dragEnd", wrapper1);
-
-        function working(){
-            var ctx = thisLib.rectPointer.getContext("2d");
-            ctx.clearRect(0, 0, thisLib.rectPointer.width, thisLib.rectPointer.height);
-            ctx.beginPath();
-
-            var rectWidth, rectHeight, rectRatio, dx, dy;
-            var canvas2thumbnailScale;
-            var currentScale = thisLib.network.getScale();
-            var currentPos = thisLib.network.getViewPosition();
-
-            rectRatio = thisLib.fitScale / currentScale;
-            rectWidth = thisLib.naviWindowWidth * rectRatio;
-            rectHeight = thisLib.naviWindowHeight * rectRatio;
-
-            var networkCanvas = thisLib.div_network.getElementsByTagName("canvas")[0];
-            canvas2thumbnailScale = thisLib.naviWindowWidth / networkCanvas.width;
-
-            dx = (currentPos.x - thisLib.fitPos.x)*thisLib.fitScale*canvas2thumbnailScale - 0.5*(rectWidth - thisLib.naviWindowWidth);
-            dy = (currentPos.y - thisLib.fitPos.y)*thisLib.fitScale*canvas2thumbnailScale - 0.5*(rectHeight - thisLib.naviWindowHeight);
-
-            // Consider page zooming issue
-            // Not sure whether it will work with browser other than chrome
-            var wholePageZoomLevel = thisLib.getZoomLevel();
-
-            // This formula is use to compensate for window scale
-            dx = (currentPos.x - thisLib.fitPos.x)*thisLib.fitScale*canvas2thumbnailScale * wholePageZoomLevel - 0.5*(rectWidth - thisLib.naviWindowWidth);
-            dy = (currentPos.y - thisLib.fitPos.y)*thisLib.fitScale*canvas2thumbnailScale * wholePageZoomLevel - 0.5*(rectHeight - thisLib.naviWindowHeight);
-
-            // complement the whole rectangle
-            var x1, x2, y1, y2;
-            x1 = (dx > 0)&&(dx < thisLib.naviWindowWidth);
-            x2 = (dx+rectWidth > 0)&&(dx+rectWidth < thisLib.naviWindowWidth);
-            y1 = (dy > 0)&&(dy < thisLib.naviWindowHeight);
-            y2 = (dy+rectHeight > 0)&&(dy+rectHeight < thisLib.naviWindowHeight);
-
-            // console.log([dx,dy]);
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = "orange";
-            ctx.rect(dx,dy,rectWidth,rectHeight);
-            if (!x1){ctx.rect(1,dy,0,rectHeight);}
-            if (!x2){ctx.rect(thisLib.naviWindowWidth - 1,dy,0,rectHeight);}
-            if (!y1){ctx.rect(dx,1,rectWidth,0);}
-            if (!y2){ctx.rect(dx,thisLib.naviWindowHeight - 1,rectWidth,0);}
-            ctx.stroke();
-        }
-
-    },
-
-    naviWindowSizeCalc : function (){
-        var networkCanvas = this.div_network.getElementsByTagName("canvas")[0];
-        var percentage = this.para.display.naviOption.size;
-        var devicePixelRatio = window.devicePixelRatio;
-        var w1 = Math.round(networkCanvas.width * percentage / devicePixelRatio);
-        var h1 = Math.round(networkCanvas.height * percentage / devicePixelRatio);
-
-        this.naviWindowWidth = w1;
-        this.naviWindowHeight = h1;
-
-        return 0;
-    },
-
-    getZoomLevel : function () {
-        var level = this.div_network.getElementsByTagName("canvas")[0].width / this.div_root.clientWidth;
-        return level
-    },
-
-    naviWindowPos : function (){
-        this.naviWindowSizeCalc();
-        var h = this.naviWindowHeight;
-        var w = this.naviWindowWidth;
-        var pos = this.para.display.naviOption.position;
-
-        var tl2t = 0,
-            tl2b = 0,
-            tl2r = 0,
-            tl2l = 0;
-        var css = "position: absolute; ";
-
-        if (pos == 1 || pos == 3){
-            tl2l = w / 10;
-            css += "left: "+tl2l+"px; "
-        }
-
-        if (pos == 2 || pos == 4){
-            //tl2r = this.div_root.clientWidth - w * 1.1;
-            tl2r = w / 10;
-            css += "right: "+tl2r+"px; "
-        }
-
-        if (pos == 1 || pos == 2){
-            tl2t = h / 10;
-            css += "top: "+ tl2t +"px; "
-        }
-
-        if (pos == 3 || pos == 4){
-            tl2b = h / 10;
-            if (this.para.display.enableTitle)
-            {
-                tl2b = tl2b + 27;
-            }
-            css += "bottom: "+tl2b+"px; "
-        }
-        return css;
-    },
-
-    // *********************************************************
-    // ******************* Helper  Function ********************
-    // *********************************************************
-
-    // *********************************************************
-    // ********************** IE Related ***********************
-    // *********************************************************
-
-    IEQuestionMark : function(){
-        var ua = window.navigator.userAgent;
-        var msie = ua.indexOf("MSIE ");
-
-        return (msie > 0 || !!navigator.userAgent.match(/Trident.*rv\:11\./))
-    },
-
-    compatibleDraw : function(para){
-        var component = para.essentials.component;
-
-        var rootname = component.root;
-        var topoonly = para.essentials.topoOnly;
-
-        if (para.essentials.viewRoot){
-            rootname = para.essentials.viewRoot;
-        }
-        recomputeLevels(component);
-
-        function recomputeLevels(component) {
-            var toexplore = [ component.root ];
-            var r;
-            while (true) {
-                if (toexplore.length == 0) {
-                    break;
-                }
-                r = toexplore.pop();
-                var rlevel = component.nodes[r].level;
-                if (r in component.edges) {
-                    component.edges[r].forEach(function(e) {
-                        if (component.nodes[e.to].level < (rlevel+1)) {
-                            component.nodes[e.to].level = (rlevel+1);
-                        }
-                        toexplore.push(e.to);
-                    });
-                }
-            }
-        }
-
-        // Loading the title
-        var div_root = document.getElementById(para.essentials.div_ID);
-        while(div_root.firstChild){
-            div_root.removeChild(div_root.firstChild);
-        }
-        var id = para.essentials.div_ID + "_glycanviewer_";
-
-        var networkContainer = document.createElement("div");
-        networkContainer.id = id+"networkContainer";
-        networkContainer.setAttribute("style","width: 100%; height: 90%;position: relative; left: 0; top: 0;");
-        var header = document.createElement("h2");
-        header.innerHTML = "For better user experience and new features, Please Please Please use modern browsers";
-
-        div_root.appendChild(header);
-        div_root.appendChild(networkContainer);
-
-        var network = new vis.Network(networkContainer);
-
-        var displaynodes = {};
-        var toexplore = [ rootname ];
-        var parentnode;
-        var rootlevel = component.nodes[rootname].level;
-
-        while (true) {
-            if (toexplore.length == 0) {
-                break;
-            }
-            var r = toexplore.pop();
-            if (topoonly) {
-                if (component.nodes[r].type != 'Saccharide') {
-                    displaynodes[r] = 1;
-                }
-            } else {
-                displaynodes[r] = 1;
-            }
-            Object.keys(component.edges).forEach(function (k) {
-                component.edges[k].forEach(function(e) {
-                    if (e.from == r) {
-                        toexplore.push(e.to);
-                    }
-                    if (e.to == rootname) {
-                        parentnode = e.from;
-                    }
-                })
-            });
-        }
-
-
-        // Calculate the nodeSpace and height scale ratio
-        var nodeImageScaleRatioComparedToDefaultSetting = 2.0, // It means how many fold larger do you want your node to present
-            nodeHorizotalSpaceRatio = 0.95;
-        // How many ford larger do you want the node space to be. 1 means just no overlap
-        var allWidth = [],
-            allHeight = [];
-        var greatestWidth = 0,
-            greatestHeight = 0;
-        var verticalSpace = 150,
-            horizontalSpace = 150; //those 2 values are default value
-
-        Object.keys(component.nodes).forEach(function (k) {
-            var d = component.nodes[k];
-            if (displaynodes[k] == 1) {
-                allWidth.push(d.width);
-                allHeight.push(d.height);
-            }
-        });
-
-        allWidth.sort(function(a, b){return b-a});
-        allHeight.sort(function(a, b){return b-a});
-        greatestWidth = allWidth[0];
-        greatestHeight = allHeight[0];
-
-        var magicNumberForHeightScaleRatio = greatestHeight/nodeImageScaleRatioComparedToDefaultSetting/25;
-        horizontalSpace = 25 * nodeImageScaleRatioComparedToDefaultSetting / greatestHeight * greatestWidth * nodeHorizotalSpaceRatio *2;
-
-        var nodes = new vis.DataSet();
-        Object.keys(component.nodes).forEach(function (k) {
-            var d = component.nodes[k];
-            d.id = d.name;
-            d.level -= rootlevel;
-            d.shape = 'image';
-            //d.image = "https://glytoucan.org/glycans/"+d.name+"/image?style=extended&format=png&notation=cfg";
-            d.image = para.essentials.imgURL + d.name + '.png';
-
-            d.size = d.height / magicNumberForHeightScaleRatio;
-            d.labelHighlightBold = true;
-
-
-            if (displaynodes[k] != 1) {
-                d.hidden = true;
-            } else {
-                d.hidden = false;
-                nodes.update(d);
-            }
-        });
-
-
-        var edges = new vis.DataSet();
-        Object.keys(component.edges).forEach(function (k) {
-            component.edges[k].forEach(function(e) {
-                e.arrows = 'middle';
-                if (e.type == 'equals') {
-                    e.color = {color:'red'};
-                } else if (e.type == 'contains') {
-                    e.color = {color: 'blue'};
-                }
-                edges.update(e);
-            });
-        });
-
-        // create a network
-        var data = {
-            nodes: nodes,
-            edges: edges
-        };
-        var options = {
-            layout: {
-                hierarchical: {
-                    direction: 'UD',
-                    enabled: true,
-                    levelSeparation: verticalSpace, // the default value is 150
-                    nodeSpacing: horizontalSpace // might be affected by physics engine, default value 100
-                }
-            }
-        };
-
-        network.setOptions(options);
-        network.setData(data);
-        network.fit()
+        })
 
     }
 
-};
-    SubsumptionNavigatorController = jQuery.extend({}, glycanviewer);
-    let SubsumptionData;
-    let EqTranslation;
-    let ImageBase64Str;
+    function renderResult(){
+        show("result_container");
 
-    function getDecedents(acc){
-        let seen = [];
-        let todo = [acc];
-        let counter = 0;
+        let result = retrieve_result.result;
+        let error = retrieve_result.error;
+        let stat = retrieve_result.stat;
 
-        while (todo.length > 0){
-            let x = todo.pop();
-            if (SubsumptionData[x]){
-                for (let xx of SubsumptionData[x]){
-                    if (!seen.includes(xx)){
-                        seen.push(xx)
-                        counter += 1;
-                        todo.push(xx);
-                    }
-                }
-            }
+        let result_container_status = document.getElementById("result_container_status");
+        let result_container_stat = document.getElementById("result_container_stat");
+        let result_container_additional = document.getElementById("result_container_additional");
 
-        }
+        result_container_status.innerHTML = "";
+        result_container_stat.innerHTML = "";
+        result_container_additional.innerHTML = "";
 
-        return counter
-    }
+        let stat_table = "" +
+            "<table style='width: 100%; border: black solid 3px; font-size: 20px;'>" +
+            "<tr style='height: 32px; background-color: lightgrey'><td>Webservice Request</td><td><a onclick='RenderJSON(\""+submitURL+"\")'>Click me!</a></td></tr>" +
+            "<tr style='height: 32px; background-color: grey'><td>Webservice Response</td><td><a onclick='RenderJSON(\""+retrieveURL+"\")'>Click me!</a></td></tr>" +
+            "<tr style='height: 32px; background-color: lightgrey'><td>Compute time</td><td>"+stat.runtime.toFixed(2)+"s</td></tr>" +
+            "<tr style='height: 32px; background-color: grey'><td>Cached</td><td>"+stat.cached+"</td></tr>" +
+            "</table>";
 
-    function rendering(acc){
-        let component = {};
-        let parent = [];
+        result_container_stat.innerHTML += stat_table;
 
-        // console.log(SubsumptionData);
-        for (let p of Object.keys(SubsumptionData)){
-            let tmpx = SubsumptionData[p];
-
-            if (tmpx.includes(acc)){
-                parent.push(p);
-            }
-        }
-
-        let children = SubsumptionData[acc];
-        if (children == undefined){
-            children = [];
-        }
-
-        let allNodes = parent.concat(children);
-        allNodes.push(acc);
-        allNodes.push("Pseudo");
-
-        let nodes = {};
-        for (let n of allNodes){
-            nodes[n] = {"name": n};
-            if (n == "Pseudo"){
-                nodes[n].type = "Pseudo";
-                nodes[n].hidden = true;
-            }else{
-                nodes[n].type = SubsumptionData[n].SubsumptionLevel;
-            }
-            if (n.startsWith("Query_")){
-                console.log(EqTranslation[n]);
-                if (Object.keys(EqTranslation).includes(n)){
-                    nodes[n].alternativeImageURL = "https://image.glycosmos.org/snfg/png/" + EqTranslation[n];
-                }
-                else if (Object.keys(ImageBase64Str).includes(n)){
-                    nodes[n].alternativeImageURL = ImageBase64Str[n];
-                }
-                else{
-                   nodes[n].alternativeImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEIAAABCCAMAAADUivDaAAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAK7OHOkAAALiUExURQAAAKanpaanpKanpaqqqqanpaOjo6WnpP///6WlpaqqqqqqqqampqWnpKWmpJ+fn6WmpaWmpKWmpLKymba2tqWmpKWlpaWnpaWmpL+/v6WmpKWmpKWnpKWmpKanpaWlpaWlpaWnpaqqoKKqoqWmpaWmpaWmpKWmpKWnpaampKWnpaampaKioqampaanpaKqoqampaWopaWnpaampKanpaamo6anpaenp6enpKWnpaSkpKenp6ampH9/f6WmpKWopaampKiooqqqqqampqWmpKOqo6anpaenp6Wlpaenp6WnpKWnpZmZmaampaampqampKWmpaOjo6anpaSopKampKWnpaSopKampKampKampqWnpaampKanpaWlpaGhoaWnpKanpaampKampqWlpaampKWlpaampKampaOjo6ampKWlpaqqqqampKWmpaWnpKWnpaampqWmpaWmpaanpKampKWmpaWnpKWnpaWmpePj46anpWRkZK+vr+Li4qenp3l5eYyMjOHh4dzc3KmqqIODg97e3paWlm9vb+Dg4Le3t9vb27+/v7y8u9jY2M7Ozp6enqipp6eopsbGxtra2tXV1cXFxKytrM3Ozb2+va6vrd/f383NzMfIx8XGxdrb2sHBwMjJyNnZ2d3d3bq7ub6/vs/PzsvLysfHxqqrqdXV1Le4t9LS0bKzscLCwdbX1rW2tc7PztXW1a6vrri5t6usqt3e3dvb2re3tq2urKytq8vMy7S0s5qamrCwr8/Pz7a3tcHCwcLDwqysq7KzstDQz6urqrGysMDAv7Cxr97f3tLT0oiIiLGxsLy8vNTV1LO0stPT0tbW1sTEw3t7e6GhodjZ2NPT05WVlbi5uL2+vNTU1KamptTU04uLi7u7usPDwpCQkLW2tLGyscPEw8nJycnJyM/Qz7i4t83NzW5ubra2tre4tr+/vrOzs4qKimdnZ9PU03x8fMbGxbOzsrS1tN3d3M0L7c8AAAB5dFJOUwDxstID+hy9ASIGD1no/BDh3PAKB/YRdeIE6v7L5/Q/SpQbJLzT2fuOlnqzFp/uIcFVfaTjVOYmXWwwKZMC1ltxLxVW+Sf9IDkjtIAF1TSezRngPo2XQZB8K3t/6TYTo+9ubWdoU2WqDoFkDHP11KAXyuSshYvRjNBxUKrdAAAEZElEQVQYGbXBU4BdVxiA0T+ciW0WSdpGtW3btu3/2+dy7JnYrps0SZukTW3btq337n0mczXn3Dvz0LXkf7XLrjd1vHnn0dBhx5E33LjTtdI+ncdOHkW2EVefcmixtFW3rXoRqN+p+0tb7HHOBDI0kWn0VptLIX02O5hmJfcvvK2uLKFauW7V7K/va6TZoG26S1779ML3wOI1Ec2SeOnDEnzjx0i4AZPx3ftdRAMkbl+L03v7zhKi2zicV+7RMJH5s3CKBkug3UdhlSyIaB6VTzRhjdtcApzQAeur6VrAa7Owjt9CWtmvP9achKZ5Xsw4Mc/TDC9uwOrXVXJsMRxrpqbMiJpMDfWaEqnF6tRDsgw4CutbTakyuaKatgJrYrFkOgZrpqaUm9biSU2pxRoiGXpirdCUBhOkVFMiXwJdzpKUPmcC9ya0hWeaVXj1qpr0Sk2zck1Z9hTQ6UhpsTVQMl1bzKgwPk9bVJlmNZryBta+sslpvYEFmtJgfFWaVl9hnJimzQGmDJZmOwDPRbRFssI4Uc1UY3zTNKXsWeAy8R02AbhHU2qME0tqlgbjRDVtATDlCnFOBJ7WtKhxPM02wzhxTat8ALhcrGG9gGc0rdQ4MzRHqbFimmEhsK1YY4FZEU0zTqnmihsrphn+BUZMFZFrgJWaqcbzKso1V9xYMc20AbhSRHYG1mhhMWPFNdNGoEhkF6AkogXVGyeqmaqBq0R2BT7QwsqNU69Z5gIitwALtSDPOHHNVguIdARWayFVxjdNs90BiNwK1GkBnvFFNcdqQGQUUKb5RY0vrrnuAkRGAwnNq9z4SrWVOkAEaNK84sZXmtRWqgERLM0nbnxxDbAeEOkAVGq4cuNr0CB1gMj1wDINVWV8UQ30CSByHbBKwyQrjONpsNmAyA7AbA3jGadcQ8wERLYH3tIwpcaqSGqI5YDIdsDPGiJpnKiGeRAQ6QqURDRYjXGmaYj1QH8R6Qe8p8GqjJPUEEuAiSKyJ/CLBvOMo2H+Bi4UkZOBOxMayDNWTEMsBbpMEpG9hgK3ayDPWDENsRjoKM4RwNqItltZI3CROMcdCPyg7fYk0HeY+E4CZlVqOy1qBM6XZl0HASu1ne4G+g6UTU4Hmt7UAJFfH/m4ToPMx+opLQaOB+bO09Z+M8b8+Ji2Nr0EKCqWlDG9gccjmutV43yhrcx7AejfTTKcgVWruaLGeVtzJV7HOkAydS7Cel5z/GScTzVH4m6srSVbn05Yn0U0S+Wfxpjfp2m2eQ9jFXWXHF13xLqvTLNUv/Py+99otumPYo3sIa0cNBTrwT+0gPklWCPPlgCH7I0zp0zzWPQ9zpY9JNDgw3HuXJLQEGWfN+Js1l1CFA/pgvPQX+s0wKLFjTgdtpM8jj4WX9P9G6s1y9Il/9Bsy26SV+fdzmWTubV33HbX0urqdz+aPXP5Q2zSt2exFHLpNsMJNfS8gdIWAy7edgQBunTcaZi02dQhRYPIMvySCyZJkP8A2G1i90fLGXQAAAAASUVORK5CYII=";
-                }
-            }
-        }
-
-        let edges = {};
-        for (let n of parent){
-            let e = {};
-            e.from = n;
-            e.to = acc;
-            e.type = "contains";
-            edges[n] = [e];
-        }
-        let temp = [];
-        for (let n of children){
-            let e = {};
-            e.from = acc;
-            e.to = n;
-            e.type = "contains";
-            temp.push(e);
-        }
-        if (children.length > 0){
-            edges[acc] = temp;
-        }
-
-        let temp2 = [];
-
-        if(parent.length > 0){
-            for (let n of parent){
-                let e = {};
-                e.from = "Pseudo";
-                e.to = n;
-                e.type = "contains";
-                temp2.push(e);
-
-                let e2 = {};
-                e2.from = n;
-                e2.to = acc;
-                e2.type = "contains";
-                edges[n] = [e2];
-            }
-        }else{
-            let e = {};
-            e.from = "Pseudo";
-            e.to = acc;
-            e.type = "contains";
-            temp2.push(e);
-        }
-        edges["Pseudo"] = temp2;
-
-
-        for (let c of children){
-            var l = 0;
-            if (SubsumptionData[c]){
-                l = getDecedents(c)
-            }
-            if (l < 1){
-                continue;
-            }
-            let tridot_name = c + "3dots";
-            nodes[tridot_name] = {
-                "name": tridot_name,
-                "alternativeImageURL": "data:image/jpeg;base64,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QFkAAAAAAAAAAAAQY3JvcFdoZW5QcmludGluZ2Jvb2wAAAAADmNyb3BSZWN0Qm90dG9tbG9uZwAAAAAAAAAMY3JvcFJlY3RMZWZ0bG9uZwAAAAAAAAANY3JvcFJlY3RSaWdodGxvbmcAAAAAAAAAC2Nyb3BSZWN0VG9wbG9uZwAAAAAAOEJJTQPtAAAAAAAQAEgAAAABAAEASAAAAAEAAThCSU0EJgAAAAAADgAAAAAAAAAAAAA/gAAAOEJJTQQNAAAAAAAEAAAAWjhCSU0EGQAAAAAABAAAAB44QklNA/MAAAAAAAkAAAAAAAAAAAEAOEJJTScQAAAAAAAKAAEAAAAAAAAAAThCSU0D9QAAAAAASAAvZmYAAQBsZmYABgAAAAAAAQAvZmYAAQChmZoABgAAAAAAAQAyAAAAAQBaAAAABgAAAAAAAQA1AAAAAQAtAAAABgAAAAAAAThCSU0D+AAAAAAAcAAA/////////////////////////////wPoAAAAAP////////////////////////////8D6AAAAAD/////////////////////////////A+gAAAAA/////////////////////////////wPoAAA4QklNBAAAAAAAAAIAADhCSU0EAgAAAAAAAgAAOEJJTQQwAAAAAAABAQA4QklNBC0AAAAAAAYAAQAAAAU4QklNBAgAAAAAABAAAAABAAACQAAAAkAAAAAAOEJJTQQeAAAAAAAEAAAAADhCSU0EGgAAAAADSQAAAAYAAAAAAAAAAAAAAA8AAAAoAAAACgBVAG4AdABpAHQAbABlAGQALQAxAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAoAAAADwAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAABAAAAABAAAAAAAAbnVsbAAAAAIAAAAGYm91bmRzT2JqYwAAAAEAAAAAAABSY3QxAAAABAAAAABUb3AgbG9uZwAAAAAAAAAATGVmdGxvbmcAAAAAAAAAAEJ0b21sb25nAAAADwAAAABSZ2h0bG9uZwAAACgAAAAGc2xpY2VzVmxMcwAAAAFPYmpjAAAAAQAAAAAABXNsaWNlAAAAEgAAAAdzbGljZUlEbG9uZwAAAAAAAAAHZ3JvdXBJRGxvbmcAAAAA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bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIiB4bWxuczpzdEV2dD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL3NUeXBlL1Jlc291cmNlRXZlbnQjIiB4bWxuczpkYz0iaHR0cDovL3B1cmwub3JnL2RjL2VsZW1lbnRzLzEuMS8iIHhtbG5zOnBob3Rvc2hvcD0iaHR0cDovL25zLmFkb2JlLmNvbS9waG90b3Nob3AvMS4wLyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ0MgMjAxOSAoTWFjaW50b3NoKSIgeG1wOkNyZWF0ZURhdGU9IjIwMTktMTAtMjJUMjM6Mjk6MDMtMDQ6MDAiIHhtcDpNZXRhZGF0YURhdGU9IjIwMTktMTAtMjJUMjM6Mjk6MDMtMDQ6MDAiIHhtcDpNb2RpZnlEYXRlPSIyMDE5LTEwLTIyVDIzOjI5OjAzLTA0OjAwIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjFjYjdiYzRlLWY0YTUtNDY3NC1hODUzLWEwMmQ2OGI5MTdmNyIgeG1wTU06RG9jdW1lbnRJRD0iYWRvYmU6ZG9jaWQ6cGhvdG9zaG9wOmMzMmM4M2FiLTNlMTItNTk0My05ZWIyLTgxMWYwNTEzN2NhOCIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ4bXAuZGlkOjZhZmI2YmNhLWU1MjgtNGM3ZS1hNGFkLWU0MDdhY2Q0NDc4MyIgZGM6Zm9ybWF0PSJpbWFnZS9qcGVnIiBwaG90b3Nob3A6Q29sb3JNb2RlPSIzIj4gPHhtcE1NOkhpc3Rvcnk+IDxyZGY6U2VxPiA8cmRmOmxpIHN0RXZ0OmFjdGlvbj0iY3JlYXRlZCIgc3RFdnQ6aW5zdGFuY2VJRD0ieG1wLmlpZDo2YWZiNmJjYS1lNTI4LTRjN2UtYTRhZC1lNDA3YWNkNDQ3ODMiIHN0RXZ0OndoZW49IjIwMTktMTAtMjJUMjM6Mjk6MDMtMDQ6MDAiIHN0RXZ0OnNvZnR3YXJlQWdlbnQ9IkFkb2JlIFBob3Rvc2hvcCBDQyAyMDE5IChNYWNpbnRvc2gpIi8+IDxyZGY6bGkgc3RFdnQ6YWN0aW9uPSJzYXZlZCIgc3RFdnQ6aW5zdGFuY2VJRD0ieG1wLmlpZDoxY2I3YmM0ZS1mNGE1LTQ2NzQtYTg1My1hMDJkNjhiOTE3ZjciIHN0RXZ0OndoZW49IjIwMTktMTAtMjJUMjM6Mjk6MDMtMDQ6MDAiIHN0RXZ0OnNvZnR3YXJlQWdlbnQ9IkFkb2JlIFBob3Rvc2hvcCBDQyAyMDE5IChNYWNpbnRvc2gpIiBzdEV2dDpjaGFuZ2VkPSIvIi8+IDwvcmRmOlNlcT4gPC94bXBNTTpIaXN0b3J5PiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA8P3hwYWNrZXQgZW5kPSJ3Ij8+/+4ADkFkb2JlAGRAAAAAAf/bAIQAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgICAgICAwMDAwMDAwMDAwEBAQEBAQEBAQEBAgIBAgIDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD/8AAEQgADwAoAwERAAIRAQMRAf/dAAQABf/EAaIAAAAGAgMBAAAAAAAAAAAAAAcIBgUECQMKAgEACwEAAAYDAQEBAAAAAAAAAAAABgUEAwcCCAEJAAoLEAACAQMEAQMDAgMDAwIGCXUBAgMEEQUSBiEHEyIACDEUQTIjFQlRQhZhJDMXUnGBGGKRJUOhsfAmNHIKGcHRNSfhUzaC8ZKiRFRzRUY3R2MoVVZXGrLC0uLyZIN0k4Rlo7PD0+MpOGbzdSo5OkhJSlhZWmdoaWp2d3h5eoWGh4iJipSVlpeYmZqkpaanqKmqtLW2t7i5usTFxsfIycrU1dbX2Nna5OXm5+jp6vT19vf4+foRAAIBAwIEBAMFBAQEBgYFbQECAxEEIRIFMQYAIhNBUQcyYRRxCEKBI5EVUqFiFjMJsSTB0UNy8BfhgjQlklMYY0TxorImNRlUNkVkJwpzg5NGdMLS4vJVZXVWN4SFo7PD0+PzKRqUpLTE1OT0laW1xdXl9ShHV2Y4doaWprbG1ub2Z3eHl6e3x9fn90hYaHiImKi4yNjo+DlJWWl5iZmpucnZ6fkqOkpaanqKmqq6ytrq+v/aAAwDAQACEQMRAD8A3+PfuvdVIfDP+d//AC8Pnr8mO0Pid8c+18vuHtjrSmzuRphnNp5Hbu1+zcNtXJriN0ZrqrcFYzRboocFUyxSOk0dHU1NHJ93SxVFLFPNF7r3WLsL+eP/AC5esPnvt/8Alw7u7jr6P5FZ3Pbc2VNPBtXK1XWm3eyd5RUc20us9x79jAoKHeWe/ilHEiRxz0NNVVkdNVVNPUiSGP3Xunv+Yf8Azn/gd/K93r1F158rt/bow27+5IKjL4TC7J2bkN7Vu29m0mUjwtRv/elNjZY6nD7TOU80EDQpVV1bJSVIpaaY082j3XurWffuvdf/0N/j37r3Wsh/K5/l4fyEfjL8494d4/BH5g9S95/JTfuG39R7L6gxXy/6C7nXq3b+cnfMb3j6j6+6+FPvuOmosLTvRy1WWqs5UUWJEsfmQSTO/uvdNHdX8un/AIT7by/mu0Xy97R+YPTG3PmbiO59jZ7O/F+p+ZHQW29t7h+Q22KvC0u0qrdXSmSmHav9/azclBjZ5sLT5OjpcrkkX7ign+5qY6j3XuhU/nP/AAB/kq/Mvu/o7cX8x35ebE+L/d/XWxxBtjGT/Kzor4/7v7K6krt25SuxOM3Jgu3KTL5nMbIod30uaTH1+HjxtQlVVZCNatnUCH3XutjL37r3X//Z",
-                "label": "(" + l.toString() + ")"
-            };
-            edges[c] = [{
-                "from": c,
-                "to": tridot_name,
-                "type": "contains"
-            }];
-
-        }
-
-        component["nodes"] = nodes;
-        component["edges"] = edges;
-        component["root"] = "Pseudo";
-
-        console.log(parent, children);
-        console.log(component);
-
-
-        SubsumptionNavigatorOption = {
-        essentials: {
-            div_ID: "hgv", // the ID of div container
-            component: {}, // the data
-            topoOnly: false,
-            viewRoot: "",
-            useGlyTouCanAsImageSource: false,
-            GlyTouCanImagePara: {
-                style: "extended", // Other Options: normal, compact
-                format: "png", // Other Options: jpg
-                notation: "cfg" // Other Options: cfgbw, uoxf, uoxf-color, cfg-uoxf, iupac
-            },
-            imgURL1: "https://image.glycosmos.org/snfg/png/", // Unnecessary if useGlyTouCanAsImageSource is true
-            imgURL2: ""
-        },
-        display: {
-            enableTitle: false,
-            enableNavi: true,
-            naviOption: {
-                size: 0.2,
-                position: 4
-            },
-            orientation: 2 // 1, 2, 3, 4 Stand for top2bottom left2right bottom2top right2left
-        },
-        contextMenu: {
-            enable: true,
-            defaultMenu: false,
-            externalURL1: "https://glytoucan.org/glycans/",
-            externalURL2: "/image?style=extended&format=png&notation=cfg"
-        }
-    };
-
-        SubsumptionNavigatorOption.essentials.component = component;
-        SubsumptionNavigatorOption.essentials.highLightedNodes = [acc];
-
-        SubsumptionNavigatorController.init(SubsumptionNavigatorOption);
+        renderResultMore();
 
     }
 
+    show("input_container");
 
+    function RenderJSON(json_url){
+        jQuery.getJSON(json_url, function (d){
+            let jv = new JSONViewer();
+            jv.render(d, "result_container_json")
 
+            let container = document.getElementById("result_container_json");
+            let ele = document.createElement("a");
+            ele.innerText = "Raw JSON";
+            ele.href = json_url;
+
+            container.appendChild(document.createElement("br"));
+            container.appendChild(ele);
+        })
+
+    }
 
 
 
 </script>
+<script src="renderresult.js">
+
+</script>
+
 </body>
 </html>

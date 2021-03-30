@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{app_name}} About</title>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="/renderer.js"></script>
+    <style>
+        h3 {
+            margin-left: 10px;
+        }
+        h4 {
+            margin-left: 20px;
+        }
+        .code {
+            background: lightgrey;
+            padding: 10px 0 10px 0;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body style='margin: 0; font-family: "adobe-caslon-pro",Georgia,"Times New Roman",serif; '>
+<div style="position: relative; min-height: 100vh;">
+    <div id="header"></div>
+
+    <br>
+
+    <div id="content" style="min-width: 400px; width: 60%; padding-left: 19%; padding-bottom: 150px; ">
+        <h1 style="text-align: center">Documentation</h1>
+        <div style="text-align: center">
+            <a href="#API_title">API</a><span> | </span>
+            <a href="#Client_title">Client</a><span> | </span>
+            <a href="#Deployment_title">Deployment</a><span> | </span>
+            <a href="#About_title">About</a>
+        </div>
+
+
+
+        <h2 id="API_title">API</h2>
+        <h3>Submit</h3>
+        <h4>Submit URL construction</h4>
+        <p>
+            Base URL for submission: https://{{app_name_lower}}.glyomics.org/submit?<br>
+            URL parameter key: tasks<br>
+            URL parameter value: URL encoded JSON string with tasks in a JavaScript array.<br>
+            Each task: {"seq": "GlycoCT or WURCS sequence"}<br><br>
+
+            For example, if there are 2 different glycans with sequence of "GlycoCT Sequence here" and "WURCS Sequence here",
+            and the constructed URL for {{app_name}} is the following:<br>
+            https://{{app_name_lower}}.glyomics.org/submit?tasks=%5B%7B%22seq%22:%22GlycoCT%20Sequence%20here%22%7D,%7B%22seq%22:%22WURCS%20Sequence%20here%22%7D%5D<br>
+
+        </p>
+        <h4>Submit response</h4>
+        <p>
+            The response is encoded in JSON document, which is a list of tasks you just submitted. Each task will include
+            an extra field called "id", which are used for later retrieval process. <br>
+            Example response:<br>
+            <div id="submitresponsejson"></div>
+        <h3>Retrieval</h3>
+        <h4>Retrieval URL construction</h4>
+        <p>
+            Base URL for retrieval: https://{{app_name_lower}}.glyomics.org/retrieval?<br>
+            URL parameter key: list_ids<br>
+            URL parameter value: URL encoded JSON string with the "id" field in a JavaScript array.<br><br>
+
+            Let's use the 2 IDs in the example above to show how to construct the retrieval URL<br>
+            https://{{app_name_lower}}.glyomics.org/retrieve?list_ids=%5B%2220dfe818ae0a3ddad11ebd97c8ddb51aw2f30sbkrnzf5e4ha7mm%22,%228b3adbe6df01722f6043270c9338f7b5w2f30sbkrnzf5e4ha7mm%22%5D<br>
+        </p>
+        <h4>Retrieval response</h4>
+        <p>
+            Example response: <br>
+            <div id="responseresponsejson"></div><br>
+            The response is encoded in JSON document, which is a list contains the result/status you are asking for. <br>
+
+            ID: The ID of the task, might be useful for your own sanity check. <br>
+            Finished: As the name suggest, it indicates whether the computation for this specific task finishes or not. Always check this first. If it's not finished yet, please try again in 5~10s. <br>
+            Stat: It includes how long it takes for this task to be computed, which doesn't include the wait time if the server is too busy. Also, we have a cache infrastructure for tasks that we've seen before. The cache field indicates whether this is read directly from cache or it is freshly computed. <br>
+            Error: A list of messages of what issue the server is facing, which hopefully can bring some insight of what's going on. <br>
+            Result: The result for your task.
+
+        </p>
+
+        <br>
+        Note: <br>
+        1. Both submit and retrieval URL supports bulk submission, which means you can submit multiple tasks in one single request. But you can also submit/retrieve them one by one.<br>
+        2. See more examples by submitting your own sequences <a href="https://{{app_name_lower}}.glyomics.org/">here</a>, and follow links for JSON in result page.
+
+
+
+
+
+
+        <h2 id="Client_title">Client</h2>
+        <h3>JavaScript</h3>
+        <div id="javascriptcode"></div>
+        <br>
+
+        <h3>Python 2&3</h3>
+        <div id="pythoncode"></div>
+        <br><br>
+
+
+
+
+
+        <h2 id="Deployment_title">Deployment</h2>
+        <div id="dockerinitcode"></div>
+        <p>
+            Note:<br>
+            1. Example command is used for running {{app_name}} app at localhost:10982. See it in your browser.<br>
+            2. Increase WEBSERVICE_BASIC_CPU_CORE under heavy usage<br>
+            3. Increase WEBSERVICE_BASIC_CPU_CORE will also increase memory usage<br>
+        </p>
+
+        <br>
+
+        <h1 id="About_title" style="text-align: center">About</h1>
+        <h2>APIFramework</h2>
+        <p>{{app_name}} is powered by APIFramework which provides the web-request based interaction, asynchronous API,
+            parallel computing, easily migratable, and result caching ability. <br>
+            Related apps: <a href="https://hub.docker.com/repository/docker/glyomics/motifmatch">Motif Match</a>,
+            <a href="https://hub.docker.com/repository/docker/glyomics/glylookup">GlyLookup</a>,
+            <a href="https://hub.docker.com/repository/docker/glyomics/subsumption">Subsumption</a>,
+            <a href="https://hub.docker.com/repository/docker/glyomics/substructure">Substructure</a>,
+            <a href="https://hub.docker.com/repository/docker/glyomics/glymage">Glymage</a>
+        </p>
+        <p></p>
+
+
+        <h2>Open source</h2>
+        <h3>Source code</h3>
+        <p>Source code of <a href="https://github.com/glygen-glycan-data/APIFramework/blob/main/src/APIFramework.py">APIFramework</a><br>
+            Source code of <a href="https://github.com/glygen-glycan-data/APIFramework/tree/main/src/Application/{{app_name_lower}}">{{app_name}}</a><br>
+            Build process <a href="https://github.com/glygen-glycan-data/APIFramework/tree/main/src/AutoBuild/{{app_name_lower}}">{{app_name}}</a><br>
+        </p>
+        <h3>Dependency</h3>
+        <p><a href="https://github.com/glygen-glycan-data/PyGly">PyGly</a>,
+            <a href="https://github.com/glygen-glycan-data/GNOme">GNOme</a>,
+            <a href="https://glytoucan.org/">GlyTouCan</a>,
+            <a href="https://glycomotif.glyomics.org/">GlycoMotif</a>,
+            <a href="https://flask.palletsprojects.com/en/1.1.x/">Flask</a>,
+            <a href="https://github.com/RDFLib/rdflib">rdflib</a>
+        </p>
+
+
+        <h2>License</h2>
+        <p><a href="https://github.com/glygen-glycan-data/APIFramework/blob/main/LICENSE">MIT License</a></p>
+
+
+        <br>
+
+
+    </div>
+
+    <div id="footer" style="position: absolute; bottom: 0; width: 100%; height: 150px;"></div>
+
+    <script>
+        "use strict";
+
+        jQuery.get("./header", function (d){
+            document.getElementById("header").innerHTML = d;
+        })
+
+        jQuery.get("./footer", function (d){
+            document.getElementById("footer").innerHTML = d;
+        })
+
+        let codeviewer = new CodeViewer();
+        let jsonviewer = new JSONViewer();
+
+
+        jsonviewer.colorTheme.background = "rgb(230, 230, 230, 50)";
+
+        codeviewer.colorTheme["background-left"] = "rgb(200, 200, 200)";
+        // codeviewer.colorTheme["background-right"] = bgcolor;
+
+        jsonviewer.render(
+            [ { "id" : "20dfe818ae0a3ddad11ebd97c8ddb51aw2f30sbkrnzf5e4ha7mm" , "seq" : "GlycoCT Sequence here"}, { "id" : "8b3adbe6df01722f6043270c9338f7b5w2f30sbkrnzf5e4ha7mm" , "seq" : "WURCS Sequence here" } ],
+            "submitresponsejson")
+        jsonviewer.render([{"error":["Unable to parse"],"finished":true,"id":"20dfe818ae0a3ddad11ebd97c8ddb51aw2f30sbkrnzf5e4ha7mm","result":[],"stat":{"cached":true,"runtime":0.012926816940307617},"task":{"id":"20dfe818ae0a3ddad11ebd97c8ddb51aw2f30sbkrnzf5e4ha7mm","seq":"GlycoCT Sequence here"}}, {"error":[],"finished":false,"id":"8b3adbe6df01722f6043270c9338f7b5w2f30sbkrnzf5e4ha7mm","result":[],"stat":{},"task":{"id":"8b3adbe6df01722f6043270c9338f7b5w2f30sbkrnzf5e4ha7mm","seq":"WURCS Sequence here"}}],
+            "responseresponsejson")
+
+        let javascriptcode = "" +
+            "\"use strict\";\n" +
+            "\n" +
+            "let query_seq1 = \"RES\\n\" +\n" +
+            "    \"1b:x-dglc-HEX-x:x\\n\" +\n" +
+            "    \"2b:b-dgal-HEX-1:5\\n\" +\n" +
+            "    \"3b:a-dgal-HEX-1:5\\n\" +\n" +
+            "    \"4b:b-dgal-HEX-1:5\\n\" +\n" +
+            "    \"5s:n-acetyl\\n\" +\n" +
+            "    \"LIN\\n\" +\n" +
+            "    \"1:1o(4+1)2d\\n\" +\n" +
+            "    \"2:2o(3+1)3d\\n\" +\n" +
+            "    \"3:3o(3+1)4d\\n\" +\n" +
+            "    \"4:4d(2+1)5n\\n\";\n" +
+            "let query_seq2 = \"WURCS=2.0/4,7,6/[u2122h_2*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5]/1-2-3-4-2-4-2/a4-b1_b4-c1_c3-d1_c6-f1_e1-d2|d4_g1-f2|f4\";\n" +
+            "\n" +
+            "\n" +
+            "let tasks = [{\"seq\": query_seq1}, {\"seq\": query_seq2}];\n" +
+            "\n" +
+            "let submit_URL = \"https://{{app_name_lower}}.glyomics.org/submit?tasks=\" + encodeURIComponent(JSON.stringify(tasks));\n" +
+            "\n" +
+            "\n" +
+            "jQuery.getJSON(submit_URL).then(function (d) {\n" +
+            "\n" +
+            "    let list_ids = [];\n" +
+            "\n" +
+            "    for (let task of d){\n" +
+            "        list_ids.push(task.id)\n" +
+            "    }\n" +
+            "\n" +
+            "    setTimeout(retrieve, 1000, list_ids)\n" +
+            "})\n" +
+            "\n" +
+            "function retrieve(list_ids) {\n" +
+            "    let retrieve_URL = \"https://{{app_name_lower}}.glyomics.org/retrieve?list_ids=\" + encodeURIComponent(JSON.stringify(list_ids));\n" +
+            "\n" +
+            "    jQuery.getJSON(retrieve_URL).then(function (d) {\n" +
+            "\n" +
+            "        let all_finished = true;\n" +
+            "        for (let task of d){\n" +
+            "            if (!task.finished){\n" +
+            "                all_finished = false;\n" +
+            "            }\n" +
+            "        }\n" +
+            "\n" +
+            "        if (all_finished){\n" +
+            "            for (let task of d){\n" +
+            "                // All tasks finished now!\n" +
+            "                console.log(task)\n" +
+            "            }\n" +
+            "        }\n" +
+            "        else {\n" +
+            "            setTimeout(retrieve, 5000, list_ids)\n" +
+            "        }\n" +
+            "    })\n" +
+            "}";
+        codeviewer.render(javascriptcode, "javascriptcode")
+
+        let pythoncode = "import os\n" +
+            "import sys\n" +
+            "import json\n" +
+            "import time\n" +
+            "import requests\n" +
+            "\n" +
+            "class APIUnfinishedError(RuntimeError):\n" +
+            "\n" +
+            "    def __init__(self, msg):\n" +
+            "        self.msg = msg\n" +
+            "\n" +
+            "    def __str__(self):\n" +
+            "        return self.msg\n" +
+            "\n" +
+            "class APIParameterError(RuntimeError):\n" +
+            "\n" +
+            "    def __init__(self, msg):\n" +
+            "        self.msg = msg\n" +
+            "\n" +
+            "    def __str__(self):\n" +
+            "        return self.msg\n" +
+            "\n" +
+            "class APIFrameworkClient:\n" +
+            "\n" +
+            "    def __init__(self):\n" +
+            "        self._protocol = \"http\"\n" +
+            "        self._host = \"localhost\"\n" +
+            "        self._port = 10980\n" +
+            "\n" +
+            "        self._max_retry = 3\n" +
+            "        self._interval = 0.5\n" +
+            "\n" +
+            "        # wait maximum 2 minutes\n" +
+            "        self._max_retry_for_unfinished_task = 240\n" +
+            "\n" +
+            "\n" +
+            "    def host(self):\n" +
+            "        return self._host\n" +
+            "\n" +
+            "    def set_host(self, h):\n" +
+            "        self._host = h\n" +
+            "\n" +
+            "    def port(self):\n" +
+            "        return self._port\n" +
+            "\n" +
+            "    def set_port(self, p):\n" +
+            "        if isinstance(p, int):\n" +
+            "            self._port = p\n" +
+            "        else:\n" +
+            "            raise APIParameterError(\"Port number requires integer, %s is not acceptable\")\n" +
+            "\n" +
+            "    def protocol(self):\n" +
+            "        return self._protocol\n" +
+            "\n" +
+            "    def set_protocol(self, p):\n" +
+            "        assert p in [\"http\", \"https\"]\n" +
+            "        self._protocol = p\n" +
+            "\n" +
+            "    def main_URL(self):\n" +
+            "        main_URL = self.protocol() + \"://\" + self.host()\n" +
+            "        if self.port() not in [22, \"22\"]:\n" +
+            "            main_URL += \":\" + str(self.port())\n" +
+            "        return main_URL\n" +
+            "\n" +
+            "    def abspath(self, fp):\n" +
+            "        base = os.path.dirname(os.path.abspath(sys.argv[0]))\n" +
+            "        res = os.path.join(base, fp)\n" +
+            "        return res\n" +
+            "\n" +
+            "    def parse_config(self, config_file_name):\n" +
+            "        config_path = self.abspath(config_file_name)\n" +
+            "\n" +
+            "        config = configparser.ConfigParser()\n" +
+            "        config.read_file(open(config_path))\n" +
+            "\n" +
+            "        res = {}\n" +
+            "        for each_section in config.sections():\n" +
+            "            res[each_section] = {}\n" +
+            "            for (each_key, each_val) in config.items(each_section):\n" +
+            "                if each_val != \"\":\n" +
+            "                    res[each_section][each_key] = each_val\n" +
+            "\n" +
+            "        if \"basic\" in res:\n" +
+            "\n" +
+            "            if \"host\" in res[\"basic\"]:\n" +
+            "                self.set_host(res[\"basic\"][\"host\"])\n" +
+            "\n" +
+            "            if \"port\" in res[\"basic\"]:\n" +
+            "                self.set_port(int(res[\"basic\"][\"port\"]))\n" +
+            "\n" +
+            "\n" +
+            "    def request(self, sub, params):\n" +
+            "\n" +
+            "        for i in range(self._max_retry):\n" +
+            "            try:\n" +
+            "                response = requests.post(self.main_URL() + \"/\" + sub, params)\n" +
+            "                return response\n" +
+            "            except:\n" +
+            "                pass\n" +
+            "\n" +
+            "            time.sleep(self._interval)\n" +
+            "\n" +
+            "    def submit(self):\n" +
+            "        raise NotImplemented\n" +
+            "\n" +
+            "    def retrieve_once(self):\n" +
+            "        raise NotImplemented\n" +
+            "\n" +
+            "    def retrieve(self, list_id):\n" +
+            "\n" +
+            "        for i in range(self._max_retry_for_unfinished_task):\n" +
+            "            time.sleep(self._interval)\n" +
+            "            try:\n" +
+            "                res = self.retrieve_once(list_id)\n" +
+            "                return res\n" +
+            "            except APIUnfinishedError:\n" +
+            "                continue\n" +
+            "\n" +
+            "        raise APIUnfinishedError(\"The task %s is not finished yet\" % list_id)\n" +
+            "\n" +
+            "    def get(self, *args, **kwargs):\n" +
+            "        list_id = self.submit(*args, **kwargs)\n" +
+            "        resjson = self.retrieve(list_id)\n" +
+            "        res = resjson[u\"result\"]\n" +
+            "        return res\n" +
+            "\n" +
+            "\n" +
+            "\n" +
+            "\n" +
+            "\n" +
+            "\n" +
+            "class ExampleClient(APIFrameworkClient):\n" +
+            "\n" +
+            "    def submit(self, seq):\n" +
+            "\n" +
+            "        param = {\"tasks\": json.dumps([{\"seq\": seq}])}\n" +
+            "\n" +
+            "        res1 = self.request(\"submit\", param)\n" +
+            "\n" +
+            "        list_id = res1.json()[0][u\"id\"]\n" +
+            "        return list_id\n" +
+            "\n" +
+            "\n" +
+            "    def retrieve_once(self, list_id):\n" +
+            "        param = {\"list_id\": list_id }\n" +
+            "\n" +
+            "        try:\n" +
+            "            res2 = self.request(\"retrieve\", param)\n" +
+            "            res2json = res2.json()[0]\n" +
+            "        except:\n" +
+            "            raise RuntimeError\n" +
+            "\n" +
+            "        if not res2json[u\"finished\"]:\n" +
+            "            raise APIUnfinishedError(\"The task %s is not finished yet\" % list_id)\n" +
+            "\n" +
+            "        return res2json\n" +
+            "\n" +
+            "\n" +
+            "\n" +
+            "\n" +
+            "if __name__ == '__main__':\n" +
+            "    example_client = ExampleClient()\n" +
+            "\n" +
+            "    # example_client.set_protocol(\"https\")\n" +
+            "    # example_client.set_host(\"substructure.glyomics.org\")\n" +
+            "    # example_client.set_port(22)\n" +
+            "\n" +
+            "    example_client.set_protocol(\"http\")\n" +
+            "    example_client.set_host(\"localhost\")\n" +
+            "    example_client.set_port(10981)\n" +
+            "\n" +
+            "\n" +
+            "    if len(sys.argv) > 1:\n" +
+            "        arg = sys.argv[1]\n" +
+            "        arg = arg.strip()\n" +
+            "\n" +
+            "        if arg.startswith(\"WURCS\") or arg.startswith(\"RES\"):\n" +
+            "            seq = arg\n" +
+            "        else:\n" +
+            "            seq = open(arg).read().strip()\n" +
+            "    else:\n" +
+            "        print(\"Please provide a sequence\")\n" +
+            "        sys.exit(1)\n" +
+            "\n" +
+            "\n" +
+            "    try:\n" +
+            "        res = example_client.get(seq)\n" +
+            "    except APIUnfinishedError:\n" +
+            "        print(\"It is not finished yet, please try again later...\")\n" +
+            "        sys.exit(1)\n" +
+            "\n" +
+            "    print(res)\n" +
+            "\n" +
+            "\n";
+
+        codeviewer.render(pythoncode, "pythoncode")
+
+        let dockercode = "docker pull glyomics/{{app_name_lower}}:latest\n" +
+            "docker run \n" +
+            "        --env WEBSERVICE_BASIC_PORT=10982 \n" +
+            "        --env WEBSERVICE_BASIC_CPU_CORE=1 \n" +
+            "        -p 10982:10982 \n" +
+            "        glyomics/{{app_name_lower}}:latest"
+        codeviewer.render(dockercode, "dockerinitcode")
+
+    </script>
+
+
+
+</div>
+</body>
+</html>

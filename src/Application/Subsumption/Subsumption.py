@@ -7,13 +7,11 @@ import json
 import copy
 import base64
 import urllib
-import hashlib
 import multiprocessing
-from APIFramework import APIFramework, queue
+from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 
 import pygly.alignment
 import pygly.GNOme
-import pygly.GlycanImage
 import pygly.GlycanResource.GlyTouCan
 from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat
 
@@ -28,13 +26,13 @@ class GNOmeLevelComputing(pygly.GNOme.SubsumptionGraph):
 
 gnome = GNOmeLevelComputing()
 
-class Subsumption(APIFramework):
+class Subsumption(APIFrameworkWithFrontEnd):
 
 
     def form_task(self, p):
         res = {}
         task_str = json.dumps(p["seqs"], sort_keys=True).encode("utf-8")
-        list_id = hashlib.md5(task_str).hexdigest()
+        list_id = self.str2hash(task_str)
 
         res["id"] = list_id
         res["seqs"] = p["seqs"]
@@ -46,16 +44,15 @@ class Subsumption(APIFramework):
 
         self.output(2, "Worker-%s is starting up" % (pid))
 
-        glycan_file_path = params["glycan_file_path"]
+        glycan_file_path = self.autopath(params["glycan_file_path"])
 
         gp = GlycoCTFormat()
         wp = WURCS20Format()
 
-        ge = pygly.GlycanImage.GlycanImage()
-        ge.notation("snfg")
-
         gie = pygly.alignment.GlycanEqual()
         gsc = pygly.alignment.GlycanSubsumption()
+
+        gis  = pygly.GNOme.IncompleteScore()
 
         wurcss = {}
         glycan_by_mass = {}
@@ -129,6 +126,11 @@ class Subsumption(APIFramework):
 
             # Try to find GlyTouCan accession for submitted query sequences
             equivalents = {}
+            relationship = {}
+            subsumption_levels_calc = {}
+            ButtonConfigs = {}
+            Score = {}
+
             if len(error) == 0:
                 potential_accs = glycan_by_mass[query_glycan_mass]
                 glycans = {}
@@ -150,7 +152,6 @@ class Subsumption(APIFramework):
 
 
                 potential_accs = glycans.keys()
-                relationship = {}
                 for acc in potential_accs:
                     relationship[acc] = []
 
@@ -196,7 +197,6 @@ class Subsumption(APIFramework):
 
 
             # Computing subsumption level
-            subsumption_levels_calc = {}
             for name, query_glycan in query_glycans.items():
                 subsumption_level_calc = None
                 subsumption_level_gnome = None
@@ -231,9 +231,12 @@ class Subsumption(APIFramework):
 
 
             # Computing buttons
-            ButtonConfigs = {}
             for name, query_glycan in query_glycans.items():
                 ButtonConfigs[name] = query_glycan.iupac_composition(floating_substituents=False,aggregate_basecomposition=True)
+
+            # Compute score
+            for name, query_glycan in query_glycans.items():
+                Score[name] = gis.score(query_glycan)
 
 
             calculation_end_time = time.time()
@@ -243,7 +246,8 @@ class Subsumption(APIFramework):
                 "relationship": relationship,
                 "equivalent": equivalents,
                 "subsumption_level": subsumption_levels_calc,
-                "buttonconfig": ButtonConfigs
+                "buttonconfig": ButtonConfigs,
+                "score": Score
             }
 
             self.output(2, "Worker-%s finished computing job (%s)" % (pid, list_id))
@@ -263,7 +267,7 @@ class Subsumption(APIFramework):
 
     def pre_start(self, worker_para):
 
-        data_file_path = self.abspath(worker_para["glycan_file_path"])
+        data_file_path = self.autopath(worker_para["glycan_file_path"])
 
         gtc_acc_pattern = re.compile(r"^G\d{5}\w{2}$")
 
@@ -316,14 +320,14 @@ class Subsumption(APIFramework):
                     lines.append("%s\t%s\t%s\t%s\n" % (gacc, mass_lut[acc], lvl, all_wurcs[gacc]))
 
 
-        output_file = open("tmp.txt", "w")
+        output_file = open(self.autopath("tmp.txt", newfile=True), "w")
         for l in sorted(lines):
             output_file.write(l)
         output_file.close()
 
         if os.path.exists(data_file_path):
             os.remove(data_file_path)
-        os.rename("tmp.txt", data_file_path)
+        os.rename(self.autopath("tmp.txt", newfile=True), data_file_path)
 
 
 

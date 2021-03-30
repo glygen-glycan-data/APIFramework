@@ -14,6 +14,7 @@ cp ../../Application/Subsumption/glycans.tsv ./
 
 
 docker build -t glyomics/subsumption:$1 -t glyomics/subsumption:latest ./
+# docker run -p 10984:10984 glyomics/subsumption:latest
 
 :'
 docker run \
@@ -34,6 +35,4 @@ docker push glyomics/subsumption:latest
 rm -rf htmls
 rm Subsumption.*
 rm glycans.tsv
-
-
 

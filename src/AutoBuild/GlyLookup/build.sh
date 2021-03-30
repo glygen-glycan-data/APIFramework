@@ -14,7 +14,7 @@ cp ../../Application/GlyLookup/glycans.tsv ./
 
 
 docker build -t glyomics/glylookup:$1 -t glyomics/glylookup:latest ./
-docker run -p 10984:10984 glyomics/subsumption:latest
+# docker run -p 10981:10981 glyomics/glylookup:latest
 
 :'
 docker run \

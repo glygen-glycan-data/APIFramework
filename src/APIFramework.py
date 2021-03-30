@@ -62,7 +62,7 @@ class APIFramework(object):
         self._app_name = "testing"
         # self._flask_app = flask.Flask(self._app_name)
 
-        self._input_file_folder  = self.abspath("input")
+        self._input_file_folder  = self.autopath("input")
         # self._output_file_folder = self.abspath("output")
 
         self._allowed_file_ext = ["txt", "doc", "docx", "pdf", "jpg", "png"]
@@ -126,7 +126,7 @@ class APIFramework(object):
         return self._input_file_folder
 
     def set_input_file_folder(self, fp):
-        self._input_file_folder = self.abspath(fp)
+        self._input_file_folder = self.autopath(fp)
 
     # set_status_saving_location
 
@@ -140,7 +140,7 @@ class APIFramework(object):
         return self._status_saving_location
 
     def set_status_saving_location(self, fp):
-        self._status_saving_location = self.abspath(fp)
+        self._status_saving_location = self.autopath(fp, newfile=True)
 
     def allowed_file_ext(self):
         return self._allowed_file_ext
@@ -165,8 +165,25 @@ class APIFramework(object):
 
 
     def abspath(self, fp):
+        # Getting things from current folder
         base = os.path.dirname(os.path.abspath(sys.argv[0]))
         res = os.path.join(base, fp)
+        return res
+
+    def datapath(self, fp):
+        # Getting things from /data folder inside docker
+        base = "/data"
+        res = os.path.join(base, fp)
+        return res
+
+    def autopath(self, fp, newfile=False):
+        res = self.abspath(fp)
+        dtp = self.datapath(fp)
+
+        if self.inside_docker():
+            if os.path.exists(dtp) or newfile:
+                res = dtp
+
         return res
 
     def bool(self, s):
@@ -189,7 +206,7 @@ class APIFramework(object):
         inside_docker = self.inside_docker()
 
         config_current_path = self.abspath(config_file_name)
-        config_docker_path  = "/root/appconfig" + config_file_name
+        config_docker_path  = "/data/" + config_file_name
 
         if inside_docker:
             if os.path.exists(config_docker_path):
@@ -311,12 +328,12 @@ class APIFramework(object):
         if self._template_folder is None:
             tf = None
         else:
-            tf = self.abspath(self._template_folder)
+            tf = self.autopath(self._template_folder)
 
         if self._static_folder is None:
             sf = None
         else:
-            sf = self.abspath(self._static_folder)
+            sf = self.autopath(self._static_folder)
 
 
         flask_app = flask.Flask(self._app_name,
@@ -355,6 +372,10 @@ class APIFramework(object):
     @staticmethod
     def random_str():
         return ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(20))
+
+    @staticmethod
+    def str2hash(s):
+        return hashlib.md5(s).hexdigest()
 
     def submit(self):
         if flask.request.method in ['GET', 'POST']:
@@ -438,7 +459,7 @@ class APIFramework(object):
             if list_id in self.result_cache:
                 r = copy.deepcopy(self.result_cache[list_id])
             else:
-                res.append({"Error": "list_id (%s) not found" % list_id})
+                res.append({"error": "list_id (%s) not found" % list_id})
                 continue
 
             cached = True
@@ -625,7 +646,6 @@ class APIFramework(object):
     # Load route and handler to flask app
     def load_route(self, app):
 
-        app.add_url_rule("/", "home", self.home, methods=["GET", "POST"])
         app.add_url_rule("/status", "status", self.status, methods=["GET", "POST"])
         app.add_url_rule("/retrieve", "retrieve", self.retrieve, methods=["GET", "POST"])
         if self._file_based_job:
@@ -640,7 +660,13 @@ class APIFramework(object):
                 response.headers.add('Access-Control-Allow-Origin', '*')
                 return response
 
+        self.load_modular_front_end(app)
         self.load_additional_route(app)
+
+
+    def load_modular_front_end(self, app):
+        app.add_url_rule("/", "home", self.home, methods=["GET", "POST"])
+        return
 
     def load_additional_route(self, app):
         return
@@ -761,6 +787,47 @@ class APIFramework(object):
                 indent=2
             )
 
+
+class APIFrameworkWithFrontEnd(APIFramework):
+
+    def load_modular_front_end(self, app):
+
+        self.data_folder = "./image"
+
+        kwarg = {
+            "app_name": self._app_name,
+            "app_name_lower": self._app_name.lower(),
+        }
+
+        # TODO better routing management
+
+        @app.route('/', methods=["GET", "POST"])
+        def home():
+            return flask.render_template(self._home_html, **kwarg)
+
+        @app.route('/header', methods=["GET", "POST"])
+        def header():
+            return flask.render_template("./header.html", **kwarg)
+
+        @app.route('/footer', methods=["GET", "POST"])
+        def footer():
+            return flask.render_template("./footer.html", **kwarg)
+
+        @app.route('/submitoption', methods=["GET", "POST"])
+        def submitoption():
+            return flask.render_template("./submitoption.html", **kwarg)
+
+        @app.route('/about', methods=["GET", "POST"])
+        def about():
+            return flask.render_template("./about.html", **kwarg)
+
+        @app.route('/renderresult.js', methods=["GET", "POST"])
+        def renderresult():
+            return open("./htmls/renderresult.js").read()
+
+        @app.route('/renderer.js', methods=["GET", "POST"])
+        def renderer():
+            return open("./htmls/renderer.js").read()
 
 
 if __name__ == '__main__':

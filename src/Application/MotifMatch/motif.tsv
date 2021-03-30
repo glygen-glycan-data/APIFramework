@@ -1740,12 +1740,11 @@ GGM	000042	G00294TN	Blood group H (type 1)	WURCS=2.0/3,4,3/[a2112h-1b_1-5][a2122
 GGM	000043	G31734OS	Blood group B (type 1)	WURCS=2.0/4,4,3/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][a1221m-1a_1-5][a2112h-1a_1-5]/1-2-3-4/a3-b1_b2-c1_b3-d1
 GGM	000044	G66163TI	Blood group A (type 1)	WURCS=2.0/4,4,3/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][a1221m-1a_1-5][a2112h-1a_1-5_2*NCC/3=O]/1-2-3-4/a3-b1_b2-c1_b3-d1
 GGM	000045	G00052MO	Blood group H (type 2) - Lewis y//H-Ley//H-Le^y	WURCS=2.0/3,4,3/[a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5][a2112h-1b_1-5]/1-2-3-2/a3-b1_a4-c1_c2-d1
-GGM	000046	G89208KM	B-Leb//B-Le^b//Blood group B (type 1) - Lewis b	WURCS=2.0/4,5,4/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][a1221m-1a_1-5][a2112h-1a_1-5]/1-2-3-4-3/a3-b1_a4-e1_b2-c1_b3-d1
+GGM	000046	G89208KM	Blood group B (type 1) - Lewis b//B-Leb//B-Le^b	WURCS=2.0/4,5,4/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][a1221m-1a_1-5][a2112h-1a_1-5]/1-2-3-4-3/a3-b1_a4-e1_b2-c1_b3-d1
 GGM	000047	G97501MA	A-Leb//A-Le^b//Blood group A (type 1) - Lewis b	WURCS=2.0/4,5,4/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][a1221m-1a_1-5][a2112h-1a_1-5_2*NCC/3=O]/1-2-3-4-3/a3-b1_a4-e1_b2-c1_b3-d1
 GGM	000049	G18464VS	4'-sulfated LDN	WURCS=2.0/2,2,1/[a2122h-1x_1-5_2*NCC/3=O][a2112h-1b_1-5_2*NCC/3=O_4*OSO/3=O/3=O]/1-2/a4-b1
 GGM	000050	G55583HW	Sialylated LDN	WURCS=2.0/3,3,2/[a2122h-1x_1-5_2*NCC/3=O][a2112h-1b_1-5_2*NCC/3=O][Aad21122h-2a_2-6_5*NCC/3=O]/1-2-3/a4-b1_b6-c2
 GGM	000051	G41052GC	Sda/CT antigen//Sd^a/CT antigen	WURCS=2.0/4,4,3/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][Aad21122h-2a_2-6_5*NCC/3=O][a2112h-1b_1-5_2*NCC/3=O]/1-2-3-4/a4-b1_b3-c2_b4-d1
-GGM	000052	G00065MO	Polysialic acid	WURCS=2.0/3,3,2/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][Aad21122h-2a_2-6_5*NCC/3=O]/1-2-3/a4-b1_b3-c2
 GGM	000053	G97345NY	SLex Core 2 O-glycan//SLe^x Core 2 O-glycan	WURCS=2.0/5,7,6/[a2112h-1a_1-5_2*NCC/3=O][a2112h-1b_1-5][Aad21122h-2a_2-6_5*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5]/1-2-3-4-5-2-3/a3-b1_a6-d1_b3-c2_d3-e1_d4-f1_f3-g2
 GGM	000054	G54792LL	Diphosphorylated Man6//Diphosphorylated Man_6	WURCS=2.0/4,7,6/[a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5][a1122h-1a_1-5_6*OPO/3O/3=O]/1-2-3-4-3-4-3/a4-b1_b3-c1_b6-e1_c2-d1_e3-f1_e6-g1
 GGM	000055	G59126YU	O-Linked mannose	WURCS=2.0/4,4,3/[a1122h-1a_1-5][a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][Aad21122h-2a_2-6_5*NCC/3=O]/1-2-3-4/a2-b1_b4-c1_c3-d2
@@ -1840,6 +1839,9 @@ GGM	001021	G85661BQ	O-Fucose//O-Fucose Core 2//O-Fucose Core EGF Type	WURCS=2.0/
 GGM	001022	G63560NE	N-glycan core, truncated	WURCS=2.0/3,4,3/[u2122h_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5]/1-2-3-3/a4-b1_b3-c1_b6-d1
 GGM	001023	G68395LV	N-glycan core, bisected	WURCS=2.0/4,6,5/[u2122h_2*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5]/1-2-3-4-2-4/a4-b1_b4-c1_c3-d1_c4-e1_c6-f1
 GGM	001024	G68504BA	N-Glycan core, core-fucosylated	WURCS=2.0/5,6,5/[a2122h-1x_1-?_2*NCC/3=O][a1221m-1a_1-5][a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5]/1-2-3-4-5-5/a4-c1_c4-d1_d3-e1_d6-f1_a?-b1
+GGM	001025	G05006NI	N-Glycan core, arm-fucosylated	WURCS=2.0/5,7,6/[u2122h_2*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5][a1221m-1a_1-5]/1-2-3-4-2-5-4/a4-b1_b4-c1_d1-c3|c6_g1-c3|c6_d?-e1_e?-f1
+GGM	001026	G62167DK	N-Glycan core, alditol reduced	WURCS=2.0/4,5,4/[h2122h_2*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5]/1-2-3-4-4/a4-b1_b4-c1_c3-d1_c6-e1
+GGM	001027	G09820LN	N-Glycan core, superclass	WURCS=2.0/2,5,4/[axxxxh-1x_1-?_2*NCC/3=O][axxxxh-1x_1-?]/1-1-2-2-2/a?-b1_b?-c1_c?-d1_c?-e1
 GGM	001101	G00012MO	Glycosphingolipid Isoglobo series	WURCS=2.0/4,4,3/[u2122h][a2112h-1b_1-5][a2112h-1a_1-5][a2112h-1b_1-5_2*NCC/3=O]/1-2-3-4/a4-b1_b3-c1_c3-d1
 GGM	001102	G00013MO	Glycosphingolipid Muco series	WURCS=2.0/2,4,3/[u2122h][a2112h-1b_1-5]/1-2-2-2/a4-b1_b4-c1_c3-d1
 GGM	001103	G00014MO	Glycosphingolipid Arthro series	WURCS=2.0/4,4,3/[u2122h][a1122h-1b_1-5][a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5_2*NCC/3=O]/1-2-3-4/a4-b1_b3-c1_c4-d1
@@ -1889,7 +1891,7 @@ GM	G00048MO	G00048MO	Lewis B//Lewis b	WURCS=2.0/3,4,3/[a2122h-1b_1-5_2*NCC/3=O][
 GM	G00049MO	G00049MO	Lewis C//Lactotetraosylceramide	WURCS=2.0/3,4,3/[a2122h-1b_1-5][a2112h-1b_1-5][a2122h-1b_1-5_2*NCC/3=O]/1-2-3-2/a4-b1_b3-c1_c3-d1
 GM	G00050MO	G00050MO	Lewis D	WURCS=2.0/4,5,4/[a2122h-1b_1-5][a2112h-1b_1-5][a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5]/1-2-3-2-4/a4-b1_b3-c1_c3-d1_d2-e1
 GM	G00051MO	G00051MO	Lewis X//Lewis x	WURCS=2.0/3,3,2/[a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5][a2112h-1b_1-5]/1-2-3/a3-b1_a4-c1
-GM	G00052MO	G00052MO	Lewis Y//Lewis y//Lewis a//Lewis b//Lewis b (Leb)//Blood group H (type 2)//Blood group H (type 2) (Ley)//Blood group H (type 2)  (Lewis Y)//Lewis b (Lewis b)//Leb//Ley//Le^y//Le^b	WURCS=2.0/3,4,3/[a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5][a2112h-1b_1-5]/1-2-3-2/a3-b1_a4-c1_c2-d1
+GM	G00052MO	G00052MO	Lewis Y//Lewis y//Lewis a//Lewis b (Leb)//Blood group H (type 2) (Ley)//Blood group H (type 2)  (Lewis Y)//Lewis b (Lewis b)//Blood group H (type 2) - Lewis y//H-Ley//H-Le^y	WURCS=2.0/3,4,3/[a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5][a2112h-1b_1-5]/1-2-3-2/a3-b1_a4-c1_c2-d1
 GM	G00053MO	G00053MO	Sialyl Lewis A//Sialyl Lewis a//Sialyl Lewis a (SLea)(CA19-9 antigen)//Sialyl Lewis a (SLea)  (CA19-9 antigen)//Slea//CA19-9 antigen//SLea//SLe^a	WURCS=2.0/4,4,3/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][Aad21122h-2a_2-6_5*NCC/3=O][a1221m-1a_1-5]/1-2-3-4/a3-b1_a4-d1_b3-c2
 GM	G00054MO	G00054MO	Sialyl Lewis X//Sialyl Lewis x//Sialyl Lewis x (SLex)//Sialyl-Lewis X//Slex//SLex//SLe^x	WURCS=2.0/4,4,3/[a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5][a2112h-1b_1-5][Aad21122h-2a_2-6_5*NCC/3=O]/1-2-3-4/a3-b1_a4-c1_c3-d2
 GM	G00055MO	G00055MO	Lactosamine motif//LN, N-acetyllactosamine//Lactosamine Type 2//Type 2 LN (N-acetyllactosamine)//Type 2 LN//N-acetyllactosamine	WURCS=2.0/2,2,1/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5]/1-2/a4-b1
@@ -1946,6 +1948,7 @@ GM	G04416BG	G04416BG	Ceramide dihexosyl sulfate	WURCS=2.0/2,2,1/[a2112h-1x_1-5][
 GM	G04433GV	G04433GV	GP1c	WURCS=2.0/4,9,8/[a2122h-1b_1-5][a2112h-1b_1-5][Aad21122h-2a_2-6_5*NCC/3=O][a2112h-1b_1-5_2*NCC/3=O]/1-2-3-3-3-4-2-3-3/a4-b1_b3-c2_b4-f1_c8-d2_d8-e2_f3-g1_f6-i2_g3-h2
 GM	G04616ST	G04616ST	LN//Globotetraosylceramide	WURCS=2.0/2,2,1/[a2122h-1x_1-5_2*NCC/3=O][a2112h-1b_1-5]/1-2/a3-b1
 GM	G04715SK	G04715SK		WURCS=2.0/5,8,7/[a2122h-1b_1-5][a2112h-1b_1-5][a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5][a2112h-1a_1-5_2*NCC/3=O]/1-2-3-2-3-2-4-5/a4-b1_b3-c1_c3-d1_d3-e1_e3-f1_f2-g1_f3-h1
+GM	G05006NI	G05006NI	N-Glycan core, arm-fucosylated	WURCS=2.0/5,7,6/[u2122h_2*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5][a1221m-1a_1-5]/1-2-3-4-2-5-4/a4-b1_b4-c1_d1-c3|c6_g1-c3|c6_d?-e1_e?-f1
 GM	G05248MY	G05248MY		WURCS=2.0/9,15,14/[a2122h-1x_1-5][a2121A-1a_1-5][a2122h-1a_1-5_2*OSO/3=O/3=O_3*OSO/3=O/3=O_6*OSO/3=O/3=O][a2122h-1b_1-5_6*OSO/3=O/3=O][a2122h-1b_1-5][a2122h-1a_1-5][a2122h-1a_1-5_6*OSO/3=O/3=O][a2122h-1b_1-5_2*OSO/3=O/3=O_3*OSO/3=O/3=O_6*OSO/3=O/3=O][a2122h-1a_1-5_2*OSO/3=O/3=O_3*OSO/3=O/3=O_4*OSO/3=O/3=O_6*OSO/3=O/3=O]/1-2-3-4-5-6-5-6-5-6-5-7-8-3-9/a4-b1_b4-c1_c4-d1_d4-e1_e4-f1_f4-g1_g4-h1_h4-i1_i4-j1_j4-k1_k4-l1_l4-m1_m4-n1_n4-o1
 GM	G05297EK	G05297EK	Mono-sulfated globotetraosylceramide	WURCS=2.0/4,4,3/[a2122h-1b_1-5][a2112h-1b_1-5][a2112h-1a_1-5][a2112h-1b_1-5_2*NCC/3=O_3*OSO/3=O/3=O]/1-2-3-4/a4-b1_b4-c1_c3-d1
 GM	G05337KJ	G05337KJ		WURCS=2.0/3,4,3/[a2122h-1b_1-5][a1221m-1a_1-5][a2112h-1b_1-5]/1-2-3-2/a3-b1_a4-c1_c2-d1
@@ -1979,6 +1982,7 @@ GM	G08872UM	G08872UM		WURCS=2.0/2,4,3/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5]/1
 GM	G09105CO	G09105CO		WURCS=2.0/4,4,3/[a2122h-1x_1-5][a2112h-1b_1-5][a2112h-1a_1-5][Aad21122h-2a_2-6_5*NCC/3=O]/1-2-3-4/a4-b1_b4-c1_c3-d2
 GM	G09376MR	G09376MR		WURCS=2.0/3,3,2/[a2122h-1x_1-5_2*NCC/3=O][a2112h-1b_1-5][Aad21122h-2a_2-6_5*NCC/3=O]/1-2-3/a4-b1_b6-c2
 GM	G09552LA	G09552LA		WURCS=2.0/4,6,5/[a2122h-1b_1-5][a2112h-1b_1-5][a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5]/1-2-3-2-4-4/a4-b1_b3-c1_c3-d1_c4-f1_d2-e1
+GM	G09820LN	G09820LN	N-Glycan core, superclass	WURCS=2.0/2,5,4/[axxxxh-1x_1-?_2*NCC/3=O][axxxxh-1x_1-?]/1-1-2-2-2/a?-b1_b?-c1_c?-d1_c?-e1
 GM	G10203DW	G10203DW		WURCS=2.0/3,3,2/[a2122h-1x_1-5_2*NCC/3=O][a2112h-1b_1-5][Aad21122h-2a_2-6_5*NCC/3=O]/1-2-3/a4-b1_b3-c2
 GM	G10356UT	G10356UT		WURCS=2.0/3,3,2/[a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5][a2112h-1b_1-5_4*OSO/3=O/3=O]/1-2-3/a3-b1_a4-c1
 GM	G10422IZ	G10422IZ		WURCS=2.0/3,3,2/[a2122h-1x_1-5][a2112h-1b_1-5][a1221m-1a_1-5]/1-2-3/a4-b1_b2-c1
@@ -2231,7 +2235,7 @@ GM	G54585VU	G54585VU		WURCS=2.0/5,6,5/[a2122h-1x_1-5][a2112h-1b_1-5][a2122h-1b_1
 GM	G54721WC	G54721WC		WURCS=2.0/4,5,4/[a2122h-1b_1-5][a2112h-1b_1-5][a2112h-1b_1-5_2*NCC/3=O][Aad21122h-2a_2-6_5*NCC/3=O]/1-2-3-2-4/a4-b1_b4-c1_c3-d1_c6-e2
 GM	G54733XO	G54733XO	GQ1ba//GQ1b alpha//GQ1balpha	WURCS=2.0/4,8,7/[a2122h-1b_1-5][a2112h-1b_1-5][Aad21122h-2a_2-6_5*NCC/3=O][a2112h-1b_1-5_2*NCC/3=O]/1-2-3-3-4-2-3-3/a4-b1_b3-c2_b4-e1_c8-d2_e3-f1_e6-h2_f3-g2
 GM	G54792LL	G54792LL	Diphosphorylated Man6//Diphosphorylated Man_6	WURCS=2.0/4,7,6/[a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5][a1122h-1a_1-5_6*OPO/3O/3=O]/1-2-3-4-3-4-3/a4-b1_b3-c1_b6-e1_c2-d1_e3-f1_e6-g1
-GM	G54826OZ	G54826OZ	Blood Group A Type 2 (difucosyl)//Blood group A (type 2)//Blood group A (type 2) (A-Ley)//Blood group A (type 2)  (A-Lewis Y)//A-Ley//A-Le^y	WURCS=2.0/4,5,4/[a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5][a2112h-1b_1-5][a2112h-1a_1-5_2*NCC/3=O]/1-2-3-2-4/a3-b1_a4-c1_c2-d1_c3-e1
+GM	G54826OZ	G54826OZ	Blood Group A Type 2 (difucosyl)//Blood group A (type 2) (A-Ley)//Blood group A (type 2)  (A-Lewis Y)//A-Ley//A-Le^y//Blood group A (type 2) - Lewis y	WURCS=2.0/4,5,4/[a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5][a2112h-1b_1-5][a2112h-1a_1-5_2*NCC/3=O]/1-2-3-2-4/a3-b1_a4-c1_c2-d1_c3-e1
 GM	G54937EM	G54937EM	Disialyl I//Disialyl-branched Type 2	WURCS=2.0/3,8,7/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][Aad21122h-2a_2-6_5*NCC/3=O]/1-2-1-2-3-1-2-3/a4-b1_b3-c1_b6-f1_c4-d1_d3-e2_f4-g1_g3-h2
 GM	G55026RI	G55026RI		WURCS=2.0/4,4,3/[a2122h-1x_1-5][a1221m-1a_1-5][a2112h-1b_1-5][a2112h-1a_1-5]/1-2-3-4/a3-b1_a4-c1_c4-d1
 GM	G55153IW	G55153IW		WURCS=2.0/4,7,6/[a2122h-1b_1-5][a2112h-1b_1-5][a2122h-1b_1-5_2*NCC/3=O][Aad21122h-2a_2-6_5*NCCO/3=O]/1-2-3-2-3-2-4/a4-b1_b3-c1_c4-d1_d3-e1_e4-f1_f3-g2
@@ -2285,6 +2289,7 @@ GM	G61418DU	G61418DU	N-acetyl-D-galactosamine	WURCS=2.0/1,1,0/[a2112h-1b_1-5_2*N
 GM	G61424BA	G61424BA	Neu5Gc(a2-8)Neu5Ac(a2-3)Gal	WURCS=2.0/3,3,2/[a2112h-1x_1-5][Aad21122h-2a_2-6_5*NCC/3=O][Aad21122h-2a_2-6_5*NCCO/3=O]/1-2-3/a3-b2_b8-c2
 GM	G61459JW	G61459JW	Blood Group H Type 2	WURCS=2.0/3,3,2/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][a1221m-1a_1-5]/1-2-3/a4-b1_b2-c1
 GM	G61730RY	G61730RY	F1 Alpha	WURCS=2.0/3,3,2/[a2112h-1a_1-5_2*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5]/1-2-3/a6-b1_b4-c1
+GM	G62167DK	G62167DK	N-Glycan core, uncyclized	WURCS=2.0/4,5,4/[h2122h_2*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5]/1-2-3-4-4/a4-b1_b4-c1_c3-d1_c6-e1
 GM	G62554JH	G62554JH	LcGg4//Lactogangliotetraosylceramide	WURCS=2.0/4,4,3/[a2122h-1b_1-5][a2112h-1b_1-5][a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5_2*NCC/3=O]/1-2-3-4/a4-b1_b3-c1_b4-d1
 GM	G62593IS	G62593IS		WURCS=2.0/3,3,2/[a2122h-1x_1-5_2*NCC/3=O][a2112h-1b_1-5_2*F][Aad21122h-2a_2-6_5*NCC/3=O]/1-2-3/a4-b1_b3-c2
 GM	G62735WZ	G62735WZ	Blood Group A2//Blood group A2 (A-associated H type 3)	WURCS=2.0/4,6,5/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][a1221m-1a_1-5][a2112h-1a_1-5_2*NCC/3=O]/1-2-3-4-2-3/a4-b1_b2-c1_b3-d1_d3-e1_e2-f1
@@ -2429,7 +2434,7 @@ GM	G88393MK	G88393MK	Antigen H	WURCS=2.0/3,3,2/[a2122h-1x_1-5_2*NCC/3=O][a2112h-
 GM	G88675ZE	G88675ZE		WURCS=2.0/4,4,3/[a2112h-1x_1-5][a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][Aad21122h-2a_2-6_5*NCC/3=O]/1-2-3-4/a3-b1_b4-c1_c3-d2
 GM	G88766TD	G88766TD		WURCS=2.0/5,5,4/[a2112h-1x_1-5][a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][a1221m-1a_1-5][a2112h-1a_1-5_2*NCC/3=O]/1-2-3-4-5/a3-b1_b4-c1_c2-d1_c3-e1
 GM	G88796WA	G88796WA		WURCS=2.0/4,4,3/[a2112h-1b_1-5][a2112h-1a_1-5][a2112h-1b_1-5_2*NCC/3=O][a2112h-1a_1-5_2*NCC/3=O]/1-2-3-4/a4-b1_b3-c1_c3-d1
-GM	G89208KM	G89208KM	Blood group B (type 1)//Blood group B (type 1) (B-Ley)//Blood group B (type 1)  (B-Lewis Y)//B-Ley//B-Le^y	WURCS=2.0/4,5,4/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][a1221m-1a_1-5][a2112h-1a_1-5]/1-2-3-4-3/a3-b1_a4-e1_b2-c1_b3-d1
+GM	G89208KM	G89208KM	Blood group B (type 1) (B-Ley)//Blood group B (type 1)  (B-Lewis Y)//Blood group B (type 1) - Lewis b//B-Leb//B-Le^b	WURCS=2.0/4,5,4/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][a1221m-1a_1-5][a2112h-1a_1-5]/1-2-3-4-3/a3-b1_a4-e1_b2-c1_b3-d1
 GM	G89307GT	G89307GT	6-Sulfo Lewis x	WURCS=2.0/3,3,2/[a2122h-1b_1-5_2*NCC/3=O_6*OSO/3=O/3=O][a1221m-1a_1-5][a2112h-1b_1-5]/1-2-3/a3-b1_a4-c1
 GM	G89524PP	G89524PP		WURCS=2.0/5,6,5/[a2112h-1a_1-5_2*NCC/3=O][a2112h-1a_1-5][Aad21122h-2a_2-6_5*NCC/3=O][a2122h-1a_1-5_2*NCC/3=O][a1221m-1a_1-5]/1-2-3-4-5-2/a3-b1_a6-d1_b3-c2_d3-e1_d4-f1
 GM	G89565QL	G89565QL	O-GlcNAc	WURCS=2.0/1,1,0/[h2122h_2*NCC/3=O]/1/
@@ -2477,7 +2482,7 @@ GM	G96865DJ	G96865DJ		WURCS=2.0/3,3,2/[a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5][a
 GM	G96874XX	G96874XX		WURCS=2.0/5,5,4/[a2112h-1x_1-5][a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5][a2112h-1b_1-5][Aad21122h-2a_2-6_5*NCC/3=O]/1-2-3-4-5/a3-b1_b3-c1_b4-d1_d3-e2
 GM	G97013VN	G97013VN		WURCS=2.0/4,5,4/[a2112h-1x_1-5][a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5][a2112h-1b_1-5]/1-2-3-4-3/a3-b1_b3-c1_b4-d1_d2-e1
 GM	G97345NY	G97345NY	SLex Core 2 O-glycan glycan//SLex Core 2 O-glycan//SLe^x Core 2 O-glycan	WURCS=2.0/5,7,6/[a2112h-1a_1-5_2*NCC/3=O][a2112h-1b_1-5][Aad21122h-2a_2-6_5*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5]/1-2-3-4-5-2-3/a3-b1_a6-d1_b3-c2_d3-e1_d4-f1_f3-g2
-GM	G97501MA	G97501MA	Blood Group A Type 1 (difucosyl)//Blood group A (type 1)//Blood group A (type 1) (A-Leb)//Blood group A (type 1)  (A-Lewis b)//A-Leb//A-Le^b	WURCS=2.0/4,5,4/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][a1221m-1a_1-5][a2112h-1a_1-5_2*NCC/3=O]/1-2-3-4-3/a3-b1_a4-e1_b2-c1_b3-d1
+GM	G97501MA	G97501MA	Blood Group A Type 1 (difucosyl)//Blood group A (type 1) (A-Leb)//Blood group A (type 1)  (A-Lewis b)//A-Leb//A-Le^b//Blood group A (type 1) - Lewis b	WURCS=2.0/4,5,4/[a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][a1221m-1a_1-5][a2112h-1a_1-5_2*NCC/3=O]/1-2-3-4-3/a3-b1_a4-e1_b2-c1_b3-d1
 GM	G97569KL	G97569KL	Disialylactose	WURCS=2.0/2,2,1/[Aad21122h-2x_2-6_5*NCC/3=O][Aad21122h-2a_2-6_5*NCC/3=O]/1-2/a8-b2
 GM	G97612UN	G97612UN	GD1b	WURCS=2.0/4,6,5/[a2122h-1x_1-5][a2112h-1b_1-5][Aad21122h-2a_2-6_5*NCC/3=O][a2112h-1b_1-5_2*NCC/3=O]/1-2-3-3-4-2/a4-b1_b3-c2_b4-e1_c8-d2_e3-f1
 GM	G97932OH	G97932OH	Disialosyl globopentaosylceramide//Disialyl Gb5//Disialosyl galactosyl globoside	WURCS=2.0/5,7,6/[a2122h-1b_1-5][a2112h-1b_1-5][a2112h-1a_1-5][a2112h-1b_1-5_2*NCC/3=O][Aad21122h-2a_2-6_5*NCC/3=O]/1-2-3-4-2-5-5/a4-b1_b4-c1_c3-d1_d3-e1_d6-g2_e3-f2

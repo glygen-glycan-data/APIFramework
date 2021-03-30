@@ -28,9 +28,8 @@ docker build -t glyomics/apiframework:$1 -t glyomics/apiframework:latest ./
 # --env WEBSERVICE_BASIC_CPU_CORE=1
 # --mount type=bind,source=/PATH/TO/CONFIG/FOLDER,target=/root/appconfig
 
-
-#docker push glyomics/apiframework:$1
-#docker push glyomics/apiframework:latest
+docker push glyomics/apiframework:$1
+docker push glyomics/apiframework:latest
 
 rm -rf pygly
 rm APIFramework.py

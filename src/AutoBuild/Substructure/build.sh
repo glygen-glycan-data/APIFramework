@@ -14,6 +14,7 @@ cp ../../Application/Substructure/*.tsv ./
 
 
 docker build -t glyomics/substructure:$1 -t glyomics/substructure:latest ./
+# docker run -p 10983:10983 glyomics/substructure:latest
 
 :'
 docker run \
@@ -27,8 +28,8 @@ docker run \
 # --mount type=bind,source=/.../.../.../ConfigFileFolder,target=/root/appconfig
 '
 
-#docker push glyomics/substructure:$1
-#docker push glyomics/substructure:latest
+docker push glyomics/substructure:$1
+docker push glyomics/substructure:latest
 
 
 rm -rf htmls

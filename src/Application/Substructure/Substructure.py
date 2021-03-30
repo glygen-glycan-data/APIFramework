@@ -1,9 +1,8 @@
 import os
 import sys
 import time
-import hashlib
 import multiprocessing
-from APIFramework import APIFramework, queue
+from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 
 import pygly.alignment
 from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat
@@ -13,13 +12,13 @@ import pygly.GlycanResource.GlyTouCan
 
 
 
-class Substructure(APIFramework):
+class Substructure(APIFrameworkWithFrontEnd):
 
     def form_task(self, p):
         res = {}
         task_str = p["seq"].strip()
         task_str.encode("utf-8")
-        list_id = hashlib.md5(task_str).hexdigest()
+        list_id = self.str2hash(task_str)
 
         res["id"] = list_id
         res["seq"] = p["seq"]
@@ -31,7 +30,7 @@ class Substructure(APIFramework):
 
         self.output(2, "Worker-%s is starting up" % (pid))
 
-        structure_list_file_path = params["glycan_list"]
+        structure_list_file_path = self.autopath(params["glycan_list"])
         max_motif_size = int(params["max_motif_size"])
 
 
@@ -118,7 +117,7 @@ class Substructure(APIFramework):
 
     def pre_start(self, worker_para):
 
-        data_file_path = self.abspath(worker_para["glycan_list"])
+        data_file_path = self.autopath(worker_para["glycan_list"])
 
         glygen = False
         if "glycan_set" in worker_para and worker_para["glycan_set"] == "glygen":
@@ -135,7 +134,7 @@ class Substructure(APIFramework):
         wp = WURCS20Format()
         gtc = pygly.GlycanResource.GlyTouCanNoCache()
 
-        f1 = open("tmp.txt", "w")
+        f1 = open(self.autopath("tmp.txt", newfile=True), "w")
 
         for acc, f, s in gtc.allseq(format="wurcs"):
 
@@ -155,7 +154,7 @@ class Substructure(APIFramework):
 
         if os.path.exists(data_file_path):
             os.remove(data_file_path)
-        os.rename("tmp.txt", data_file_path)
+        os.rename(self.autopath("tmp.txt", newfile=True), data_file_path)
 
 
 
