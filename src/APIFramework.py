@@ -736,31 +736,56 @@ class APIFramework(object):
 
         self.monitor()
 
+    def new_worker_process(self):
+
+        self._last_worker_process_id += 1
+        pid = self._last_worker_process_id
+
+        proc = multiprocessing.Process(
+            target=self.worker,
+            args=(pid, self.task_queue, self.result_queue, self._worker_para)
+        )
+
+        proc.start()
+
+        self.output(0, "Worker-%s is created" % (pid))
+
+        return pid, proc
+
     def new_worker_processes(self):
 
         process_pool = {}
         for i in range(self._worker_num):
-
-            self._last_worker_process_id += 1
-            pid = self._last_worker_process_id
-
-            p = multiprocessing.Process(target=self.worker,
-                                        args=(pid, self.task_queue, self.result_queue, self._worker_para))
-            process_pool[pid] = p
-
-        for p in process_pool.values():
-            p.start()
+            pid, proc = self.new_worker_process()
+            process_pool[pid] = proc
 
         return process_pool
 
 
     def monitor(self):
         # Function 1: Keeps master process alive
-        # Function 2: We may add functions checking how everything works in while loop
+        # Function 2: Relauch the worker nodes when they are dead unexpectedly
+
         self.cleanup()
 
         while True:
-            time.sleep(100)
+            time.sleep(60)
+
+            for pid, proc in self._deamon_process_pool.items():
+
+                # print("\tProcess", pid, proc.is_alive())
+
+                if proc.is_alive():
+                    # Process / worker node works as expected...
+                    pass
+                else:
+                    # Process / worker node is dead
+                    self.output(0, "Worker-%s terminated unexpectedly for some reasons... Please check the log for more info" % (pid))
+                    del self._deamon_process_pool[pid]
+
+                    new_pid, new_proc = self.new_worker_process()
+                    self._deamon_process_pool[new_pid] = new_proc
+                    self.output(0, "Worker-%s replaced the dead Worker-%s" % (new_pid, pid))
 
 
     def cleanup(self):
