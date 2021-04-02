@@ -21,7 +21,9 @@ imagetable   = open(image_home + "imageinfo.tsv")
 shash2acc = {}
 for l in seqhashtable.read().strip().split("\n"):
     shash, acc = l.strip().split()
-    shash2acc[shash] = acc
+    if shash not in shash2acc:
+        shash2acc[shash] = []
+    shash2acc[shash].append(acc)
 
 
 
@@ -50,7 +52,7 @@ for l in imagetable.read().strip().split("\n"):
 
     destination = [shash, ihash]
     try:
-        destination.append(shash2acc[shash])
+        destination += shash2acc[shash]
     except:
         pass
 

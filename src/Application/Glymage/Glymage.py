@@ -14,14 +14,27 @@ from APIFramework import APIFramework, queue
 
 
 import pygly.GlycanImage
+import pygly.GlycanResource
 
 
 class Glymage(APIFramework):
 
+    allowed_display  = []
+    allowed_notation = []
+
 
     def form_task(self, p):
         res = {}
-        seq = p["seq"].strip()
+
+        if "seq" in p:
+            res["seq"] = p["seq"].strip()
+        else:
+            res["seq"] = None
+
+        if "acc" in p:
+            res["acc"] = p["acc"].strip()
+        else:
+            res["acc"] = None
 
         scale = 1.0
         if "scale" in p:
@@ -60,9 +73,9 @@ class Glymage(APIFramework):
         if "opaque" in p:
             tmp = p["opaque"].lower()
             if tmp in ["y", "yes", "t", "true", "1"]:
-                opaque = True
-            elif tmp in ["n", "no", "f", "false", "0"]:
                 opaque = False
+            elif tmp in ["n", "no", "f", "false", "0"]:
+                opaque = True
             else:
                 raise RuntimeError
 
@@ -72,7 +85,6 @@ class Glymage(APIFramework):
             if image_format not in ["png", "jpg", "jpeg", "svg"]:
                 raise RuntimeError
 
-        res["seq"] = seq
         res["scale"] = scale
         res["notation"] = notation
         res["display"] = display
@@ -85,10 +97,8 @@ class Glymage(APIFramework):
         for k in sorted(res.keys()):
             task_str += "_%s" % res[k]
 
-        list_id = hashlib.md5(task_str).hexdigest()
-
+        list_id = self.str2hash(task_str)
         res["id"] = list_id
-
 
         return res
 
@@ -97,12 +107,17 @@ class Glymage(APIFramework):
 
         self.output(2, "Worker-%s is starting up" % (pid))
 
+        # TODO
+        self.data_folder = self._static_folder
+        print self.data_folder
+
         tmp_image_folder = "tmp"
         try:
             os.mkdir(tmp_image_folder)
         except:
             pass
 
+        gtc = pygly.GlycanResource.GlyTouCanNoPrefetch()
         self.output(2, "Worker-%s is ready to take job" % (pid))
 
         while True:
@@ -118,6 +133,7 @@ class Glymage(APIFramework):
 
 
             list_id = task_detail["id"]
+            acc = task_detail["acc"]
             seq = task_detail["seq"]
             scale = task_detail["scale"]
             notation = task_detail["notation"]
@@ -127,38 +143,64 @@ class Glymage(APIFramework):
             opaque = task_detail["opaque"]
             image_format = task_detail["image_format"]
 
+            displayjava = display
             if display == "extended":
-                display = "normalinfo"
+                displayjava = "normalinfo"
 
             ge = pygly.GlycanImage.GlycanImage()
             ge.scale(scale)
             ge.notation(notation)
-            ge.display(display)
+            ge.display(displayjava)
             ge.orientation(orientation)
             ge.opaque(opaque)
             ge.reducing_end(redend)
             ge.format(image_format)
 
-            # print scale, notation, display, orientation, opaque, redend, image_format
+            seq_hashs = []
+
+            glycoct = None
+            wurcs = None
+            if acc != None:
+                seq_hashs.append(acc)
+
+                wurcs   = gtc.getseq(acc, format="wurcs")
+                glycoct = gtc.getseq(acc, format="glycoct")
+
+                if wurcs == None:
+                    error.append("GlyTouCan Accession (%s) is not present" % acc)
+                else:
+                    seq = wurcs
+                    seq_hashs.append(self.str2hash(wurcs))
+
+                if glycoct != None:
+                    seq_hashs.append(self.str2hash(glycoct))
+
+            else:
+                seq_hashs.append(self.str2hash(seq))
+
 
             str_image = ""
             image_md5_hash = ""
-            try:
-                tmp_image_file_name = "./%s/%s.%s" % (tmp_image_folder, list_id, image_format)
-                ge.writeImage(seq, tmp_image_file_name)
 
-                if image_format == "svg":
-                    f = open(tmp_image_file_name)
-                    str_image = f.read()
-                    f.close()
-                    image_md5_hash = hashlib.md5(str_image).hexdigest()
-                else:
-                    str_image = base64.b64encode(open(tmp_image_file_name, "rb").read())
-                    image_md5_hash = hashlib.md5(open(tmp_image_file_name).read()).hexdigest()
-                os.remove(tmp_image_file_name)
+            if len(error) == 0:
+                try:
+                    tmp_image_file_name = "./%s/%s.%s" % (tmp_image_folder, list_id, image_format)
+                    ge.writeImage(seq, tmp_image_file_name)
 
-            except:
-                error.append("Could not generate image...")
+                    str_image = open(tmp_image_file_name).read()
+                    image_md5_hash = self.str2hash(str_image)
+
+                    img_actual_path = self.data_folder + "/hash/%s.%s" % (image_md5_hash, image_format)
+
+                    os.rename(tmp_image_file_name, img_actual_path)
+                    img_actual_path = self.data_folder + "/hash/%s.%s" % (image_md5_hash, image_format)
+                    for accorseq in seq_hashs:
+                        image_sym_path = os.path.join(self.data_folder, notation, display, accorseq + "." + image_format)
+                        print image_sym_path
+                        os.link(os.path.abspath(img_actual_path), os.path.abspath(image_sym_path))
+
+                except:
+                    error.append("Could not generate image...")
 
             calculation_end_time = time.time()
             calculation_time_cost = calculation_end_time - calculation_start_time
@@ -171,29 +213,132 @@ class Glymage(APIFramework):
                 "end time": calculation_end_time,
                 "runtime": calculation_time_cost,
                 "error": error,
-                "result": [image_md5_hash, str_image]
+                "result": image_md5_hash
             }
             self.output(2, "Job (%s): %s" % (list_id, res))
             result_queue.put(res)
 
-    @staticmethod
-    def str2hash(s):
-        return hashlib.md5(s).hexdigest()
+
 
     def error_image(self):
         fp = self.abspath(os.path.join(self._static_folder, "error.png"))
+
+        try:
+            notfoundurl = str(flask.request.url)
+            content = notfoundurl.split("/")
+            imageword = content[3]
+            notation = content[4]
+            display = content[5]
+            filename = content[6]
+
+            if imageword != "image":
+                raise RuntimeError
+
+            if notation not in ["snfg"]:
+                raise RuntimeError
+
+            if display not in ["compact", "extended"]:
+                raise RuntimeError
+
+            acc, image_format = filename.split(".")
+            if image_format not in ["png"]:
+                raise RuntimeError
+
+            acc = acc.upper()
+            if not self.glytoucan_accession_detection(acc):
+                raise RuntimeError
+
+            option = {
+                "acc": acc,
+                "notation": notation,
+                "display": display,
+                "image_format": image_format,
+            }
+            self.image_generation_submit(option)
+
+        except:
+            pass
+
         return flask.send_file(fp, mimetype='image/png')
 
+    def glytoucan_accession_detection(self, s):
+        gtcp = re.compile(r"^G\d{5}\w{2}$")
+        return len(gtcp.findall(s)) > 0
+
+
+    def image_generation_submit(self, option):
+        imagegenerationwebservicebaseurl = "http://%s:%s/" % (self.host(), self.port())
+
+        submiturl = imagegenerationwebservicebaseurl + "submit?"
+        submiturl += "tasks=" + urllib.quote_plus(json.dumps([option]))
+
+        response = urllib2.urlopen(submiturl)
+        jobid = json.loads(response.read())[0]["id"]
+
+        return jobid
+
+
+    def image_generation(self, acc, seq, notation, display, image_format):
+
+        seq = seq.strip()
+        seq_hash = self.str2hash(seq)
+
+        option = {}
+
+        if acc != None:
+            option["acc"] = acc
+
+        if seq != None:
+            option["seq"] = seq
+
+        option["notation"] = notation
+        option["display"] = display
+
+        option["image_format"] = image_format
+
+        image_sym_path_seq = os.path.join(self.data_folder, notation, display, seq_hash + "." + image_format)
+
+        mimetype = image_format
+        if image_format == "svg":
+            mimetype = "svg+xml"
+
+        if os.path.exists(image_sym_path_seq):
+            pass
+        else:
+
+            imagegenerationwebservicebaseurl = "http://%s:%s/" % (self.host(), self.port())
+
+            jobid = self.image_generation_submit(option)
+
+            b64imagecomputed = ["", ""]
+            errors = ["Time out..."]
+            for i in range(10):
+                retrieveurl = imagegenerationwebservicebaseurl + "retrieve?list_id="
+                retrieveurl += jobid
+
+                response = urllib2.urlopen(retrieveurl)
+                response_obj = json.loads(response.read())[0]
+
+                if response_obj["finished"]:
+                    b64imagecomputed = response_obj
+                    errors = b64imagecomputed["error"]
+                    break
+
+                time.sleep(2)
+
+            if len(errors) > 0:
+                return self.error_image(), 404
+
+        return flask.send_file(image_sym_path_seq, mimetype='image/%s' % mimetype)
+
+
     def load_additional_route(self, app):
-        self.data_folder = "./image"
+        # TODO
+        self.data_folder = self._static_folder
 
         @app.errorhandler(404)
         def error_handling(e):
             return self.error_image(), 404
-
-        @app.route('/test')
-        def x():
-            return open("./htmls/ig.html").read()
 
         @app.route('/getimage')
         def getimage():
@@ -210,7 +355,7 @@ class Glymage(APIFramework):
                 v = para.get(k)
                 p[k] = str(v)
 
-            option = {}
+            seq = p["seq"].strip()
 
             notation = "snfg"
             if "notation" in p:
@@ -230,75 +375,7 @@ class Glymage(APIFramework):
                 if image_format not in ["png", "svg"]:
                     return self.error_image(), 404
 
-            seq = p["seq"]
-            seq = seq.strip()
-            seq_hash = self.str2hash(seq)
-
-            option["seq"] = seq
-
-            option["notation"] = notation
-            option["display"] = display
-
-            option["image_format"] = image_format
-
-            """
-            option["scale"] = scale
-            option["orientation"] = orientation
-            option["redend"] = redend
-            option["opaque"] = opaque
-            """
-
-            image_sym_path_seq = os.path.join(self.data_folder, notation, display, seq_hash + "." + image_format)
-
-            mimetype = image_format
-            if os.path.exists(image_sym_path_seq):
-                pass
-            else:
-
-                imagegenerationwebservicebaseurl = "http://%s:%s/" % (self.host(), self.port())
-
-                submiturl = imagegenerationwebservicebaseurl + "submit?"
-
-                submiturl += "tasks=" + urllib.quote_plus(json.dumps([option]))
-                response = urllib2.urlopen(submiturl)
-                jobid = json.loads(response.read())[0]["id"]
-
-                b64imagecomputed = ["", ""]
-                errors = ["Time out..."]
-                for i in range(10):
-                    retrieveurl = imagegenerationwebservicebaseurl + "retrieve?list_id="
-                    retrieveurl += jobid
-
-                    response = urllib2.urlopen(retrieveurl)
-                    response_obj = json.loads(response.read())[0]
-
-                    if response_obj["finished"]:
-                        b64imagecomputed = response_obj
-                        errors = b64imagecomputed["error"]
-                        break
-
-                    time.sleep(2)
-
-                if len(errors) > 0:
-                    return self.error_image(), 404
-
-                ihash, image_str = b64imagecomputed["result"]
-
-                img_actual_path = self.data_folder + "/hash/%s.%s" % (ihash, image_format)
-
-                if image_format == "svg":
-                    imgf = open(img_actual_path, "w")
-                    imgf.write(image_str)
-                    imgf.close()
-                    mimetype = "svg+xml"
-                else:
-                    imgf = open(img_actual_path, "wb")
-                    imgf.write(base64.b64decode(image_str))
-                    imgf.close()
-
-                os.link(os.path.abspath(img_actual_path), os.path.abspath(image_sym_path_seq))
-
-            return flask.send_file(image_sym_path_seq, mimetype='image/%s' % mimetype)
+            return self.image_generation(None, seq, notation, display, image_format)
 
 
 if __name__ == '__main__':
