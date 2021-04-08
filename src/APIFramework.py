@@ -6,10 +6,12 @@ import sys
 import copy
 import time
 import json
+import math
 import flask
 import werkzeug
 import atexit
 import hashlib
+import urllib2
 import random
 import string
 import datetime
@@ -74,6 +76,8 @@ class APIFramework(object):
         self.task_queue   = multiprocessing.Queue()
         self.result_queue = multiprocessing.Queue()
         self.flask_queue  = multiprocessing.Queue()
+        self.request_suicide_queue = multiprocessing.Queue()
+        self.approve_suicide_queue = multiprocessing.Queue()
 
         self._static_folder = None
         self._static_url = None
@@ -362,7 +366,7 @@ class APIFramework(object):
         else:
             return flask.render_template(self._file_upload_finished_html, **kwargs)
 
-    def get_unfinished_job_count(self):
+    def queue_length(self):
         self.update_results(getall=True)
         n = len(list(filter(lambda x: not x["finished"], self.result_cache.values())))
 
@@ -647,6 +651,7 @@ class APIFramework(object):
     def load_route(self, app):
 
         app.add_url_rule("/status", "status", self.status, methods=["GET", "POST"])
+        app.add_url_rule("/queue_length", "queue_length", self.queue_length, methods=["GET", "POST"])
         app.add_url_rule("/retrieve", "retrieve", self.retrieve, methods=["GET", "POST"])
         if self._file_based_job:
             app.add_url_rule("/file_upload", "upload_file", self.upload_file, methods=["GET", "POST"])
@@ -741,9 +746,14 @@ class APIFramework(object):
         self._last_worker_process_id += 1
         pid = self._last_worker_process_id
 
+        suicide_queue = [
+            self.request_suicide_queue,
+            self.approve_suicide_queue
+        ]
+
         proc = multiprocessing.Process(
             target=self.worker,
-            args=(pid, self.task_queue, self.result_queue, self._worker_para)
+            args=(pid, self.task_queue, self.result_queue, suicide_queue, self._worker_para)
         )
 
         proc.start()
@@ -761,31 +771,86 @@ class APIFramework(object):
 
         return process_pool
 
+    def task_queue_get(self, task_queue, pid, suicide_queue):
+
+        counter = 0
+        while True:
+            counter += 1
+            try:
+                task_detail = task_queue.get_nowait()
+                return task_detail
+            except queue.Empty:
+                time.sleep(1)
+
+            # TODO 60? 10 minutes?
+            if counter > 5:
+                counter = 0
+
+                self.output(2, "Worker-%s is idling for 10 minutes" % pid)
+                suicide_queue[0].put(pid)
+
+            try:
+                approval = suicide_queue[1].get_nowait()
+                if approval:
+                    self.output(2, "Worker-%s received KILL-SIGNAL, Bye." % pid)
+                    sys.exit()
+            except queue.Empty:
+                continue
+
+
+    def get_queue_length(self):
+        url = "http://%s:%s/queue_length" % (self.host(), self.port())
+
+        req = urllib2.urlopen(url)
+        x = req.read()
+
+        return int(x)
+
 
     def monitor(self):
-        # Function 1: Keeps master process alive
-        # Function 2: Relauch the worker nodes when they are dead unexpectedly
-
         self.cleanup()
 
         while True:
-            time.sleep(60)
+            # TODO 60s
+            time.sleep(10)
+
+            try:
+                pid = self.request_suicide_queue.get_nowait()
+
+                if len(self._deamon_process_pool) == 1:
+                    break
+
+                self.approve_suicide_queue.put(True)
+                self.output(0, "Sending KILL-SIGNAL to worker")
+
+            except queue.Empty:
+                pass
+
+            unfinished_job_count = 0
+            try:
+                unfinished_job_count = self.get_queue_length()
+            except:
+                # TODO network issue handling?
+                continue
 
             for pid, proc in self._deamon_process_pool.items():
 
-                # print("\tProcess", pid, proc.is_alive())
-
-                if proc.is_alive():
-                    # Process / worker node works as expected...
-                    pass
-                else:
-                    # Process / worker node is dead
-                    self.output(0, "Worker-%s terminated unexpectedly for some reasons... Please check the log for more info" % (pid))
+                if not proc.is_alive():
+                    self.output(0, "Worker-%s was terminated for some reasons... Please check the log for more info" % (pid))
                     del self._deamon_process_pool[pid]
 
+            required_process_count = int(math.ceil(float(unfinished_job_count)/10))
+            required_process_count = min(required_process_count, self.worker_num())
+            required_process_count = max(required_process_count, 1)
+
+            needed_process_count = required_process_count - len(self._deamon_process_pool)
+
+            if needed_process_count > 0:
+
+                self.output(0, "Need %s more worker(s)" % (needed_process_count))
+                for i in range(needed_process_count):
                     new_pid, new_proc = self.new_worker_process()
                     self._deamon_process_pool[new_pid] = new_proc
-                    self.output(0, "Worker-%s replaced the dead Worker-%s" % (new_pid, pid))
 
 
     def cleanup(self):
