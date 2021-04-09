@@ -40,7 +40,7 @@ class Subsumption(APIFrameworkWithFrontEnd):
         return res
 
 
-    def worker(self, pid, task_queue, result_queue, params):
+    def worker(self, pid, task_queue, result_queue, suicide_queue_pair, params):
 
         self.output(2, "Worker-%s is starting up" % (pid))
 
@@ -74,13 +74,9 @@ class Subsumption(APIFrameworkWithFrontEnd):
         self.output(2, "Worker-%s is ready to take job" % (pid))
 
         while True:
-            try:
-                task_detail = task_queue.get_nowait()
-            except queue.Empty:
-                time.sleep(1)
-                continue
+            task_detail = self.task_queue_get(task_queue, pid, suicide_queue_pair)
 
-            self.output(1, "Worker-%s is computing task: %s" % (pid, task_detail))
+            self.output(2, "Worker-%s is computing task: %s" % (pid, task_detail))
 
             error = []
             calculation_start_time = time.time()

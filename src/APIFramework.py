@@ -57,7 +57,7 @@ class APIFramework(object):
         self._host = "localhost"
         self._port = 10980
 
-        self._worker_num = 1
+        self._max_worker_num = 1
         self._clean_start = True
         self._file_based_job = False
 
@@ -109,11 +109,11 @@ class APIFramework(object):
         else:
             raise APIParameterError("Port number requires integer, %s is not acceptable")
 
-    def worker_num(self):
-        return self._worker_num
+    def max_worker_num(self):
+        return self._max_worker_num
 
-    def set_worker_num(self, w):
-        self._worker_num = w
+    def set_max_worker_num(self, w):
+        self._max_worker_num = w
 
     def verbose_level(self):
         return self._verbose_level
@@ -246,8 +246,8 @@ class APIFramework(object):
             if "port" in res["basic"]:
                 self.set_port(int(res["basic"]["port"]))
 
-            if "cpu_core" in res["basic"]:
-                self.set_worker_num(int(res["basic"]["cpu_core"]))
+            if "max_cpu_core" in res["basic"]:
+                self.set_max_worker_num(int(res["basic"]["max_cpu_core"]))
 
             if "clean_start" in res["basic"]:
                 self._clean_start = self.bool(res["basic"]["clean_start"])
@@ -309,7 +309,11 @@ class APIFramework(object):
             self.set_port(int(os.environ["WEBSERVICE_BASIC_PORT"]))
 
         if "WEBSERVICE_BASIC_CPU_CORE" in os.environ:
-            self.set_worker_num(int(os.environ["WEBSERVICE_BASIC_CPU_CORE"]))
+            self.output(0, "Environment variable (WEBSERVICE_BASIC_CPU_CORE) is deprecated!")
+            self.set_max_worker_num(int(os.environ["WEBSERVICE_BASIC_CPU_CORE"]))
+
+        if "WEBSERVICE_BASIC_MAX_CPU_CORE" in os.environ:
+            self.set_max_worker_num(int(os.environ["WEBSERVICE_BASIC_MAX_CPU_CORE"]))
 
         for k, v in os.environ.items():
             if k.startswith("WEBSERVICE_APP_"):
@@ -704,7 +708,7 @@ class APIFramework(object):
 
         self.output(0, "Host: %s" % self._host)
         self.output(0, "Port: %s" % self._port)
-        self.output(0, "Worker_num: %s" % self._worker_num)
+        self.output(0, "Max_Worker_Num: %s" % self._max_worker_num)
 
         for k,v in self._worker_para.items():
             self.output(0, "%s(worker para): %s" % (k,v))
@@ -765,7 +769,7 @@ class APIFramework(object):
     def new_worker_processes(self):
 
         process_pool = {}
-        for i in range(self._worker_num):
+        for i in range(self._max_worker_num):
             pid, proc = self.new_worker_process()
             process_pool[pid] = proc
 
@@ -773,20 +777,37 @@ class APIFramework(object):
 
     def task_queue_get(self, task_queue, pid, suicide_queue):
 
+        i = 0
         counter = 0
+        next_report = 600
         while True:
             counter += 1
+            i += 1
+
             try:
                 task_detail = task_queue.get_nowait()
                 return task_detail
             except queue.Empty:
                 time.sleep(1)
 
-            # TODO 60? 10 minutes?
-            if counter > 5:
-                counter = 0
+            if counter > 599:
+                i = 0
 
-                self.output(2, "Worker-%s is idling for 10 minutes" % pid)
+                time_str = ""
+                hours = int(counter / 3600)
+                minutes = int(counter % 3600 / 60)
+
+                if hours > 0:
+                    time_str += "%sh " % hours
+                time_str += "%sm " % minutes
+
+                if counter == next_report:
+                    if counter < 3600:
+                        next_report += 600
+                    else:
+                        next_report += 3600
+
+                    self.output(2, "Worker-%s has been idling for %s" % (pid, time_str))
                 suicide_queue[0].put(pid)
 
             try:
@@ -806,25 +827,21 @@ class APIFramework(object):
 
         return int(x)
 
+    def deamon_process_pool_update(self):
+
+        for pid, proc in self._deamon_process_pool.items():
+
+            if not proc.is_alive():
+                self.output(0, "Worker-%s was terminated for some reasons... Please check the log for more info" % (pid))
+                del self._deamon_process_pool[pid]
+
+        return
 
     def monitor(self):
         self.cleanup()
 
         while True:
-            # TODO 60s
-            time.sleep(10)
-
-            try:
-                pid = self.request_suicide_queue.get_nowait()
-
-                if len(self._deamon_process_pool) == 1:
-                    break
-
-                self.approve_suicide_queue.put(True)
-                self.output(0, "Sending KILL-SIGNAL to worker")
-
-            except queue.Empty:
-                pass
+            time.sleep(60)
 
             unfinished_job_count = 0
             try:
@@ -833,14 +850,10 @@ class APIFramework(object):
                 # TODO network issue handling?
                 continue
 
-            for pid, proc in self._deamon_process_pool.items():
-
-                if not proc.is_alive():
-                    self.output(0, "Worker-%s was terminated for some reasons... Please check the log for more info" % (pid))
-                    del self._deamon_process_pool[pid]
+            self.deamon_process_pool_update()
 
             required_process_count = int(math.ceil(float(unfinished_job_count)/10))
-            required_process_count = min(required_process_count, self.worker_num())
+            required_process_count = min(required_process_count, self.max_worker_num())
             required_process_count = max(required_process_count, 1)
 
             needed_process_count = required_process_count - len(self._deamon_process_pool)
@@ -851,6 +864,25 @@ class APIFramework(object):
                 for i in range(needed_process_count):
                     new_pid, new_proc = self.new_worker_process()
                     self._deamon_process_pool[new_pid] = new_proc
+
+                while True:
+                    try:
+                        pid = self.request_suicide_queue.get_nowait()
+                    except queue.Empty:
+                        break
+
+            try:
+                pid = self.request_suicide_queue.get_nowait()
+
+                self.deamon_process_pool_update()
+
+                if len(self._deamon_process_pool) > 1:
+                    self.approve_suicide_queue.put(True)
+                    self.output(0, "Sending KILL-SIGNAL to worker")
+                self.deamon_process_pool_update()
+
+            except queue.Empty:
+                pass
 
 
     def cleanup(self):
