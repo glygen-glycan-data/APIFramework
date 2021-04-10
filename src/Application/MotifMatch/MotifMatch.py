@@ -169,27 +169,28 @@ class MotifMatch(APIFrameworkWithFrontEnd):
         assert site in ["", "dev", "test"]
 
         gm = pygly.GlycanResource.GlycoMotif()
-        gm.endpt = "https://edwardslab.bmcb.georgetown.edu/sparql/glycomotif"+site+"/query"
+        gm.endpt = "https://glycomotif.glyomics.org/glycomotif"+site+"/sparql/query"
 
         wp = WURCS20Format()
 
         q2 = """
-        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-        PREFIX glycomotif: <http://glycandata.glygen.org/glycomotif#>
-
-        SELECT ?collection ?accession ?gtcacc (group_concat(?aname;SEPARATOR="//") as ?name) ?wurcs ?glycoct
+        PREFIX glycomotif: <http://glyomics.org/glycomotif#>
+        
+        SELECT ?collectionid ?accession ?gtcacc ?preferred_name ?wurcs ?glycoct
         WHERE {
-            ?motif rdf:type glycomotif:Motif .
+            ?collection a glycomotif:Collection .
+            ?collection glycomotif:id ?collectionid .
+            
+            ?motif a glycomotif:Motif .
             ?motif glycomotif:accession ?accession .
             ?motif glycomotif:incollection ?collection . 
             ?motif glycomotif:glytoucan ?gtcacc . 
-            ?collection rdf:type glycomotif:Collection .
-            OPTIONAL { ?motif glycomotif:name ?aname }
+            
+            OPTIONAL { ?motif glycomotif:preferred_name ?preferred_name }
             OPTIONAL { ?motif glycomotif:wurcs ?wurcs }
             OPTIONAL { ?motif glycomotif:glycoct ?glycoct }
         }
-        GROUP BY ?collection ?accession ?gtcacc ?wurcs ?glycoct
-        ORDER BY ?collection ?accession
+        ORDER BY ?collectionid ?accession ?gtcacc ?preferred_name
         """
 
         data_file_handle = open(self.autopath("tmp.txt", newfile=True), "w")

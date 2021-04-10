@@ -865,11 +865,13 @@ class APIFramework(object):
                     new_pid, new_proc = self.new_worker_process()
                     self._deamon_process_pool[new_pid] = new_proc
 
+            if unfinished_job_count >= len(self._deamon_process_pool):
                 while True:
                     try:
                         pid = self.request_suicide_queue.get_nowait()
                     except queue.Empty:
                         break
+                continue
 
             try:
                 pid = self.request_suicide_queue.get_nowait()
