@@ -16,18 +16,6 @@ cp ../../Application/GlyLookup/glycans.tsv ./
 docker build -t glyomics/glylookup:$1 -t glyomics/glylookup:latest ./
 # docker run -p 10981:10981 glyomics/glylookup:latest
 
-:'
-docker run \
-  --env WEBSERVICE_BASIC_HOST=0.0.0.0 \
-  --env WEBSERVICE_BASIC_PORT=10981 \
-  --env WEBSERVICE_BASIC_CPU_CORE=1 \
-  -p 10981:10981 \
-  glyomics/glylookup:$1
-
-# Additional Options:
-# --mount type=bind,source=/.../.../.../ConfigFileFolder,target=/root/appconfig
-'
-
 docker push glyomics/glylookup:$1
 docker push glyomics/glylookup:latest
 

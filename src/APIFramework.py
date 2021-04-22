@@ -16,6 +16,8 @@ import random
 import string
 import datetime
 import multiprocessing
+import multiprocessing.queues
+
 
 try:
     # Python3 import
@@ -46,6 +48,55 @@ class APIParameterError(APIErrorBase):
 
 class APIUnfinishedError(APIErrorBase):
     pass
+
+
+
+# For MacOS/Unix only...
+class SharedCounter(object):
+
+    def __init__(self, n=0):
+        self.count = multiprocessing.Value('i', n)
+
+    def increment(self, n=1):
+        with self.count.get_lock():
+            self.count.value += n
+
+    @property
+    def value(self):
+        return self.count.value
+
+
+class MacOSQueue(multiprocessing.queues.Queue):
+
+    def __init__(self, *args, **kwargs):
+        super(MacOSQueue, self).__init__(*args, **kwargs)
+        self.size = SharedCounter(0)
+
+    def put(self, *args, **kwargs):
+        super(MacOSQueue, self).put(*args, **kwargs)
+        self.size.increment(1)
+
+    def get(self, *args, **kwargs):
+        res = super(MacOSQueue, self).get(*args, **kwargs)
+        self.size.increment(-1)
+        return res
+
+    def qsize(self):
+        return self.size.value
+
+    def empty(self):
+        return not self.qsize()
+
+    def clear(self):
+        while not self.empty():
+            self.get()
+
+# Hmmm not the best implementation..
+try:
+    q = multiprocessing.Queue()
+    q.qsize()
+except NotImplementedError:
+    multiprocessing.Queue = MacOSQueue
 
 
 class APIFramework(object):
@@ -91,6 +142,8 @@ class APIFramework(object):
         self._worker_started = False
         self._last_worker_process_id = 0
 
+        self._google_analytics_tag_id = ""
+
 
 
     # Proper APIs for changing config
@@ -125,6 +178,13 @@ class APIFramework(object):
 
     def set_app_name(self, an):
         self._app_name = an
+
+    def google_analytics_tag_id(self):
+        return self._google_analytics_tag_id
+
+    def set_google_analytics_tag_id(self, tag):
+        assert type(tag) in [str, unicode]
+        self._google_analytics_tag_id = tag
 
     def input_file_folder(self):
         return self._input_file_folder
@@ -289,6 +349,8 @@ class APIFramework(object):
             if "allow_cors" in res["basic"]:
                 self._allow_cors = self.bool(res["basic"]["allow_cors"])
 
+            if "google_analytics_tag_id" in res["basic"]:
+                self.set_google_analytics_tag_id(res["basic"]["google_analytics_tag_id"])
 
             if "app_name" in res["basic"]:
                 self.set_app_name(res["basic"]["app_name"])
@@ -314,6 +376,9 @@ class APIFramework(object):
 
         if "WEBSERVICE_BASIC_MAX_CPU_CORE" in os.environ:
             self.set_max_worker_num(int(os.environ["WEBSERVICE_BASIC_MAX_CPU_CORE"]))
+
+        if "WEBSERVICE_BASIC_GOOGLE_ANALYTICS_TAG_ID" in os.environ:
+            self.set_google_analytics_tag_id(os.environ["WEBSERVICE_BASIC_GOOGLE_ANALYTICS_TAG_ID"])
 
         for k, v in os.environ.items():
             if k.startswith("WEBSERVICE_APP_"):
@@ -655,7 +720,7 @@ class APIFramework(object):
     def load_route(self, app):
 
         app.add_url_rule("/status", "status", self.status, methods=["GET", "POST"])
-        app.add_url_rule("/queue_length", "queue_length", self.queue_length, methods=["GET", "POST"])
+        # app.add_url_rule("/queue_length", "queue_length", self.queue_length, methods=["GET", "POST"])
         app.add_url_rule("/retrieve", "retrieve", self.retrieve, methods=["GET", "POST"])
         if self._file_based_job:
             app.add_url_rule("/file_upload", "upload_file", self.upload_file, methods=["GET", "POST"])
@@ -786,6 +851,7 @@ class APIFramework(object):
 
             try:
                 task_detail = task_queue.get_nowait()
+                # task_detail = task_queue.get_nowait(block=True)
                 return task_detail
             except queue.Empty:
                 time.sleep(1)
@@ -843,27 +909,21 @@ class APIFramework(object):
         while True:
             time.sleep(60)
 
-            unfinished_job_count = 0
-            try:
-                unfinished_job_count = self.get_queue_length()
-            except:
-                # TODO network issue handling?
-                continue
+            unfinished_job_count = self.task_queue.qsize()
 
             self.deamon_process_pool_update()
 
-            required_process_count = int(math.ceil(float(unfinished_job_count)/10))
-            required_process_count = min(required_process_count, self.max_worker_num())
-            required_process_count = max(required_process_count, 1)
+            require_new_worker = False
+            if unfinished_job_count > 10:
+                require_new_worker = True
+            if len(self._deamon_process_pool) >= self.max_worker_num():
+                require_new_worker = False
 
-            needed_process_count = required_process_count - len(self._deamon_process_pool)
-
-            if needed_process_count > 0:
+            if require_new_worker:
 
                 self.output(0, "Need %s more worker(s)" % (needed_process_count))
-                for i in range(needed_process_count):
-                    new_pid, new_proc = self.new_worker_process()
-                    self._deamon_process_pool[new_pid] = new_proc
+                new_pid, new_proc = self.new_worker_process()
+                self._deamon_process_pool[new_pid] = new_proc
 
             if unfinished_job_count >= len(self._deamon_process_pool):
                 while True:
@@ -918,9 +978,14 @@ class APIFrameworkWithFrontEnd(APIFramework):
 
         self.data_folder = "./image"
 
+        google_tracking_js = ""
+        if self.google_analytics_tag_id() not in [None, ""]:
+            google_tracking_js = self.google_analytics_script()
+
         kwarg = {
             "app_name": self._app_name,
             "app_name_lower": self._app_name.lower(),
+            "google_analytics_html": google_tracking_js
         }
 
         # TODO better routing management
@@ -952,6 +1017,19 @@ class APIFrameworkWithFrontEnd(APIFramework):
         @app.route('/renderer.js', methods=["GET", "POST"])
         def renderer():
             return open("./htmls/renderer.js").read()
+
+    def google_analytics_script(self):
+        tag = self.google_analytics_tag_id()
+        res = """
+<script async src="https://www.googletagmanager.com/gtag/js?id=%s"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', '%s');
+</script>""" % (tag, tag)
+        return res
 
 
 if __name__ == '__main__':

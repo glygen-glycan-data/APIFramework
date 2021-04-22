@@ -16,18 +16,6 @@ cp ../../Application/Substructure/*.tsv ./
 docker build -t glyomics/substructure:$1 -t glyomics/substructure:latest ./
 # docker run -p 10983:10983 glyomics/substructure:latest
 
-:'
-docker run \
-  --env WEBSERVICE_BASIC_HOST=0.0.0.0 \
-  --env WEBSERVICE_BASIC_PORT=10982 \
-  --env WEBSERVICE_BASIC_CPU_CORE=1 \
-  -p 10982:10982 \
-  glyomics/motifmatch:$1
-
-# Additional Options:
-# --mount type=bind,source=/.../.../.../ConfigFileFolder,target=/root/appconfig
-'
-
 docker push glyomics/substructure:$1
 docker push glyomics/substructure:latest
 
