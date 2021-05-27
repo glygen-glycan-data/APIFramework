@@ -34,7 +34,8 @@ function renderResultMore(){
     imgurl += "notation=snfg&display=extended&format=png&seq=" + s;
 
 
-    result_container.innerHTML += "<br><img src='"+imgurl+"'><p>Query glycan (motif)</p>";
+    result_container.innerHTML += "<br><img src='"+imgurl+"'>";
+    result_container.innerHTML += "<br><a href='https://glytoucan.org/Structures/Glycans/"+retrieve_result.result[0]+"'>"+retrieve_result.result[0]+"</a>"
 
     if (result.length == 0){
         return
