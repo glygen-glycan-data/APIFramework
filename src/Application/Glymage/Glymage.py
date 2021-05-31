@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import time
+import datetime
 import json
 import copy
 import flask
@@ -33,6 +34,10 @@ class Glymage(APIFramework):
 
         if "acc" in p:
             res["acc"] = p["acc"].strip()
+
+            now = datetime.datetime.now()
+            res["timestamp"] = now.strftime("%Y.%m.%d.%H")
+
         else:
             res["acc"] = None
 
@@ -69,7 +74,7 @@ class Glymage(APIFramework):
             else:
                 raise RuntimeError
 
-        opaque = False
+        opaque = True
         if "opaque" in p:
             tmp = p["opaque"].lower()
             if tmp in ["y", "yes", "t", "true", "1"]:
@@ -109,7 +114,7 @@ class Glymage(APIFramework):
 
         # TODO
         self.data_folder = self._static_folder
-        print self.data_folder
+        # print self.data_folder
 
         tmp_image_folder = "tmp"
         try:
@@ -164,7 +169,7 @@ class Glymage(APIFramework):
                 glycoct = gtc.getseq(acc, format="glycoct")
 
                 if wurcs == None:
-                    error.append("GlyTouCan Accession (%s) is not present" % acc)
+                    error.append("GlyTouCan Accession (%s) is not present in triple store" % acc)
                 else:
                     seq = wurcs
                     seq_hashs.append(self.str2hash(wurcs))
