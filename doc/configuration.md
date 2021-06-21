@@ -12,10 +12,10 @@ Basic parameters are not application specific.
     * default value: 10980
     * usage: indicate the port for FLASK
     
-* cpu_core:
+* max_cpu_core:
     * type: Int
     * default value: 1
-    * usage: Number of daemon processes
+    * usage: Maximum amount of daemon processes
     
 * app_name:
     * type: String

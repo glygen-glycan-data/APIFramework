@@ -112,7 +112,7 @@ LIN
 
 
         retrieve_counter = 0;
-
+        // TODO POST
         submitURL = "./submit?tasks=" + encodeURIComponent(JSON.stringify([para]));
         jQuery.getJSON(submitURL).then(function (d) {
             job_id = d[0].id;
@@ -126,7 +126,7 @@ LIN
     function retrieve(){
 
         retrieve_counter += 1;
-
+        // TODO POST
         retrieveURL = "./retrieve?list_ids="+encodeURIComponent(JSON.stringify([job_id]));
         jQuery.getJSON(retrieveURL).then(function (d) {
 

@@ -921,7 +921,7 @@ class APIFramework(object):
 
             if require_new_worker:
 
-                self.output(0, "Need %s more worker(s)" % (needed_process_count))
+                self.output(0, "Need more worker...")
                 new_pid, new_proc = self.new_worker_process()
                 self._deamon_process_pool[new_pid] = new_proc
 
