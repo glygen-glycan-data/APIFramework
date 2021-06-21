@@ -4,4 +4,4 @@ ADD . /code
 
 WORKDIR /code
 
-CMD python GlycanConverter.py
+CMD python Converter.py
