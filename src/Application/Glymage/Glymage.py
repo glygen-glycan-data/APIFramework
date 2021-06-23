@@ -185,24 +185,27 @@ class Glymage(APIFramework):
             image_md5_hash = ""
 
             if len(error) == 0:
+
+                tmp_image_file_name = "./%s/%s.%s" % (tmp_image_folder, list_id, image_format)
+                ge.writeImage(seq, tmp_image_file_name)
+
                 try:
-                    tmp_image_file_name = "./%s/%s.%s" % (tmp_image_folder, list_id, image_format)
-                    ge.writeImage(seq, tmp_image_file_name)
-
                     str_image = open(tmp_image_file_name).read()
+
                     image_md5_hash = self.str2hash(str_image)
-
                     img_actual_path = self.data_folder + "/hash/%s.%s" % (image_md5_hash, image_format)
-
                     os.rename(tmp_image_file_name, img_actual_path)
-                    img_actual_path = self.data_folder + "/hash/%s.%s" % (image_md5_hash, image_format)
-                    for accorseq in seq_hashs:
-                        image_sym_path = os.path.join(self.data_folder, notation, display, accorseq + "." + image_format)
-                        print image_sym_path
-                        os.link(os.path.abspath(img_actual_path), os.path.abspath(image_sym_path))
-
                 except:
                     error.append("Could not generate image...")
+
+
+                for accorseq in seq_hashs:
+                    try:
+                        image_sym_path = os.path.join(self.data_folder, notation, display, accorseq + "." + image_format)
+                        os.link(os.path.abspath(img_actual_path), os.path.abspath(image_sym_path))
+                    except:
+                        error.append("Issue in make symbolic link (%s)" % image_sym_path)
+
 
             calculation_end_time = time.time()
             calculation_time_cost = calculation_end_time - calculation_start_time

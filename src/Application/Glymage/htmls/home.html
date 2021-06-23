@@ -3,8 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <title>Image Service</title>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 </head>
 <body>
+
+<div id="compute">
+    <textarea rows = "25" cols = "100" id="sequence">WURCS=2.0/4,7,6/[u2122h_2*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5]/1-2-3-4-4-4-4/a4-b1_b4-c1_c3-d1_c6-e1_e3-f1_e6-g1</textarea><br>
+    <form id="additional_para">
+        <label>Notation: </label>
+        <input type="radio" name="notation" value="snfg" checked><label>SNFG</label>
+        <input type="radio" name="notation" value="cfg" ><label>CFG</label>
+
+        <br>
+        <label>Display: </label>
+        <input type="radio" name="display" value="normalinfo" checked><label>Extended</label>
+        <input type="radio" name="display" value="normal" ><label>Normal</label>
+        <input type="radio" name="display" value="compact" ><label>Compact</label>
+
+        <br>
+        <label>Reducing end: </label>
+        <input type="radio" name="redend" value="y" checked><label>Show</label>
+        <input type="radio" name="redend" value="n" ><label>Hide</label>
+
+        <br>
+        <label>Background: </label>
+        <input type="radio" name="opaque" value="n" checked><label>White</label>
+        <input type="radio" name="opaque" value="y" ><label>Opaque</label>
+
+        <br>
+        <label>Image format: </label>
+        <input type="radio" name="image_format" value="png" checked><label>png</label>
+        <input type="radio" name="image_format" value="jpg" ><label>jpg</label>
+        <input type="radio" name="image_format" value="svg" ><label>svg</label>
+
+        <br>
+        <label>Scale: </label><input id="para_scale" type="number" value="1.0">
+
+        <!---
+        <br>
+        <label>Option 2: </label>
+        <input type="radio" name="" value="" checked><label></label>
+        <input type="radio" name="" value="" ><label></label>
+        <input type="radio" name="" value="" ><label></label>
+        <input type="radio" name="" value="" ><label></label>
+        --->
+
+
+    </form>
+    <button id="submit-sequence" onclick="compute()">Submit</button>
+    <br><br><br>
+    <div id="result"></div>
+</div>
 
 <h1>By sequence (real-time)</h1>
 <p>WURCS=2.0/4,5,4/[a2122h-1b_1-5][a2112h-1b_1-5][a2122h-1b_1-5_2*NCC/3=O][a1221m-1a_1-5]/1-2-3-2-4/a4-b1_b3-c1_c3-d1_d3-e1</p>
@@ -62,11 +111,11 @@ LIN<br>
 <img src="./image/snfg/extended/G00062MO.png"><br>
 
 <h1>By sequence hash</h1>
-<img src="./image/snfg/compact/f7c9d8e8b4fc3122c49cbe38083c964a.png">
-<img src="./image/snfg/extended/f7c9d8e8b4fc3122c49cbe38083c964a.png"><br>
+<img src="./image/snfg/compact/75130cf40b7338f08e50554e1db46f41.png">
+<img src="./image/snfg/extended/75130cf40b7338f08e50554e1db46f41.png"><br>
 
-<img src="./image/snfg/compact/533dfa2dc56c163682fcdc7c15c1a194.png">
-<img src="./image/snfg/extended/533dfa2dc56c163682fcdc7c15c1a194.png"><br>
+<img src="./image/snfg/compact/96b63a6edd0299118edb4fddfe25d7a3.png">
+<img src="./image/snfg/extended/96b63a6edd0299118edb4fddfe25d7a3.png"><br>
 
 
 <h1>Error</h1>
@@ -80,6 +129,125 @@ LIN<br>
 
 
 <script>
+    function updateServerStatus(){
+        jQuery.getJSON("./queue").then(function (d) {
+            const s_p = " motifs are waiting for aligning";
+            var s_s = "1 motif is waiting for aligning";
+            var s_empty = "Empty load on the server";
+            var s = "";
+
+            if (d == 0) {
+                s = s_empty;
+            }
+            else if (d == 1) {
+                s = s_s;
+            }
+            else {
+                s = d + s_p;
+            }
+            document.getElementById("server-status").innerHTML = s;
+        })
+    }
+    // updateServerStatus();
+
+    function space(){
+        var space = document.createElement("span");
+        space.innerHTML = '&nbsp&nbsp';
+        return space
+    }
+
+    var list_id = "";
+    var query_counter = 0;
+    var this_result = {};
+    var para = {}
+    function compute(){
+        para = {};
+        para["seq"] = document.getElementById("sequence").value;
+
+        var formEle = document.getElementById("additional_para");
+        for (var ele of formEle.childNodes){
+
+            if (ele.tagName != "INPUT"){
+                continue
+            }
+
+            if (ele.type != "radio"){
+                continue
+            }
+
+            if (ele.checked){
+                para[ele.name] = ele.value;
+            }
+
+        }
+
+        para.scale = parseFloat(document.getElementById("para_scale").value)
+
+
+        var requestURL = "http://localhost:10985/submit?tasks="+encodeURIComponent(JSON.stringify([para]));
+
+        jQuery.getJSON(requestURL).then(function (d) {
+            d = d[0]
+            list_id = d.id;
+            query_counter = 0;
+            //document.getElementById("result").innerHTML = "<a href='./retrieve?list_id="+d.list_id+"'>"+"Click me to see result"+"</a>";
+            document.getElementById("result").innerHTML = "Submitted successfully";
+            get_results();
+        })
+    }
+
+    function get_results() {
+        var requestURL = "http://localhost:10985/retrieve?list_ids=" + JSON.stringify([list_id]);
+        query_counter += 1;
+        jQuery.getJSON(requestURL).then(function (d) {
+            d = d[0];
+            if (d.finished){
+                this_result = d;
+                display_results();
+            }else{
+                setTimeout(get_results, 1000);
+                document.getElementById("result").innerHTML = "Checked for the "+query_counter+" times, haven't completed yet";
+            }
+        })
+    }
+
+    function display_results() {
+        var d = this_result;
+
+
+        var runtime = d["stat"]["runtime"];
+        var rterror = d["error"];
+
+        if (rterror.length > 0){
+            document.getElementById("result").innerHTML = "ERROR: "+rterror;
+        }
+
+
+        document.getElementById("result").innerHTML = "Alignment Calculation Time: " + runtime.toFixed(5);
+
+        var original_task = d["task"];
+        var result_hash = d["result"];
+
+
+        var base_image_static_url = "./image/hash/"
+        var the_image_url = base_image_static_url + result_hash + "." + d.task.image_format;
+
+        document.getElementById("result").innerHTML += "<br><a href='"+the_image_url+"' target=\"_blank\">Open me in new tab</a><br>"
+
+        var something = "<div style='background: lightgrey; padding: 20px; display: inline-block'>"
+        if (d.task.image_format == "svg"){
+            something += "<object data='"+the_image_url+"' type='image/svg+xml' style='width: 100%'></object>"
+        }
+        else {
+            something += "<img src='"+the_image_url+"'>"
+        }
+        something += "</div>";
+
+        document.getElementById("result").innerHTML += something
+    }
+
+
+
 </script>
 
 </body>
