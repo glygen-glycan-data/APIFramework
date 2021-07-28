@@ -1,6 +1,7 @@
 # Parameters
 
-## Basic
+## Parameter explanation
+### Common parameters for all apps
 Basic parameters are not application specific.
 * host 
     * type: String
@@ -62,10 +63,35 @@ Basic parameters are not application specific.
     * default value: None
     * usage: the web page when user finished uploading the file for your web-based API
     
+* google_analytics_tag_id:
+    * type: String
+    * default value: None
+    * usage: google analytics tag id
 
 
-
-## App specific
+### App specific
 Parameters here will be processed as key-value pairs and pass it to worker function as variable params.
 The section name must be the same as basic.app_name
+
+
+## Change parameter
+
+### Python methods
+For example, use "set_port" to set port number for your app.
+
+### Configuration file
+
+### Environmental variable
+#### Common parameters
+The following parameters can be set by environmental variable:
+1. host: WEBSERVICE_BASIC_HOST
+2. port: WEBSERVICE_BASIC_PORT
+3. max_cpu_core: WEBSERVICE_BASIC_MAX_CPU_CORE
+4. google_analytics_tag_id: WEBSERVICE_BASIC_GOOGLE_ANALYTICS_TAG_ID
+
+#### App specific
+Use "WEBSERVICE_APP_" to set app specific parameter, example:
+WEBSERVICE_APP_GLYCOMOTIF_VERSION to set glycomotif_version for MotifMatch.
+
+
 

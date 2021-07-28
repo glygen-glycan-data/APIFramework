@@ -34,8 +34,8 @@ function renderResultMore(){
     imgurl += "notation=snfg&display=extended&format=png&seq=" + s;
 
 
-    result_container.innerHTML += "<br><img src='"+imgurl+"'>";
-    result_container.innerHTML += "<br><p>"+retrieve_result.result.replaceAll("\n", "<br>")+"</p>"
+    result_container_additional.innerHTML += "<br><img src='"+imgurl+"'>";
+    result_container_additional.innerHTML += "<br><p>"+retrieve_result.result.replaceAll("\n", "<br>")+"</p>"
 
     if (result.length == 0){
         return

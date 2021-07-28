@@ -1,14 +1,11 @@
 
 import os
 import re
-import sys
 import time
 import json
-import copy
-import base64
 import urllib
 import multiprocessing
-from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
+from APIFramework import APIFrameworkWithFrontEnd
 
 import pygly.alignment
 import pygly.GNOme

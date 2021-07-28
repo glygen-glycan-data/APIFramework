@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 import os
+import re
 import sys
 import copy
 import time
@@ -443,8 +444,8 @@ class APIFramework(object):
         return response
 
     @staticmethod
-    def random_str():
-        return ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(20))
+    def random_str(l=20):
+        return ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(l))
 
     @staticmethod
     def str2hash(s):
@@ -469,7 +470,7 @@ class APIFramework(object):
             raw_tasks = json.loads(p["q"])
 
         res = []
-        userid = self.random_str()
+        userid_random = self.random_str()
         for raw_task in raw_tasks:
             task_detail = self.form_task(raw_task)
 
@@ -478,7 +479,38 @@ class APIFramework(object):
                     "No id provided for your job(%s), probably check the form_task method"
                     % task_detail)
 
-            res.append(copy.deepcopy(task_detail))
+            userid = userid_random
+
+            developer_email = ""
+            developer_email_valid = False
+            if "developer_email" in raw_task:
+                developer_email = raw_task["developer_email"].strip()
+                email_valid = re.compile(r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$')
+                developer_email_valid = bool(email_valid.match(developer_email))
+            if developer_email != "interactive":
+                userid = self.str2hash(developer_email)[:20]
+
+            returned_task_detail = copy.deepcopy(task_detail)
+            if developer_email == "":
+                self.output(1, "No email address is provided for task(%s)" % task_detail)
+                returned_task_detail["error"] = "Please provide your E-mail address"
+            if developer_email != "interactive" and not developer_email_valid:
+                self.output(1, "Invalid email(%s) for task(%s)" % (developer_email, task_detail))
+                returned_task_detail["error"] = "Please provide valid E-mail address"
+
+            res.append(returned_task_detail)
+
+            if "error" in returned_task_detail:
+                del returned_task_detail["id"]
+                continue
+            else:
+                returned_task_detail["id"] = returned_task_detail["id"] + userid
+                if developer_email != "interactive":
+                    returned_task_detail["developer_email"] = developer_email
+                    self.output(1, "Job request from %s" % developer_email)
+
+
+
             list_id = task_detail["id"]
             status = {
                 "id": list_id,
@@ -496,9 +528,6 @@ class APIFramework(object):
                 self.task_queue.put(task_detail)
                 self.result_cache[list_id] = status
             self.output(1, "Job received by API: %s" % (task_detail))
-
-        for r in res:
-            r["id"] = r["id"] + userid
 
         response = flask.jsonify(res)
         return response

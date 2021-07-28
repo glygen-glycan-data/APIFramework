@@ -5,6 +5,7 @@
     <title>{{app_name}}</title>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="/renderer.js"></script>
+    {{google_analytics_html|safe}}
 </head>
 
 <body style='margin: 0; font-family: "adobe-caslon-pro",Georgia,"Times New Roman",serif; '>
@@ -41,8 +42,8 @@ LIN
     <div id="result_container" style="width: 70%; margin: auto; text-align: center">
         <div id="result_container_status"></div>
         <div id="result_container_stat"></div><br>
-        <div id="result_container_json" style="text-align: left"></div>
-        <div id="result_container_additional"></div>
+        <div id="result_container_additional"></div><br><br>
+        <div id="result_container_json" style="text-align: left"></div><br><br><br>
     </div>
 </div>
 
@@ -71,6 +72,7 @@ LIN
     "use strict";
 
     let job_id;
+    let submit_result;
     let retrieve_result;
 
     let submitURL, retrieveURL;
@@ -93,7 +95,8 @@ LIN
 
 
     function submit(){
-        let para = {};
+        let para = {"developer_email": "interactive"};
+        // let para = {"developer_email": "interactive@abc.xyz"};
         let seq = document.getElementById("input_seq").value.trim();
         para["seqs"] = {"Query": seq};
 
@@ -113,9 +116,10 @@ LIN
 
         retrieve_counter = 0;
 
-        submitURL = "./submit?tasks=" + encodeURIComponent(JSON.stringify([para]));
-        jQuery.getJSON(submitURL).then(function (d) {
+        jQuery.post("./submit", {"tasks": JSON.stringify([para])}).then(function (d){
             job_id = d[0].id;
+            submit_result = d[0];
+
             show("loading_container");
             document.getElementById("submit_status").innerHTML = "<br><br><br>Submitted successfully!";
 
@@ -128,7 +132,7 @@ LIN
         retrieve_counter += 1;
 
         retrieveURL = "./retrieve?list_ids="+encodeURIComponent(JSON.stringify([job_id]));
-        jQuery.getJSON(retrieveURL).then(function (d) {
+        jQuery.post("./retrieve", {"list_ids": JSON.stringify([job_id])}).then(function (d){
 
             if (retrieve_counter > 5){
                 retrieve_interval = 3000;
@@ -173,8 +177,8 @@ LIN
 
         let stat_table = "" +
             "<table style='width: 100%; border: black solid 3px; font-size: 20px;'>" +
-            "<tr style='height: 32px; background-color: lightgrey'><td>Webservice Request</td><td><a onclick='RenderJSON(\""+submitURL+"\")'>Click me!</a></td></tr>" +
-            "<tr style='height: 32px; background-color: grey'><td>Webservice Response</td><td><a onclick='RenderJSON(\""+retrieveURL+"\")'>Click me!</a></td></tr>" +
+            "<tr style='height: 32px; background-color: lightgrey'><td>Webservice Request</td><td><a onclick='RenderObj(submit_result)'>Click me!</a></td></tr>" +
+            "<tr style='height: 32px; background-color: grey'><td>Webservice Response</td><td><a onclick='RenderObj(retrieve_result)'>Click me!</a></td></tr>" +
             "<tr style='height: 32px; background-color: lightgrey'><td>Compute time</td><td>"+stat.runtime.toFixed(2)+"s</td></tr>" +
             "<tr style='height: 32px; background-color: grey'><td>Cached</td><td>"+stat.cached+"</td></tr>" +
             "</table>";
@@ -187,20 +191,10 @@ LIN
 
     show("input_container");
 
-    function RenderJSON(json_url){
-        jQuery.getJSON(json_url, function (d){
-            let jv = new JSONViewer();
-            jv.render(d, "result_container_json")
-
-            let container = document.getElementById("result_container_json");
-            let ele = document.createElement("a");
-            ele.innerText = "Raw JSON";
-            ele.href = json_url;
-
-            container.appendChild(document.createElement("br"));
-            container.appendChild(ele);
-        })
-
+    function RenderObj(obj){
+        let jv = new JSONViewer();
+        jv.render([obj], "result_container_json")
+        document.getElementById('result_container_json').scrollIntoView();
     }
 
 
