@@ -92,8 +92,8 @@ LIN<br>
 9:9o(2|4+1)10d<br>
 10:10d(2+1)11n<br>
 </p>
-<img src="./getimage?notation=snfg&display=compact&format=png&seq=RES%0A1b%3Ax-dglc-HEX-x%3Ax%0A2s%3An-acetyl%0A3b%3Ab-dglc-HEX-1%3A5%0A4s%3An-acetyl%0A5b%3Ab-dman-HEX-1%3A5%0A6b%3Aa-dman-HEX-1%3A5%0A7b%3Ab-dglc-HEX-1%3A5%0A8s%3An-acetyl%0A9b%3Aa-dman-HEX-1%3A5%0A10b%3Ab-dglc-HEX-1%3A5%0A11s%3An-acetyl%0ALIN%0A1%3A1d(2%2B1)2n%0A2%3A1o(4%2B1)3d%0A3%3A3d(2%2B1)4n%0A4%3A3o(4%2B1)5d%0A5%3A5o(3%2B1)6d%0A6%3A6o(2%7C4%2B1)7d%0A7%3A7d(2%2B1)8n%0A8%3A5o(6%2B1)9d%0A9%3A9o(2%7C4%2B1)10d%0A10%3A10d(2%2B1)11n">
-<img src="./getimage?notation=snfg&display=extended&format=png&seq=RES%0A1b%3Ax-dglc-HEX-x%3Ax%0A2s%3An-acetyl%0A3b%3Ab-dglc-HEX-1%3A5%0A4s%3An-acetyl%0A5b%3Ab-dman-HEX-1%3A5%0A6b%3Aa-dman-HEX-1%3A5%0A7b%3Ab-dglc-HEX-1%3A5%0A8s%3An-acetyl%0A9b%3Aa-dman-HEX-1%3A5%0A10b%3Ab-dglc-HEX-1%3A5%0A11s%3An-acetyl%0ALIN%0A1%3A1d(2%2B1)2n%0A2%3A1o(4%2B1)3d%0A3%3A3d(2%2B1)4n%0A4%3A3o(4%2B1)5d%0A5%3A5o(3%2B1)6d%0A6%3A6o(2%7C4%2B1)7d%0A7%3A7d(2%2B1)8n%0A8%3A5o(6%2B1)9d%0A9%3A9o(2%7C4%2B1)10d%0A10%3A10d(2%2B1)11n"><br>
+<img src="./getimage?notation=snfg&display=compact&image_format=png&seq=RES%0A1b%3Ax-dglc-HEX-x%3Ax%0A2s%3An-acetyl%0A3b%3Ab-dglc-HEX-1%3A5%0A4s%3An-acetyl%0A5b%3Ab-dman-HEX-1%3A5%0A6b%3Aa-dman-HEX-1%3A5%0A7b%3Ab-dglc-HEX-1%3A5%0A8s%3An-acetyl%0A9b%3Aa-dman-HEX-1%3A5%0A10b%3Ab-dglc-HEX-1%3A5%0A11s%3An-acetyl%0ALIN%0A1%3A1d(2%2B1)2n%0A2%3A1o(4%2B1)3d%0A3%3A3d(2%2B1)4n%0A4%3A3o(4%2B1)5d%0A5%3A5o(3%2B1)6d%0A6%3A6o(2%7C4%2B1)7d%0A7%3A7d(2%2B1)8n%0A8%3A5o(6%2B1)9d%0A9%3A9o(2%7C4%2B1)10d%0A10%3A10d(2%2B1)11n">
+<img src="./getimage?notation=snfg&display=extended&image_format=png&seq=RES%0A1b%3Ax-dglc-HEX-x%3Ax%0A2s%3An-acetyl%0A3b%3Ab-dglc-HEX-1%3A5%0A4s%3An-acetyl%0A5b%3Ab-dman-HEX-1%3A5%0A6b%3Aa-dman-HEX-1%3A5%0A7b%3Ab-dglc-HEX-1%3A5%0A8s%3An-acetyl%0A9b%3Aa-dman-HEX-1%3A5%0A10b%3Ab-dglc-HEX-1%3A5%0A11s%3An-acetyl%0ALIN%0A1%3A1d(2%2B1)2n%0A2%3A1o(4%2B1)3d%0A3%3A3d(2%2B1)4n%0A4%3A3o(4%2B1)5d%0A5%3A5o(3%2B1)6d%0A6%3A6o(2%7C4%2B1)7d%0A7%3A7d(2%2B1)8n%0A8%3A5o(6%2B1)9d%0A9%3A9o(2%7C4%2B1)10d%0A10%3A10d(2%2B1)11n"><br>
 
 
 
@@ -161,7 +161,7 @@ LIN<br>
     var this_result = {};
     var para = {}
     function compute(){
-        para = {};
+        para = {"developer_email":"interactive"};
         para["seq"] = document.getElementById("sequence").value;
 
         var formEle = document.getElementById("additional_para");
@@ -184,7 +184,7 @@ LIN<br>
         para.scale = parseFloat(document.getElementById("para_scale").value)
 
 
-        var requestURL = "http://localhost:10985/submit?tasks="+encodeURIComponent(JSON.stringify([para]));
+        var requestURL = "./submit?tasks="+encodeURIComponent(JSON.stringify([para]));
 
         jQuery.getJSON(requestURL).then(function (d) {
             d = d[0]
@@ -197,7 +197,7 @@ LIN<br>
     }
 
     function get_results() {
-        var requestURL = "http://localhost:10985/retrieve?list_ids=" + JSON.stringify([list_id]);
+        var requestURL = "./retrieve?list_ids=" + JSON.stringify([list_id]);
         query_counter += 1;
         jQuery.getJSON(requestURL).then(function (d) {
             d = d[0];

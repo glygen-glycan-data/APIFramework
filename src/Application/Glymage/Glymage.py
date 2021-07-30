@@ -199,6 +199,8 @@ class Glymage(APIFramework):
                     error.append("Could not generate image...")
 
 
+            if len(error) == 0:
+
                 for accorseq in seq_hashs:
                     try:
                         image_sym_path = os.path.join(self.data_folder, notation, display, accorseq + "." + image_format)
@@ -272,6 +274,8 @@ class Glymage(APIFramework):
 
 
     def image_generation_submit(self, option):
+        option["developer_email"] = "interactive"
+
         imagegenerationwebservicebaseurl = "http://%s:%s/" % (self.host(), self.port())
 
         submiturl = imagegenerationwebservicebaseurl + "submit?"
@@ -283,58 +287,75 @@ class Glymage(APIFramework):
         return jobid
 
 
-    def image_generation(self, acc, seq, notation, display, image_format):
+    def image_generation(self, notation, display, image_format, query="", query_type=""):
 
-        seq = seq.strip()
-        seq_hash = self.str2hash(seq)
+        result_path = ""
+
+        imagegenerationwebservicebaseurl = "http://%s:%s/" % (self.host(), self.port())
+
+        assert query_type in ["sequence", "accession", "task"]
+        query = query.strip()
 
         option = {}
-
-        if acc != None:
-            option["acc"] = acc
-
-        if seq != None:
-            option["seq"] = seq
-
         option["notation"] = notation
         option["display"] = display
-
         option["image_format"] = image_format
 
-        image_sym_path_seq = os.path.join(self.data_folder, notation, display, seq_hash + "." + image_format)
+        if query_type == "accession":
+            option["acc"] = query
+        elif query_type == "sequence":
+            option["seq"] = query
+
 
         mimetype = image_format
         if image_format == "svg":
             mimetype = "svg+xml"
 
-        if os.path.exists(image_sym_path_seq):
-            pass
+
+        task_id = ""
+        if query_type == "task":
+            task_id = query
         else:
+            # See if the image already exists
+            locater = ""
+            if query_type == "accession":
+                locater = query
+            elif query_type == "sequence":
+                locater = self.str2hash(query)
+            result_path = os.path.join(self.data_folder, notation, display, locater + "." + image_format)
 
-            imagegenerationwebservicebaseurl = "http://%s:%s/" % (self.host(), self.port())
+            if os.path.exists(result_path):
+                return flask.send_file(result_path, mimetype='image/%s' % mimetype)
 
-            jobid = self.image_generation_submit(option)
+            # Nope, submit the task
+            task_id = self.image_generation_submit(option)
 
-            b64imagecomputed = ["", ""]
-            errors = ["Time out..."]
-            for i in range(10):
-                retrieveurl = imagegenerationwebservicebaseurl + "retrieve?list_id="
-                retrieveurl += jobid
 
-                response = urllib2.urlopen(retrieveurl)
-                response_obj = json.loads(response.read())[0]
+        errors = ["Time out..."]
+        for i in range(10):
+            retrieveurl = imagegenerationwebservicebaseurl + "retrieve?list_id="
+            retrieveurl += task_id
 
-                if response_obj["finished"]:
-                    b64imagecomputed = response_obj
-                    errors = b64imagecomputed["error"]
-                    break
+            response = urllib2.urlopen(retrieveurl)
+            response_obj = json.loads(response.read())[0]
 
-                time.sleep(2)
+            if response_obj["finished"]:
+                errors = response_obj["error"]
+                image_hash = response_obj["result"]
+                result_path = os.path.join(self.data_folder, "hash", image_hash + "." + image_format)
 
-            if len(errors) > 0:
-                return self.error_image(), 404
+                image_format = response_obj["task"]["image_format"]
+                mimetype = image_format
+                if image_format == "svg":
+                    mimetype = "svg+xml"
+                break
 
-        return flask.send_file(image_sym_path_seq, mimetype='image/%s' % mimetype)
+            time.sleep(2)
+
+        if len(errors) > 0:
+            return self.error_image(), 404
+
+        return flask.send_file(result_path, mimetype='image/%s' % mimetype)
 
 
     def load_additional_route(self, app):
@@ -360,7 +381,22 @@ class Glymage(APIFramework):
                 v = para.get(k)
                 p[k] = str(v)
 
-            seq = p["seq"].strip()
+            query, query_type = "", ""
+            if "seq" in p:
+                query = p["seq"].strip()
+                query_type = "sequence"
+
+            if "acc" in p:
+                query = p["acc"].strip()
+                query_type = "accession"
+
+            if "list_id" in p:
+                query = p["list_id"].strip()
+                query_type = "task"
+
+            if query == "" or query_type == "":
+                raise RuntimeError
+
 
             notation = "snfg"
             if "notation" in p:
@@ -380,7 +416,7 @@ class Glymage(APIFramework):
                 if image_format not in ["png", "svg"]:
                     return self.error_image(), 404
 
-            return self.image_generation(None, seq, notation, display, image_format)
+            return self.image_generation(notation, display, image_format, query=query, query_type=query_type)
 
 
 if __name__ == '__main__':

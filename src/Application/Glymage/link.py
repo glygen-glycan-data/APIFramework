@@ -11,7 +11,6 @@ image_home = "./image/"
 
 wp = WURCS20Format()
 gp = GlycoCTFormat()
-gtc = pygly.GlycanResource.GlyTouCan()
 
 
 seqhashtable = open(image_home + "shash2acc.tsv")
