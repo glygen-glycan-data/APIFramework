@@ -493,7 +493,7 @@ class APIFramework(object):
             returned_task_detail = copy.deepcopy(task_detail)
             if developer_email == "":
                 self.output(1, "No email address is provided for task(%s)" % task_detail)
-                returned_task_detail["error"] = "Please provide your E-mail address"
+                returned_task_detail["error"] = "Please provide your E-mail address in each task. Use developer_email field for each task."
             if developer_email != "interactive" and not developer_email_valid:
                 self.output(1, "Invalid email(%s) for task(%s)" % (developer_email, task_detail))
                 returned_task_detail["error"] = "Please provide valid E-mail address"

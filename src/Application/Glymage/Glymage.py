@@ -342,9 +342,9 @@ class Glymage(APIFramework):
             if response_obj["finished"]:
                 errors = response_obj["error"]
                 image_hash = response_obj["result"]
+                image_format = response_obj["task"]["image_format"]
                 result_path = os.path.join(self.data_folder, "hash", image_hash + "." + image_format)
 
-                image_format = response_obj["task"]["image_format"]
                 mimetype = image_format
                 if image_format == "svg":
                     mimetype = "svg+xml"
@@ -352,10 +352,11 @@ class Glymage(APIFramework):
 
             time.sleep(2)
 
-        if len(errors) > 0:
-            return self.error_image(), 404
 
-        return flask.send_file(result_path, mimetype='image/%s' % mimetype)
+        if os.path.exists(result_path):
+            return flask.send_file(result_path, mimetype='image/%s' % mimetype)
+        else:
+            return self.error_image(), 404
 
 
     def load_additional_route(self, app):
