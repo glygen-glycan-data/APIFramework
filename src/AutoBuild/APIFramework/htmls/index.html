@@ -94,8 +94,13 @@ LIN
 
 
     function submit(){
-        let para = {"developer_email": "interactive"};
-        // let para = {"developer_email": "interactive@abc.xyz"};
+        // Template for Flask
+        let app_name = "{{app_name}}";
+        if (app_name.includes("app_name")){
+            app_name = ""
+        }
+
+        let para = {"developer_email": app_name+"FrontEnd@glyomics.org"};
         let seq = document.getElementById("input_seq").value.trim();
         para["seq"] = seq;
 

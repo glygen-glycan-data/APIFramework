@@ -37,7 +37,8 @@ Glymage requires [all images](https://github.com/glygen-glycan-data/APIFramework
 Because it contains so many small files, the copy operation from local hard drive into docker container and making hard links from accession and sequence hash takes tremendous amount of time. Usually 20~40 minutes.
 
 #### Release steps:
-1. Download all images into [this folder](https://github.com/glygen-glycan-data/APIFramework/tree/main/src/Application/Glymage/image), unzip it and delete it.
+1. Download all images ([processed.zip]()) into [this folder](https://github.com/glygen-glycan-data/APIFramework/tree/main/src/Application/Glymage/image), unzip it and delete it.<br>
+Alternatively, you can unzip the [source.zip]() and run image2hash.py (included in source.zip) yourself, and move the hash folder and 2 tsv tables to the same location.
 2. Execute build script in terminal
 ```
 # Provide the tag number in the following format
