@@ -1,23 +1,26 @@
 #!/bin/bash
 
+tag=$1
 if [ -z "$1" ]
   then
-    # Check for tag
-    echo "Please provide the tag number, eg 0.0.1"
-    exit
+    echo "No tag is provided, NOT going to push to docker hub."
+    tag="TEST"
 fi
-
 
 cp -r ../../Application/Substructure/htmls ./htmls
 cp ../../Application/Substructure/Substructure.* ./
 cp ../../Application/Substructure/*.tsv ./
 
 
-docker build -t glyomics/substructure:$1 -t glyomics/substructure:latest ./
+docker build -t glyomics/substructure:$tag -t glyomics/substructure:latest ./
 # docker run -p 10983:10983 glyomics/substructure:latest
 
-docker push glyomics/substructure:$1
-docker push glyomics/substructure:latest
+if [ "$tag" != "TEST" ];
+  then
+    docker push glyomics/substructure:$tag
+    docker push glyomics/substructure:latest
+fi
+
 
 
 rm -rf htmls

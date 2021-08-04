@@ -1,10 +1,10 @@
 #!/bin/bash
 
+tag=$1
 if [ -z "$1" ]
   then
-    # Check for tag
-    echo "Please provide the tag number, eg 0.1.1"
-    exit
+    echo "No tag is provided, NOT going to push to docker hub."
+    tag="TEST"
 fi
 
 
@@ -12,11 +12,15 @@ cp -r ../../Application/Converter/htmls ./htmls
 cp ../../Application/Converter/Converter.* ./
 
 
-docker build -t glyomics/converter:$1 -t glyomics/converter:latest ./
+docker build -t glyomics/converter:$tag -t glyomics/converter:latest ./
 # docker run -p 10986:10986 glyomics/converter:latest
 
-docker push glyomics/converter:$1
-docker push glyomics/converter:latest
+if [ "$tag" != "TEST" ];
+  then
+    docker push glyomics/converter:$tag
+    docker push glyomics/converter:latest
+fi
+
 
 
 rm -rf htmls

@@ -1,10 +1,10 @@
 #!/bin/bash
 
+tag=$1
 if [ -z "$1" ]
   then
-    # Check for tag
-    echo "Please provide the tag number, eg 0.0.1"
-    exit
+    echo "No tag is provided, NOT going to push to docker hub."
+    tag="TEST"
 fi
 
 if [[ ! ("$(pwd)" =~ "/AutoBuild") ]]; then
@@ -15,7 +15,7 @@ fi
 
 cd ./APIFramework
 echo "BUILDING: APIFramework Base"
-./build.sh $1
+./build.sh tag
 cd ..
 
 for d in $(find ./ -maxdepth 1 -type d)
@@ -34,7 +34,7 @@ do
 
   cd $d
   # pwd
-  ./build.sh $1
+  ./build.sh tag
   cd ..
 
 done

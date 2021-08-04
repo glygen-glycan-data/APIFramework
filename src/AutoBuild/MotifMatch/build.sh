@@ -1,10 +1,10 @@
 #!/bin/bash
 
+tag=$1
 if [ -z "$1" ]
   then
-    # Check for tag
-    echo "Please provide the tag number, eg 0.0.1"
-    exit
+    echo "No tag is provided, NOT going to push to docker hub."
+    tag="TEST"
 fi
 
 
@@ -13,10 +13,14 @@ cp ../../Application/MotifMatch/MotifMatch.* ./
 cp ../../Application/MotifMatch/motif.tsv ./
 
 
-docker build -t glyomics/motifmatch:$1 -t glyomics/motifmatch:latest ./
+docker build -t glyomics/motifmatch:$tag -t glyomics/motifmatch:latest ./
 
-docker push glyomics/motifmatch:$1
-docker push glyomics/motifmatch:latest
+if [ "$tag" != "TEST" ];
+  then
+    docker push glyomics/motifmatch:$tag
+    docker push glyomics/motifmatch:latest
+fi
+
 
 
 rm -rf htmls
