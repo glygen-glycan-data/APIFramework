@@ -54,7 +54,9 @@ class Register(APIFrameworkWithFrontEnd):
                 "status": "",
             }
 
-            glytoucan_seq_hash, acc = gtc.gethashedseq(seq=seq)
+            glytoucan_seq_hash, acc, e = gtc.gethashedseq(seq=seq)
+            if e != None:
+                error.append(e)
 
             if not glytoucan_seq_hash:
                 # Never registered to GlyTouCan
