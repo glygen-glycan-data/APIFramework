@@ -543,8 +543,6 @@ class APIFramework(object):
         if "list_ids" not in p and "list_id" not in p and "q" not in p:
             return flask.jsonify("Please provide with list_id(s)")
 
-        self.update_results(getall=True)
-
         if "list_ids" in p:
             list_ids = json.loads(p["list_ids"])
         elif "list_id" in p:
@@ -552,41 +550,70 @@ class APIFramework(object):
         elif "q" in p:
             list_ids = json.loads(p["q"])
 
-        res = []
-        for tmp in list_ids:
-            # Assume MD5
-            list_id = tmp[:32]
-            user_id = tmp[32:]
 
-            if list_id in self.result_cache:
-                r = copy.deepcopy(self.result_cache[list_id])
-            else:
-                res.append({"error": "list_id (%s) not found" % list_id})
-                continue
-
-            cached = True
-            if r["initial_user_id"] == user_id:
-                cached = False
-
-            if r["finished"]:
-                r["stat"]["cached"] = cached
-
-            r["task"] = r["submission_detail"]
-
-            del r["submission_original"]
-            del r["submission_detail"]
-            del r["initial_user_id"]
-
-            r["id"] = tmp
-            r["task"]["id"] = tmp
-
+        timeout = 0
+        if "timeout" in p:
             try:
-                del r["stat"]["start time"]
-                del r["stat"]["end time"]
+                timeout = float(p["timeout"])
+                if timeout < 0:
+                    timeout = -timeout
+                if timeout > 10:
+                    timeout = 10
             except:
                 pass
 
-            res.append(r)
+
+        res = []
+        query_start_timestamp = time.time()
+        for query_round in range(30):
+            res = []
+            got_all = True
+            self.update_results(getall=True)
+
+            for tmp in list_ids:
+                # Assume MD5
+                list_id = tmp[:32]
+                user_id = tmp[32:]
+
+                if list_id in self.result_cache:
+                    r = copy.deepcopy(self.result_cache[list_id])
+                else:
+                    res.append({"error": "list_id (%s) not found" % list_id})
+                    continue
+
+                cached = True
+                if r["initial_user_id"] == user_id:
+                    cached = False
+
+                if r["finished"]:
+                    r["stat"]["cached"] = cached
+                else:
+                    got_all = False
+
+                r["task"] = r["submission_detail"]
+
+                del r["submission_original"]
+                del r["submission_detail"]
+                del r["initial_user_id"]
+
+                r["id"] = tmp
+                r["task"]["id"] = tmp
+
+                try:
+                    del r["stat"]["start time"]
+                    del r["stat"]["end time"]
+                except:
+                    pass
+
+                res.append(r)
+
+
+            if time.time() - query_start_timestamp > timeout:
+                break
+            if got_all:
+                break
+            time.sleep(0.5)
+
 
         response = flask.jsonify(res)
         self.output(1, "Retrieve json: %s" % res)
