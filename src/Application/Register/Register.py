@@ -2,6 +2,7 @@
 import os
 import sys
 import time
+import re
 import multiprocessing
 from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 
@@ -30,11 +31,10 @@ class Register(APIFrameworkWithFrontEnd):
         self.output(2, "Worker-%s is starting up" % (pid))
 
         # TODO get hash in batch
-        glytoucan_userid = params["userid"]
-        glytoucan_apikey = params["apikey"]
+        glytoucan_userid = params["userid"].strip()
+        glytoucan_apikey = params["apikey"].strip()
 
-        gtc = GlyTouCan(prefetch=False)
-        gtc.setup(user=glytoucan_userid, apikey=glytoucan_apikey)
+        gtc = GlyTouCan(verbose=True, prefetch=False, user=glytoucan_userid, apikey=glytoucan_apikey)
 
         self.output(2, "Worker-%s is ready to take job" % (pid))
 
@@ -50,26 +50,37 @@ class Register(APIFrameworkWithFrontEnd):
             list_id = task_detail["id"]
             seq = str(task_detail["seq"])
             result = {
-                "accession": "",
                 "status": "",
             }
 
             glytoucan_seq_hash, acc, e = gtc.gethashedseq(seq=seq)
-            if e != None:
-                error.append(e)
 
             if not glytoucan_seq_hash:
-                # Never registered to GlyTouCan
+                # Never submitted to GlyTouCan
                 hsh = gtc.register(seq)
-                result["status"] = "register sent"
-                if not hsh:
-                    error.append("Your sequence is rejected by GlyTouCan")
+                if hsh and re.search(r'^[0-9a-f]{64}$',hsh):
+                    result["status"] = "Submitted"
+                    result["seqhash"] = hsh
+		else:
+                    result["status"] = "Error"
+                    error.append("Submission failed.")
+		    if hsh:
+                        error.append(hsh)
+
             elif not acc:
-                # Registered, but no accession yet
-                result["status"] = "registered, but no accession yet"
+                # Submitted, but no accession
+                if e:
+                    result["status"] = "Error"
+                    result["seqhash"] = glytoucan_seq_hash
+                    error.append(e)
+		else:
+                    result["status"] = "Processing"
+                    result["seqhash"] = glytoucan_seq_hash
+    
             else:
+                result["status"] = "Registered"
+                result["seqhash"] = glytoucan_seq_hash
                 result["accession"] = acc
-                result["status"] = "accession found"
 
 
             calculation_end_time = time.time()

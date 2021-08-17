@@ -15,17 +15,17 @@ fi
 
 cd ./APIFramework
 echo "BUILDING: APIFramework Base"
-./build.sh tag
+./build.sh $tag
 cd ..
 
-for d in $(find ./ -maxdepth 1 -type d)
+for d in $(find . -maxdepth 1 -type d)
 do
-  if [ $d = "./" ]; then
+  if [ $d = "." ]; then
     # Current folder
     continue
   fi
 
-  if [ $d = ".//APIFramework" ]; then
+  if [ $d = "./APIFramework" ]; then
     # Build base docker image before everything else
     continue
   fi
@@ -34,7 +34,7 @@ do
 
   cd $d
   # pwd
-  ./build.sh tag
+  ./build.sh $tag
   cd ..
 
 done
