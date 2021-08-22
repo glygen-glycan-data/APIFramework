@@ -8,6 +8,7 @@ import json
 import copy
 import flask
 import base64
+import requests
 import urllib, urllib2
 import hashlib
 import multiprocessing
@@ -274,15 +275,16 @@ class Glymage(APIFramework):
 
 
     def image_generation_submit(self, option):
-        option["developer_email"] = "interactive"
+        imagegenerationwebservicebaseurl = "http://%s:%s/" % (self.host(), self.port()) + "submit"
 
-        imagegenerationwebservicebaseurl = "http://%s:%s/" % (self.host(), self.port())
+        req = requests.post(
+            imagegenerationwebservicebaseurl,
+            data={
+                "task": json.dumps(option),
+                "developer_email": "GlymageBackEnd@glyomics.org"
+            })
 
-        submiturl = imagegenerationwebservicebaseurl + "submit?"
-        submiturl += "tasks=" + urllib.quote_plus(json.dumps([option]))
-
-        response = urllib2.urlopen(submiturl)
-        jobid = json.loads(response.read())[0]["id"]
+        jobid = json.loads(req.text)[0]["id"]
 
         return jobid
 
@@ -333,7 +335,7 @@ class Glymage(APIFramework):
 
         errors = ["Time out..."]
         for i in range(10):
-            retrieveurl = imagegenerationwebservicebaseurl + "retrieve?list_id="
+            retrieveurl = imagegenerationwebservicebaseurl + "retrieve?task_id="
             retrieveurl += task_id
 
             response = urllib2.urlopen(retrieveurl)
@@ -367,7 +369,7 @@ class Glymage(APIFramework):
         def error_handling(e):
             return self.error_image(), 404
 
-        @app.route('/getimage')
+        @app.route('/getimage', methods=["GET", "POST"])
         def getimage():
             para = {}
             if flask.request.method == "GET":
@@ -392,7 +394,12 @@ class Glymage(APIFramework):
                 query_type = "accession"
 
             if "list_id" in p:
+                # TODO should be removed in the future version
                 query = p["list_id"].strip()
+                query_type = "task"
+
+            if "task_id" in p:
+                query = p["task_id"].strip()
                 query_type = "task"
 
             if query == "" or query_type == "":

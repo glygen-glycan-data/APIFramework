@@ -161,7 +161,7 @@ LIN<br>
     var this_result = {};
     var para = {}
     function compute(){
-        para = {"developer_email":"interactive"};
+        para = {};
         para["seq"] = document.getElementById("sequence").value;
 
         var formEle = document.getElementById("additional_para");
@@ -184,7 +184,7 @@ LIN<br>
         para.scale = parseFloat(document.getElementById("para_scale").value)
 
 
-        var requestURL = "./submit?tasks="+encodeURIComponent(JSON.stringify([para]));
+        var requestURL = "./submit?task="+encodeURIComponent(JSON.stringify(para)) + "&developer_email=GlymageFrontEnd@glyomics.org";
 
         jQuery.getJSON(requestURL).then(function (d) {
             d = d[0]
