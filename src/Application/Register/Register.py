@@ -1,8 +1,9 @@
 
+import re
 import os
 import sys
 import time
-import re
+import hashlib
 import multiprocessing
 from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 
@@ -18,9 +19,9 @@ class Register(APIFrameworkWithFrontEnd):
 
         p["seq"] = p["seq"].strip()
         task_str = p["seq"].encode("utf-8") + "_" + str(int(time.time()/600))
-        list_id = self.str2hash(task_str)
+        task_id = self.str2hash(task_str)
 
-        res["id"] = list_id
+        res["id"] = task_id
         res["seq"] = p["seq"]
 
         return res
@@ -30,11 +31,16 @@ class Register(APIFrameworkWithFrontEnd):
 
         self.output(2, "Worker-%s is starting up" % (pid))
 
-        # TODO get hash in batch
         glytoucan_userid = params["userid"].strip()
         glytoucan_apikey = params["apikey"].strip()
+        hashupdateinterval = int(params["hashupdateinterval"].strip())
 
         gtc = GlyTouCan(verbose=True, prefetch=False, user=glytoucan_userid, apikey=glytoucan_apikey)
+
+        hashedseqs = []
+        for row in gtc.query_hashedseq():
+            hashedseqs.append((row['hash'], row['accession'], row['error']))
+        hashedseqs_lastupdated = time.time()
 
         self.output(2, "Worker-%s is ready to take job" % (pid))
 
@@ -46,14 +52,29 @@ class Register(APIFrameworkWithFrontEnd):
             error = []
             calculation_start_time = time.time()
 
+            if time.time() - hashedseqs_lastupdated > hashupdateinterval:
+                hashedseqs = []
+                for row in gtc.query_hashedseq():
+                    hashedseqs.append((row['hash'], row['accession'], row['error']))
+                hashedseqs_lastupdated = time.time()
+                self.output(2, "Worker-%s just updated the hashed sequence from GlyTouCan Triple Store" % (pid, ))
 
-            list_id = task_detail["id"]
+
+            task_id = task_detail["id"]
+
+            # TODO seq conversions?
             seq = str(task_detail["seq"])
             result = {
                 "status": "",
             }
 
-            glytoucan_seq_hash, acc, e = gtc.gethashedseq(seq=seq)
+
+            glytoucan_seq_hash, acc, e = None, None, None
+            thehash = hashlib.sha256(seq.strip()).hexdigest().lower()
+            for h, a, e in hashedseqs:
+                if thehash == h:
+                    glytoucan_seq_hash, acc, e = h, a, e
+
 
             if not glytoucan_seq_hash:
                 # Never submitted to GlyTouCan
@@ -86,10 +107,10 @@ class Register(APIFrameworkWithFrontEnd):
             calculation_end_time = time.time()
             calculation_time_cost = calculation_end_time - calculation_start_time
 
-            self.output(2, "Worker-%s finished computing job (%s)" % (pid, list_id))
+            self.output(2, "Worker-%s finished computing job (%s)" % (pid, task_id))
 
             res = {
-                "id": list_id,
+                "id": task_id,
                 "start time": calculation_start_time,
                 "end time": calculation_end_time,
                 "runtime": calculation_time_cost,
@@ -97,7 +118,7 @@ class Register(APIFrameworkWithFrontEnd):
                 "result": result
             }
 
-            self.output(2, "Job (%s): %s" % (list_id, res))
+            self.output(2, "Job (%s): %s" % (task_id, res))
 
             result_queue.put(res)
 
