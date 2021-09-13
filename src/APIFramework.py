@@ -469,8 +469,27 @@ class APIFramework(object):
         elif "q" in p:
             raw_tasks = json.loads(p["q"])
 
+
+        developer_email = ""
+        developer_email_valid = False
+        if "developer_email" in p:
+            developer_email = p["developer_email"].strip()
+            email_valid = re.compile(r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$')
+            developer_email_valid = bool(email_valid.match(developer_email))
+        else:
+            self.output(1, "No email address is provided for task(%s)" % raw_tasks)
+            response = flask.jsonify("Please provide your E-mail address. Use developer_email field.")
+            return response
+
+        if not developer_email_valid:
+            self.output(1, "Invalid email(%s) for task(%s)" % (developer_email, raw_tasks))
+            response = flask.jsonify("Please provide valid E-mail address")
+            return response
+
+        userid = self.str2hash(developer_email)[:20]
+
+
         res = []
-        userid_random = self.random_str()
         for raw_task in raw_tasks:
             task_detail = self.form_task(raw_task)
 
@@ -479,24 +498,8 @@ class APIFramework(object):
                     "No id provided for your job(%s), probably check the form_task method"
                     % task_detail)
 
-            userid = userid_random
-
-            developer_email = ""
-            developer_email_valid = False
-            if "developer_email" in raw_task:
-                developer_email = raw_task["developer_email"].strip()
-                email_valid = re.compile(r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$')
-                developer_email_valid = bool(email_valid.match(developer_email))
-            if developer_email != "interactive":
-                userid = self.str2hash(developer_email)[:20]
 
             returned_task_detail = copy.deepcopy(task_detail)
-            if developer_email == "":
-                self.output(1, "No email address is provided for task(%s)" % task_detail)
-                returned_task_detail["error"] = "Please provide your E-mail address in each task. Use developer_email field for each task."
-            if developer_email != "interactive" and not developer_email_valid:
-                self.output(1, "Invalid email(%s) for task(%s)" % (developer_email, task_detail))
-                returned_task_detail["error"] = "Please provide valid E-mail address"
 
             res.append(returned_task_detail)
 
@@ -505,15 +508,10 @@ class APIFramework(object):
                 continue
             else:
                 returned_task_detail["id"] = returned_task_detail["id"] + userid
-                if developer_email != "interactive":
-                    returned_task_detail["developer_email"] = developer_email
-                    self.output(1, "Job request from %s" % developer_email)
 
-
-
-            list_id = task_detail["id"]
+            task_id = task_detail["id"]
             status = {
-                "id": list_id,
+                "id": task_id,
                 "initial_user_id": userid,
                 "submission_original": raw_task,
                 "submission_detail": task_detail,
@@ -522,11 +520,11 @@ class APIFramework(object):
                 "result": {}
             }
 
-            if list_id in self.result_cache:
+            if task_id in self.result_cache:
                 pass
             else:
                 self.task_queue.put(task_detail)
-                self.result_cache[list_id] = status
+                self.result_cache[task_id] = status
             self.output(1, "Job received by API: %s" % (task_detail))
 
         response = flask.jsonify(res)
@@ -540,15 +538,21 @@ class APIFramework(object):
             response = flask.jsonify("METHOD %s is not suppoted" % flask.request.method)
             return response
 
-        if "list_ids" not in p and "list_id" not in p and "q" not in p:
+        if "list_ids" not in p and \
+                "task_ids" not in p and \
+                "list_id" not in p and \
+                "task_id" not in p:
             return flask.jsonify("Please provide with list_id(s)")
 
         if "list_ids" in p:
-            list_ids = json.loads(p["list_ids"])
+            task_ids = json.loads(p["list_ids"])
         elif "list_id" in p:
-            list_ids = [str(p["list_id"])]
-        elif "q" in p:
-            list_ids = json.loads(p["q"])
+            task_ids = [str(p["list_id"])]
+
+        elif "task_ids" in p:
+            task_ids = json.loads(p["task_ids"])
+        elif "task_id" in p:
+            task_ids = [str(p["task_id"])]
 
 
         timeout = 0
@@ -570,15 +574,15 @@ class APIFramework(object):
             got_all = True
             self.update_results(getall=True)
 
-            for tmp in list_ids:
+            for tmp in task_ids:
                 # Assume MD5
-                list_id = tmp[:32]
+                task_id = tmp[:32]
                 user_id = tmp[32:]
 
-                if list_id in self.result_cache:
-                    r = copy.deepcopy(self.result_cache[list_id])
+                if task_id in self.result_cache:
+                    r = copy.deepcopy(self.result_cache[task_id])
                 else:
-                    res.append({"error": "list_id (%s) not found" % list_id})
+                    res.append({"error": "task_id (%s) not found" % task_id})
                     continue
 
                 cached = True
@@ -635,17 +639,17 @@ class APIFramework(object):
                 return response
 
             task_detail = self.form_task({"original_file_name": file.filename})
-            list_id = task_detail["id"]
+            task_id = task_detail["id"]
 
             if file and self.allow_file_ext(file.filename):
-                file.save(os.path.join(self.input_file_folder(), list_id))
+                file.save(os.path.join(self.input_file_folder(), task_id))
             else:
                 response = flask.jsonify('File extension is not supported')
 
                 return response
 
             status = {
-                "id": list_id,
+                "id": task_id,
                 "submission_original": {},
                 "submission_detail": task_detail,
                 "finished": False,
@@ -653,14 +657,14 @@ class APIFramework(object):
                 "result": {}
             }
 
-            if list_id in self.result_cache:
+            if task_id in self.result_cache:
                 pass
             else:
                 self.task_queue.put(task_detail)
-                self.result_cache[list_id] = status
+                self.result_cache[task_id] = status
             self.output(1, "Job received by API: %s" % (task_detail))
 
-        return self.file_upload_finished_page(list_id=list_id)
+        return self.file_upload_finished_page(list_id=task_id)
 
 
     def download_file(self):
@@ -707,7 +711,7 @@ class APIFramework(object):
         #
         """
         task = {
-            "id": list_id,
+            "id": task_id,
             "key": value...
         }
         return task
@@ -1017,9 +1021,9 @@ class APIFramework(object):
     def dump_status(self):
         if self.status_saving_location() != None:
             useful_result = {}
-            for list_id, task in self.result_cache.items():
+            for task_id, task in self.result_cache.items():
                 if task["finished"]:
-                    useful_result[list_id] = task
+                    useful_result[task_id] = task
 
             json.dump(
                 useful_result,
@@ -1065,6 +1069,11 @@ class APIFrameworkWithFrontEnd(APIFramework):
         @app.route('/about', methods=["GET", "POST"])
         def about():
             return flask.render_template("./about.html", **kwarg)
+
+
+        @app.route('/glycoapi.js', methods=["GET", "POST"])
+        def glycoapi():
+            return open("./htmls/glycoapi.js").read()
 
         @app.route('/renderresult.js', methods=["GET", "POST"])
         def renderresult():

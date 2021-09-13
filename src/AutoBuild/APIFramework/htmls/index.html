@@ -100,7 +100,7 @@ LIN
             app_name = ""
         }
 
-        let para = {"developer_email": app_name+"FrontEnd@glyomics.org"};
+        let para = {};
         let seq = document.getElementById("input_seq").value.trim();
         para["seq"] = seq;
 
@@ -120,7 +120,7 @@ LIN
 
         retrieve_counter = 0;
 
-        jQuery.post("./submit", {"tasks": JSON.stringify([para])}).then(function (d){
+        jQuery.post("./submit", {"task": JSON.stringify(para), "developer_email": app_name+"FrontEnd@glyomics.org"}).then(function (d){
             job_id = d[0].id;
             submit_result = d[0];
             show("loading_container");
@@ -133,7 +133,7 @@ LIN
     function retrieve(){
 
         retrieve_counter += 1;
-        jQuery.post("./retrieve", {"list_ids": JSON.stringify([job_id])}).then(function (d){
+        jQuery.post("./retrieve", {"list_id": job_id}).then(function (d){
 
             if (retrieve_counter > 5){
                 retrieve_interval = 3000;
