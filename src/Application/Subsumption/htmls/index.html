@@ -71,11 +71,9 @@ LIN
 <script>
     "use strict";
 
-    let job_id;
+    let task_id;
     let submit_result;
     let retrieve_result;
-
-    let submitURL, retrieveURL;
 
     let retrieve_counter = 0;
     let retrieve_interval = 1000;
@@ -95,7 +93,8 @@ LIN
 
 
     function submit(){
-        let para = {"developer_email": "interactive"};
+        let para = {};
+        // let para = {"developer_email": "SubsumptionFrontEnd@glyomics.org"};
         // let para = {"developer_email": "interactive@abc.xyz"};
         let seq = document.getElementById("input_seq").value.trim();
         para["seqs"] = {"Query": seq};
@@ -113,11 +112,10 @@ LIN
             }
         }
 
-
         retrieve_counter = 0;
 
-        jQuery.post("./submit", {"tasks": JSON.stringify([para])}).then(function (d){
-            job_id = d[0].id;
+        jQuery.post("./submit", {"developer_email": "SubsumptionFrontEnd@glyomics.org", "task": JSON.stringify(para)}).then(function (d){
+            task_id = d[0].id;
             submit_result = d[0];
 
             show("loading_container");
@@ -131,8 +129,7 @@ LIN
 
         retrieve_counter += 1;
 
-        retrieveURL = "./retrieve?list_ids="+encodeURIComponent(JSON.stringify([job_id]));
-        jQuery.post("./retrieve", {"list_ids": JSON.stringify([job_id])}).then(function (d){
+        jQuery.post("./retrieve", {"task_id": task_id}).then(function (d){
 
             if (retrieve_counter > 5){
                 retrieve_interval = 3000;

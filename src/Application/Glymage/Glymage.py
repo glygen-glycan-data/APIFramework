@@ -12,6 +12,7 @@ import requests
 import urllib, urllib2
 import hashlib
 import multiprocessing
+import traceback
 from APIFramework import APIFramework, queue
 
 
@@ -197,7 +198,7 @@ class Glymage(APIFramework):
                     img_actual_path = self.data_folder + "/hash/%s.%s" % (image_md5_hash, image_format)
                     os.rename(tmp_image_file_name, img_actual_path)
                 except:
-                    error.append("Could not generate image...")
+                    error.append("Could not generate image...\n%s"%( traceback.format_exc(),))
 
 
             if len(error) == 0:
@@ -205,9 +206,10 @@ class Glymage(APIFramework):
                 for accorseq in seq_hashs:
                     try:
                         image_sym_path = os.path.join(self.data_folder, notation, display, accorseq + "." + image_format)
-                        os.link(os.path.abspath(img_actual_path), os.path.abspath(image_sym_path))
+                        if not os.path.exists(image_sym_path):
+                            os.link(os.path.abspath(img_actual_path), os.path.abspath(image_sym_path))
                     except:
-                        error.append("Issue in make symbolic link (%s)" % image_sym_path)
+                        error.append("Issue in make symbolic link (%s)\n%s" % (image_sym_path, traceback.format_exc()))
 
 
             calculation_end_time = time.time()
@@ -224,6 +226,9 @@ class Glymage(APIFramework):
                 "result": image_md5_hash
             }
             self.output(2, "Job (%s): %s" % (list_id, res))
+            if len(res['error']) > 0:
+                for err in res['error']:
+                    self.output(2, "Error:\n%s" % (err,))
             result_queue.put(res)
 
 

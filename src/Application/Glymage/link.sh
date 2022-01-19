@@ -1,5 +1,4 @@
 #!/bin/bash
 
 python link.py
-chmod -R 0777 ./
-
+find image -type d -exec chmod a+rwx {} \;

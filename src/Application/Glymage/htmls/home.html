@@ -156,7 +156,7 @@ LIN<br>
         return space
     }
 
-    var list_id = "";
+    var task_id = "";
     var query_counter = 0;
     var this_result = {};
     var para = {}
@@ -188,16 +188,15 @@ LIN<br>
 
         jQuery.getJSON(requestURL).then(function (d) {
             d = d[0]
-            list_id = d.id;
+            task_id = d.id;
             query_counter = 0;
-            //document.getElementById("result").innerHTML = "<a href='./retrieve?list_id="+d.list_id+"'>"+"Click me to see result"+"</a>";
             document.getElementById("result").innerHTML = "Submitted successfully";
             get_results();
         })
     }
 
     function get_results() {
-        var requestURL = "./retrieve?list_ids=" + JSON.stringify([list_id]);
+        var requestURL = "./retrieve?task_id="+task_id;
         query_counter += 1;
         jQuery.getJSON(requestURL).then(function (d) {
             d = d[0];

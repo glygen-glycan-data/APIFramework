@@ -1,16 +1,17 @@
+#!/bin/env python2
 
 import os
 import sys
 import shutil
 import hashlib
-import pygly.GlycanImage
-import pygly.GlycanResource.GlyTouCan
-from pygly.GlycanFormatter import GlycoCTFormat, WURCS20Format
+# import pygly.GlycanImage
+# import pygly.GlycanResource.GlyTouCan
+# from pygly.GlycanFormatter import GlycoCTFormat, WURCS20Format
 
 image_home = "./image/"
 
-wp = WURCS20Format()
-gp = GlycoCTFormat()
+# wp = WURCS20Format()
+# gp = GlycoCTFormat()
 
 
 seqhashtable = open(image_home + "shash2acc.tsv")
@@ -45,9 +46,9 @@ for l in imagetable.read().strip().split("\n"):
 
     src = os.path.join(image_home, "hash", ihash + ".png")
     src_abs = os.path.abspath(src)
-    i+=1
-    #if i > 1000:
-    #    break
+    # i+=1
+    # if i > 1000:
+    #     break
 
     destination = [shash, ihash]
     try:
