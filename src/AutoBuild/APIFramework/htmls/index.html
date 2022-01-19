@@ -70,7 +70,7 @@ LIN
 <script>
     "use strict";
 
-    let job_id;
+    let task_id;
     let submit_result;
     let retrieve_result;
 
@@ -121,7 +121,7 @@ LIN
         retrieve_counter = 0;
 
         jQuery.post("./submit", {"task": JSON.stringify(para), "developer_email": app_name+"FrontEnd@glyomics.org"}).then(function (d){
-            job_id = d[0].id;
+            task_id = d[0].id;
             submit_result = d[0];
             show("loading_container");
             document.getElementById("submit_status").innerHTML = "<br><br><br>Submitted successfully!";
@@ -133,7 +133,7 @@ LIN
     function retrieve(){
 
         retrieve_counter += 1;
-        jQuery.post("./retrieve", {"list_id": job_id}).then(function (d){
+        jQuery.post("./retrieve", {"task_id": task_id}).then(function (d){
 
             if (retrieve_counter > 5){
                 retrieve_interval = 3000;

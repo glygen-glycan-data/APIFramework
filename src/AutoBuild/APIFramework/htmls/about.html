@@ -62,11 +62,11 @@
         <h4>Retrieval URL construction</h4>
         <p>
             Base URL for retrieval: https://{{app_name_lower}}.glyomics.org/retrieval?<br>
-            URL parameter key: list_ids<br>
+            URL parameter key: task_ids<br>
             URL parameter value: URL encoded JSON string with the "id" field in a JavaScript array.<br><br>
 
             Let's use the 2 IDs in the example above to show how to construct the retrieval URL<br>
-            https://{{app_name_lower}}.glyomics.org/retrieve?list_ids=%5B%2220dfe818ae0a3ddad11ebd97c8ddb51aw2f30sbkrnzf5e4ha7mm%22,%228b3adbe6df01722f6043270c9338f7b5w2f30sbkrnzf5e4ha7mm%22%5D<br>
+            https://{{app_name_lower}}.glyomics.org/retrieve?task_ids=%5B%2220dfe818ae0a3ddad11ebd97c8ddb51aw2f30sbkrnzf5e4ha7mm%22,%228b3adbe6df01722f6043270c9338f7b5w2f30sbkrnzf5e4ha7mm%22%5D<br>
         </p>
         <h4>Retrieval response</h4>
         <p>
@@ -206,17 +206,17 @@
             "\n" +
             "jQuery.getJSON(submit_URL).then(function (d) {\n" +
             "\n" +
-            "    let list_ids = [];\n" +
+            "    let task_ids = [];\n" +
             "\n" +
             "    for (let task of d){\n" +
-            "        list_ids.push(task.id)\n" +
+            "        task_ids.push(task.id)\n" +
             "    }\n" +
             "\n" +
-            "    setTimeout(retrieve, 1000, list_ids)\n" +
+            "    setTimeout(retrieve, 1000, task_ids)\n" +
             "})\n" +
             "\n" +
-            "function retrieve(list_ids) {\n" +
-            "    let retrieve_URL = \"https://{{app_name_lower}}.glyomics.org/retrieve?list_ids=\" + encodeURIComponent(JSON.stringify(list_ids));\n" +
+            "function retrieve(task_ids) {\n" +
+            "    let retrieve_URL = \"https://{{app_name_lower}}.glyomics.org/retrieve?task_ids=\" + encodeURIComponent(JSON.stringify(task_ids));\n" +
             "\n" +
             "    jQuery.getJSON(retrieve_URL).then(function (d) {\n" +
             "\n" +
@@ -234,7 +234,7 @@
             "            }\n" +
             "        }\n" +
             "        else {\n" +
-            "            setTimeout(retrieve, 5000, list_ids)\n" +
+            "            setTimeout(retrieve, 5000, task_ids)\n" +
             "        }\n" +
             "    })\n" +
             "}";
@@ -348,21 +348,21 @@
             "    def retrieve_once(self):\n" +
             "        raise NotImplemented\n" +
             "\n" +
-            "    def retrieve(self, list_id):\n" +
+            "    def retrieve(self, task_id):\n" +
             "\n" +
             "        for i in range(self._max_retry_for_unfinished_task):\n" +
             "            time.sleep(self._interval)\n" +
             "            try:\n" +
-            "                res = self.retrieve_once(list_id)\n" +
+            "                res = self.retrieve_once(task_id)\n" +
             "                return res\n" +
             "            except APIUnfinishedError:\n" +
             "                continue\n" +
             "\n" +
-            "        raise APIUnfinishedError(\"The task %s is not finished yet\" % list_id)\n" +
+            "        raise APIUnfinishedError(\"The task %s is not finished yet\" % task_id)\n" +
             "\n" +
             "    def get(self, *args, **kwargs):\n" +
-            "        list_id = self.submit(*args, **kwargs)\n" +
-            "        resjson = self.retrieve(list_id)\n" +
+            "        task_id = self.submit(*args, **kwargs)\n" +
+            "        resjson = self.retrieve(task_id)\n" +
             "        res = resjson[u\"result\"]\n" +
             "        return res\n" +
             "\n" +
@@ -379,12 +379,12 @@
             "\n" +
             "        res1 = self.request(\"submit\", param)\n" +
             "\n" +
-            "        list_id = res1.json()[0][u\"id\"]\n" +
-            "        return list_id\n" +
+            "        task_id = res1.json()[0][u\"id\"]\n" +
+            "        return task_id\n" +
             "\n" +
             "\n" +
-            "    def retrieve_once(self, list_id):\n" +
-            "        param = {\"list_id\": list_id }\n" +
+            "    def retrieve_once(self, task_id):\n" +
+            "        param = {\"task_id\": task_id }\n" +
             "\n" +
             "        try:\n" +
             "            res2 = self.request(\"retrieve\", param)\n" +
@@ -393,7 +393,7 @@
             "            raise RuntimeError\n" +
             "\n" +
             "        if not res2json[u\"finished\"]:\n" +
-            "            raise APIUnfinishedError(\"The task %s is not finished yet\" % list_id)\n" +
+            "            raise APIUnfinishedError(\"The task %s is not finished yet\" % task_id)\n" +
             "\n" +
             "        return res2json\n" +
             "\n" +

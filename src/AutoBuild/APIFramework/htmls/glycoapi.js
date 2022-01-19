@@ -69,7 +69,7 @@ function APIFrameworkJS(url) {
             timeout = 5;
         }
         let data = {
-            "list_id": tid,
+            "task_id": tid,
             "timeout": timeout
         };
 

@@ -12,6 +12,7 @@ cp ../../Application/Substructure/Substructure.* ./
 cp ../../Application/Substructure/*.tsv ./
 
 
+docker pull glyomics/apiframework:latest
 docker build -t glyomics/substructure:$tag -t glyomics/substructure:latest ./
 # docker run -p 10983:10983 glyomics/substructure:latest
 
