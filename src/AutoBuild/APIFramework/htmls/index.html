@@ -132,6 +132,13 @@ LIN
 
     function retrieve(){
 
+        var url = new URL(window.location);
+        var search_params = url.searchParams;
+        search_params.set('task_id', task_id);
+        url.search = search_params.toString();
+        window.history.pushState('', '', url.toString());
+
+
         retrieve_counter += 1;
         jQuery.post("./retrieve", {"task_id": task_id}).then(function (d){
 
@@ -148,6 +155,15 @@ LIN
             document.getElementById("loading").innerHTML = "The page refreshes every " + parseInt(retrieve_interval/1000) + "s.<br>" +
                             "Please wait.";
 
+            if (!d[0].error !== null){
+                if (d[0].error.includes("not found")){
+                    retrieve_result = d[0];
+                    retrieve_result.error = [d[0].error];
+                    retrieve_result.stat = {"runtime": 0.01, "cached": false}
+                    renderResult();
+                    return;
+                }
+            }
 
             if (!d[0].finished){
                 setTimeout(retrieve, retrieve_interval)
@@ -199,6 +215,16 @@ LIN
     }
 
 
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const tmp_task_id = urlParams.get('task_id');
+
+    if (tmp_task_id !== null && tmp_task_id !== task_id) {
+        task_id = tmp_task_id;
+        retrieve();
+    }
+
+
 
 
 </script>
@@ -208,3 +234,4 @@ LIN
 
 </body>
 </html>
+
