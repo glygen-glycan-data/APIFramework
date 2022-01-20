@@ -10,11 +10,11 @@
 <body style='margin: 0; font-family: "adobe-caslon-pro",Georgia,"Times New Roman",serif; '>
 <div style="position: relative; min-height: 100vh; ">
 <div id="header"></div>
-
-<br>
-
-<div id="content" style="margin: 5px; padding-bottom: 150px; ">
+<div id="content" style="margin: 5px; padding-bottom: 0px; ">
     <div id="input_container" style="width: 70%; margin: auto">
+        <p style="width: 100%; ">
+            Input: Glycan in GlycoCT or WURCS sequence:
+        </p>
         <textarea id="input_seq" rows="18" style="width: 100%; max-width: 100%; height: 50%; display: block; ">RES
 1b:x-dglc-HEX-x:x
 2b:b-dgal-HEX-1:5
@@ -27,12 +27,11 @@ LIN
 3:3o(3+1)4d
 4:4d(2+1)5n
         </textarea>
+        <br>
         <div id="submitoption"></div>
         <br>
         <button style="width: 80px; text-align: center; margin-left: 47%; margin-right: 47%; " onclick="submit()">Submit</button>
-        <p style="width: 100%; ">
-            Input: Glycan in GlycoCT or WURCS sequence.<br>
-        </p>
+        <p/>
     </div>
     <div id="loading_container" style="width: 70%; height: 100%; margin: auto; text-align: center">
         <p id="submit_status" style="font-size: 25px;"></p>
@@ -40,15 +39,13 @@ LIN
     </div>
     <div id="result_container" style="width: 70%; margin: auto; text-align: center">
         <div id="result_container_status"></div>
+        <div id="result_container_additional"></div><br>
         <div id="result_container_stat"></div><br>
-        <div id="result_container_additional"></div><br><br>
-        <div id="result_container_json" style="text-align: left"></div><br><br><br>
+        <div id="result_container_json" style="text-align: left"></div><br><br><br><br><br>
     </div>
 </div>
-
-<div id="footer" style="position: absolute; bottom: 0; width: 100%; height: 150px;"></div>
+<div id="footer" style="position: absolute; bottom: 0; width: 100%; height: 80px;"></div>
 </div>
-
 <script>
     "use strict";
 
@@ -155,7 +152,7 @@ LIN
             document.getElementById("loading").innerHTML = "The page refreshes every " + parseInt(retrieve_interval/1000) + "s.<br>" +
                             "Please wait.";
 
-            if (!d[0].error !== null){
+            if (!(d[0].error === undefined)){
                 if (d[0].error.includes("not found")){
                     retrieve_result = d[0];
                     retrieve_result.error = [d[0].error];
@@ -166,8 +163,8 @@ LIN
             }
 
             if (!d[0].finished){
-                setTimeout(retrieve, retrieve_interval)
-                return
+                setTimeout(retrieve, retrieve_interval);
+                return;
             }
 
             retrieve_result = d[0];
@@ -231,7 +228,6 @@ LIN
 <script src="renderresult.js">
 
 </script>
-
 </body>
 </html>
 

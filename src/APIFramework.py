@@ -286,7 +286,10 @@ class APIFramework(object):
     def parse_config(self, config_file_name):
 
         config = configparser.ConfigParser()
-        config.read_file(open(config_file_name))
+	if hasattr(config,"read_file"):
+            config.read_file(open(config_file_name))
+        else:
+            config.readfp(open(config_file_name))
 
         res = {}
         for each_section in config.sections():
@@ -707,16 +710,17 @@ class APIFramework(object):
 
 
     # FLASK helper functions
-    def form_task(self, p):
-        #
-        """
-        task = {
-            "id": task_id,
-            "key": value...
-        }
+    def form_task(self, params):
+        task = {}
+	task_str = ""
+	for par in self.task_params:
+            if par in params:
+	        task[par] = params[par].strip()
+            elif self.task_params[par] != None:
+                task[par] = self.task_params[par].strip()
+            task_str += "_" + task[par]
+        task["id"] = self.str2hash(task_str.encode("utf-8"))
         return task
-        """
-        raise NotImplemented
 
     # @staticmethod
     def api_para(self):

@@ -8,26 +8,38 @@ function renderResultMore(){
     let error = retrieve_result.error;
     let stat = retrieve_result.stat;
 
+    let align = submit_result.align || 'substructure';
+    if (align == "all") {
+        align = 'substructure';
+    }
+
     let result_container_status = document.getElementById("result_container_status");
     let result_container_additional = document.getElementById("result_container_additional");
 
-
-    if (result.length > 0){
-        result_container_status.innerHTML += "<p style='font-size: 25px;'>Found "+result.length+" structure(s)</p>";
+    let align_text = "substructure";
+    if (align == 'core') {
+        align_text = 'glycan-core';
+    } else if (align == 'nonreducingend') {
+        align_text = 'nonreducing-end';
+    } else if (align == 'wholeglycan') {
+        align_text = 'whole-glycan';
     }
-    else {
-        result_container_status.innerHTML += "<p style='font-size: 25px;'>No structure found</p>";
-    }
-
 
     if (error.length > 0){
         let tmp = error.join(", ");
         result_container_status.innerHTML += "<p style='font-size: 25px; color: red; '>Error: "+tmp+"</p>";
+    } else if (result[align].length > 0){
+        result_container_status.innerHTML += "<p style='font-size: 25px;'>Found "+result[align].length+" "+align_text+" alignments.</p>";
+    }
+    else {
+        result_container_status.innerHTML += "<p style='font-size: 25px;'>No " + align_text + " alignments found.</p>";
     }
 
 
+
+
     let imgurl = "https://glymage.glyomics.org/getimage?";
-    let s = retrieve_result.task.seq;
+    let s = submit_result.seq;
     if ( !s.startsWith("WURCS") ){
         s = encodeURIComponent(s);
     }
@@ -36,7 +48,7 @@ function renderResultMore(){
 
     result_container_additional.innerHTML += "<br><img src='"+imgurl+"'><p>Query glycan (motif)</p>";
 
-    if (result.length == 0){
+    if (result[align].length == 0){
         return
     }
 
@@ -45,9 +57,9 @@ function renderResultMore(){
             "<tr style='height: 28px; background-color: grey'><td>Results</td></tr>";
 
 
-    for (let i in result){
+    for (let i in result[align]){
         let lightstr = 'light';
-        let r = result[i];
+        let r = result[align][i];
 
         if (i % 2 == 1){
             lightstr = "";
