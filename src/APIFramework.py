@@ -490,7 +490,8 @@ class APIFramework(object):
             return response
 
         userid = self.str2hash(developer_email)[:20]
-
+        
+        nocache = (p.get('nocache') == 'true')
 
         res = []
         for raw_task in raw_tasks:
@@ -501,6 +502,8 @@ class APIFramework(object):
                     "No id provided for your job(%s), probably check the form_task method"
                     % task_detail)
 
+            if nocache:
+                task_detail['id'] = self.str2hash(self.random_str(20))
 
             returned_task_detail = copy.deepcopy(task_detail)
 
@@ -524,7 +527,9 @@ class APIFramework(object):
             }
 
             if task_id in self.result_cache:
-                pass
+                if self.result_cache[task_id]['finished']:
+                    if "stat" in self.result_cache[task_id]:
+                        self.result_cache[task_id]["stat"]["cached"] = True
             else:
                 self.task_queue.put(task_detail)
                 self.result_cache[task_id] = status
@@ -585,16 +590,16 @@ class APIFramework(object):
                 if task_id in self.result_cache:
                     r = copy.deepcopy(self.result_cache[task_id])
                 else:
-                    res.append({"error": "task_id (%s) not found" % task_id})
+                    res.append({"error": "task_id %s not found" % task_id})
                     continue
 
-                cached = True
-                if r["initial_user_id"] == user_id:
-                    cached = False
+                # cached = True
+                # if r["initial_user_id"] == user_id:
+                #     cached = False
+                # if r["finished"]:
+                #     r["stat"]["cached"] = cached
 
-                if r["finished"]:
-                    r["stat"]["cached"] = cached
-                else:
+                if not r["finished"]:
                     got_all = False
 
                 r["task"] = r["submission_detail"]
@@ -604,7 +609,12 @@ class APIFramework(object):
                 del r["initial_user_id"]
 
                 r["id"] = tmp
-                r["task"]["id"] = tmp
+                # r["task"]["id"] = tmp
+                 
+                try:
+                   del r["task"]["id"]
+                except:
+                   pass
 
                 try:
                     del r["stat"]["start time"]
@@ -661,7 +671,10 @@ class APIFramework(object):
             }
 
             if task_id in self.result_cache:
-                pass
+                print(self.result_cache[task_id])
+                if self.result_cache[task_id]['finished']:
+                    if "stat" in self.result_cache[task_id]:
+                        self.result_cache[task_id]["stat"]["cached"] = True
             else:
                 self.task_queue.put(task_detail)
                 self.result_cache[task_id] = status
@@ -759,11 +772,13 @@ class APIFramework(object):
                 self.result_cache[res["id"]]["stat"] = {
                     "start time": res["start time"],
                     "end time": res["end time"],
-                    "runtime": res["runtime"]
+                    "runtime": res["runtime"],
+                    "cached": False
                 }
 
                 self.result_cache[res["id"]]["error"] = res["error"]
                 self.result_cache[res["id"]]["result"] = res["result"]
+                self.result_cache[res["id"]]["status"] = res.get("status","OK" if len(res["error"]) == 0 else "ERROR")
 
                 self.result_cache[res["id"]]['finished'] = True
             except queue.Empty:

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-docker pull glyomics/apiframework:latest
+docker pull glyomics/apiframework:TEST
 # docker build -t glyomics/glymage:$1 -t glyomics/glymage:latest ./
 
 # docker push glyomics/glymage:$1

@@ -9,13 +9,13 @@
 </head>
 <body style='margin: 0; font-family: "adobe-caslon-pro",Georgia,"Times New Roman",serif; '>
 <div style="position: relative; min-height: 100vh; ">
-<div id="header"></div>
-<div id="content" style="margin: 5px; padding-bottom: 0px; ">
-    <div id="input_container" style="width: 70%; margin: auto">
+<div id="header" style="position:absolute; top:0px; left:0px; height:110px; right:0px; overflow:hidden;"></div>
+<div id="content" style="position:absolute; top:110px; bottom:80px; left:0px; right:0px; overflow:auto;">
+    <div id="input_container" style="width: 70%; margin: auto; display: none;">
         <p style="width: 100%; ">
-            Input: Glycan in GlycoCT or WURCS sequence:
+            Query: GlycoCT or WURCS sequence
         </p>
-        <textarea id="input_seq" rows="18" style="width: 100%; max-width: 100%; height: 50%; display: block; ">RES
+        <textarea id="input_seq" rows="17" style="width: 100%; max-width: 100%; height: 100%; display: block; ">RES
 1b:x-dglc-HEX-x:x
 2b:b-dgal-HEX-1:5
 3b:a-dgal-HEX-1:5
@@ -27,24 +27,24 @@ LIN
 3:3o(3+1)4d
 4:4d(2+1)5n
         </textarea>
-        <br>
-        <div id="submitoption"></div>
-        <br>
-        <button style="width: 80px; text-align: center; margin-left: 47%; margin-right: 47%; " onclick="submit()">Submit</button>
+        <p/>
+        <div id="submitoption" style="float: left; margin: 0px 0px 20px 0px;"></div>
+        <div style="float: right; margin: 0px 0px 20px 0px;"><button style="width: 80px; text-align: center;" onclick="submit()">Submit</button></div>
         <p/>
     </div>
-    <div id="loading_container" style="width: 70%; height: 100%; margin: auto; text-align: center">
+    <div id="loading_container" style="width: 70%; margin: auto; text-align: center; display: none;">
         <p id="submit_status" style="font-size: 25px;"></p>
         <p id="loading"></p>
     </div>
-    <div id="result_container" style="width: 70%; margin: auto; text-align: center">
+    <div id="result_container" style="width: 70%; margin: auto; text-align: center; display: none;">
         <div id="result_container_status"></div>
         <div id="result_container_additional"></div><br>
         <div id="result_container_stat"></div><br>
-        <div id="result_container_json" style="text-align: left"></div><br><br><br><br><br>
+        <div id="result_container_json" style="text-align: left"></div>
+        <p/>
     </div>
 </div>
-<div id="footer" style="position: absolute; bottom: 0; width: 100%; height: 80px;"></div>
+<div id="footer" style="position: absolute; bottom: 0; width: 100%; height: 80px; overflow: hidden;"></div>
 </div>
 <script>
     "use strict";
@@ -68,7 +68,7 @@ LIN
     "use strict";
 
     let task_id;
-    let submit_result;
+    let nocache;
     let retrieve_result;
 
     let submitURL, retrieveURL;
@@ -117,9 +117,8 @@ LIN
 
         retrieve_counter = 0;
 
-        jQuery.post("./submit", {"task": JSON.stringify(para), "developer_email": app_name+"FrontEnd@glyomics.org"}).then(function (d){
+        jQuery.post("./submit", {"task": JSON.stringify(para), "nocache": nocache, "developer_email": app_name+"FrontEnd@glyomics.org"}).then(function (d){
             task_id = d[0].id;
-            submit_result = d[0];
             show("loading_container");
             document.getElementById("submit_status").innerHTML = "<br><br><br>Submitted successfully!";
 
@@ -142,7 +141,7 @@ LIN
             if (retrieve_counter > 5){
                 retrieve_interval = 3000;
             }
-            else if (retrieve_counter > 10) {
+            if (retrieve_counter > 10) {
                 retrieve_interval = 5000;
             }
 
@@ -180,6 +179,7 @@ LIN
         let result = retrieve_result.result;
         let error = retrieve_result.error;
         let stat = retrieve_result.stat;
+        let task = retrieve_result.task;
 
         let result_container_status = document.getElementById("result_container_status");
         let result_container_stat = document.getElementById("result_container_stat");
@@ -189,21 +189,21 @@ LIN
         result_container_stat.innerHTML = "";
         result_container_additional.innerHTML = "";
 
-        let stat_table = "" +
-            "<table style='width: 100%; border: black solid 3px; font-size: 20px;'>" +
-            "<tr style='height: 32px; background-color: lightgrey'><td>Webservice Request</td><td><a onclick='RenderObj(submit_result)'>Click me!</a></td></tr>" +
-            "<tr style='height: 32px; background-color: grey'><td>Webservice Response</td><td><a onclick='RenderObj(retrieve_result)'>Click me!</a></td></tr>" +
-            "<tr style='height: 32px; background-color: lightgrey'><td>Compute time</td><td>"+stat.runtime.toFixed(2)+"s</td></tr>" +
-            "<tr style='height: 32px; background-color: grey'><td>Cached</td><td>"+stat.cached+"</td></tr>" +
-            "</table>";
+        if (task) {
+            let stat_table = "" +
+                "<table style='width: 100%; border: black solid 3px; font-size: 20px;'>" +
+                "<tr style='height: 32px; background-color: lightgrey'><td>Webservice Request</td><td><a onclick='RenderObj(retrieve_result.task)'>Click me!</a></td></tr>" +
+                "<tr style='height: 32px; background-color: grey'><td>Webservice Response</td><td><a onclick='RenderObj(retrieve_result)'>Click me!</a></td></tr>" +
+                "<tr style='height: 32px; background-color: lightgrey'><td>Compute time</td><td>"+stat.runtime.toFixed(2)+"s</td></tr>" +
+                "<tr style='height: 32px; background-color: grey'><td>Cached</td><td>"+stat.cached+"</td></tr>" +
+                "</table>";
 
-        result_container_stat.innerHTML += stat_table;
+            result_container_stat.innerHTML += stat_table;
+        }
 
         renderResultMore();
 
     }
-
-    show("input_container");
 
     function RenderObj(obj){
         let jv = new JSONViewer();
@@ -214,15 +214,21 @@ LIN
 
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
+    const tmp_nocache = urlParams.get('nocache');
+
+    if (tmp_nocache !== null) {
+        nocache = tmp_nocache;        
+    }
+
     const tmp_task_id = urlParams.get('task_id');
 
     if (tmp_task_id !== null && tmp_task_id !== task_id) {
+        show("loading_container");
         task_id = tmp_task_id;
         retrieve();
+    } else {
+        show("input_container");
     }
-
-
-
 
 </script>
 <script src="renderresult.js">

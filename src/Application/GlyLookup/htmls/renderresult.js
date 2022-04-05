@@ -34,8 +34,8 @@ function renderResultMore(){
     imgurl += "notation=snfg&display=extended&format=png&seq=" + s;
 
 
-    result_container.innerHTML += "<br><img src='"+imgurl+"'>";
-    result_container.innerHTML += "<br><a href='https://glytoucan.org/Structures/Glycans/"+retrieve_result.result[0]+"'>"+retrieve_result.result[0]+"</a>"
+    result_container_additional.innerHTML += "<br><img src='"+imgurl+"'>";
+    result_container_additional.innerHTML += "<br><a href='https://glytoucan.org/Structures/Glycans/"+retrieve_result.result[0]+"'>"+retrieve_result.result[0]+"</a>"
 
 
 }

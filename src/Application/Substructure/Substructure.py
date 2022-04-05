@@ -49,13 +49,22 @@ class Substructure(APIFrameworkWithFrontEnd):
 
             self.output(2, "Worker-%s is computing task: %s" % (pid, task_detail))
 
-            result = defaultdict(list)
-            error = []
-            calculation_start_time = time.time()
-
             list_id = task_detail["id"]
             seq = task_detail["seq"]
             align = task_detail["align"]
+
+            result = {}
+            if align in ('all','substructure'):
+                result['substructure'] = []
+            if align in ('all','core'):
+                result['core'] = []
+            if align in ('all','nonreducingend'):
+                result['nonreducingend'] = []
+            if align in ('all','wholeglycan'):
+                result['wholeglycan'] = []
+
+            error = []
+            calculation_start_time = time.time()
 
             try:
                 if "RES" in seq:
@@ -137,7 +146,7 @@ class Substructure(APIFrameworkWithFrontEnd):
                 "end time": calculation_end_time,
                 "runtime": calculation_time_cost,
                 "error": error,
-                "result": result
+                "result": result,
             }
 
             self.output(2, "Job (%s): %s" % (list_id, res))

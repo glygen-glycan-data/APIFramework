@@ -7,8 +7,9 @@ function renderResultMore(){
     let result = retrieve_result.result;
     let error = retrieve_result.error;
     let stat = retrieve_result.stat;
+    let task = retrieve_result.task;
 
-    let align = submit_result.align || 'substructure';
+    let align = (task && task.align) || 'substructure';
     if (align == "all") {
         align = 'substructure';
     }
@@ -28,6 +29,7 @@ function renderResultMore(){
     if (error.length > 0){
         let tmp = error.join(", ");
         result_container_status.innerHTML += "<p style='font-size: 25px; color: red; '>Error: "+tmp+"</p>";
+        return;
     } else if (result[align].length > 0){
         result_container_status.innerHTML += "<p style='font-size: 25px;'>Found "+result[align].length+" "+align_text+" alignments.</p>";
     }
@@ -39,14 +41,14 @@ function renderResultMore(){
 
 
     let imgurl = "https://glymage.glyomics.org/getimage?";
-    let s = submit_result.seq;
+    let s = task.seq;
     if ( !s.startsWith("WURCS") ){
         s = encodeURIComponent(s);
     }
     imgurl += "notation=snfg&display=extended&format=png&seq=" + s;
 
 
-    result_container_additional.innerHTML += "<br><img src='"+imgurl+"'><p>Query glycan (motif)</p>";
+    result_container_additional.innerHTML += "<br><img src='"+imgurl+"'><p>Query</p>";
 
     if (result[align].length == 0){
         return
