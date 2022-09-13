@@ -214,8 +214,14 @@ function JSONViewer (){
             td2.innerHTML = value;
 
             if (typeof value === "string") {
-                td2.innerHTML = "\""+td2.innerHTML+"\"";
-                td2.style.color = this.colorTheme.string
+                var str = td2.innerHTML;
+                str = str.replace(/&/g, "&amp;").replace(/</g, "&lt;")
+                         .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+                         .replace(/'/g, "&#39;").replace(/\n/g, "\\n")
+                         .replace(/\t/g, "\\t").replace(/\r/g, "\\r");
+                // console.log(str);
+                td2.innerHTML = "\""+str+"\"";
+                td2.style.color = this.colorTheme.string;
             }
             else if (typeof value === "number") {
                 td2.style.color = this.colorTheme.number
