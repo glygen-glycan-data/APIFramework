@@ -16,26 +16,30 @@ function renderResultMore(){
         result_container_status.innerHTML += "<p style='font-size: 25px;'>Found "+result.length+" structure(s)</p>";
     }
     else {
-        result_container_status.innerHTML += "<p style='font-size: 25px;'>No structure found</p>";
+        if (error.length == 0) {
+            result_container_status.innerHTML += "<p style='font-size: 25px;'>No structure found</p>";
+        } else {
+            let tmp = error.join(", ");
+            result_container_status.innerHTML += "<p style='font-size: 25px; color: red; '>Error: "+tmp+"</p>";
+        }
     }
 
-
-    if (error.length > 0){
-        let tmp = error.join(", ");
-        result_container_status.innerHTML += "<p style='font-size: 25px; color: red; '>Error: "+tmp+"</p>";
-    }
-
-
-    let imgurl = "https://glymage.glyomics.org/getimage?";
+    let imgurl = "https://glymage.glyomics.org/";
     let s = retrieve_result.task.seq;
-    if ( !s.startsWith("WURCS") ){
-        s = encodeURIComponent(s);
+    if (error.length == 0 && result.length == 0 && (s.startsWith("WURCS") || s.startsWith("RES"))) {
+        if ( !s.startsWith("WURCS") ){
+            s = encodeURIComponent(s);
+        }
+        imgurl += "getimage?" + "notation=snfg&display=extended&format=png&seq=" + s;
+        result_container_additional.innerHTML += "<br><img src='"+imgurl+"'>";
+    } else if (result.length > 0) {
+        imgurl += "image/snfg/extended/"+ result[0].accession +".png";
+        result_container_additional.innerHTML += "<br><img src='"+imgurl+"'>";
     }
-    imgurl += "notation=snfg&display=extended&format=png&seq=" + s;
 
-
-    result_container_additional.innerHTML += "<br><img src='"+imgurl+"'>";
-    result_container_additional.innerHTML += "<br><a href='https://glytoucan.org/Structures/Glycans/"+retrieve_result.result[0]+"'>"+retrieve_result.result[0]+"</a>"
+    if (result.length > 0) {
+        result_container_additional.innerHTML += "<br><a href='https://glytoucan.org/Structures/Glycans/"+result[0].accession+"'>"+result[0].accession+"</a>";
+    }
 
 
 }

@@ -2,11 +2,14 @@
 import os
 import sys
 import time
+import re
+from collections import defaultdict
 import multiprocessing
 from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 
 import pygly.alignment
 from pygly.GlycanResource.GlyTouCan import GlyTouCanNoCache, GlyTouCan
+from pygly.GlycanResource.GlyGen import GlyGen
 from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat
 
 def round2str(n):
@@ -40,30 +43,39 @@ class GlyLookup(APIFrameworkWithFrontEnd):
         gie = pygly.alignment.GlycanEqual()
 
         wurcss = {}
-        glycan_by_mass = {}
+        otherseq = defaultdict(list)
+        member = defaultdict(list)
+        glycan_by_mass = defaultdict(list)
 
-        hash2seq = {}
-
+        hash2acc = {}
 
         for line in open(glycan_file_path):
 
-            acc, mass, wseq, gseq, xxx = line.strip().split("\t")
+            try:
+                acc, mass, wseq, gseq, glygen, xxx = line.strip().split("\t")
+            except ValueError:
+                acc, mass, wseq, gseq, xxx = line.strip().split("\t")
+                glygen = ""
+
             gseq = gseq.replace("\\n", "\n")
 
             for s in [wseq, gseq]:
                 if s != "":
                     h = self.str2hash(s)
-                    hash2seq[h] = acc
+                    hash2acc[h] = acc
+
+            wurcss[acc] = wseq
+            for s in [gseq,]:
+                if s != "":
+                    otherseq[acc].append(dict(seq=s,hash=self.str2hash(s),format='GlycoCT',source='GlyTouCan'))
+
+            if glygen == "true":
+                member[acc].append("GlyGen")
 
             if mass == "":
                 continue
-            elif mass not in glycan_by_mass:
-                glycan_by_mass[mass] = []
 
             glycan_by_mass[mass].append(acc)
-            wurcss[acc] = wseq
-
-        glycan_by_mass[None] = []
 
         self.output(2, "Worker-%s is ready to take job" % (pid))
 
@@ -78,14 +90,22 @@ class GlyLookup(APIFrameworkWithFrontEnd):
 
             list_id = task_detail["id"]
             seq = str(task_detail["seq"])
+            if re.search(r'^G[0-9]{5}[A-Z]{2}$',seq):
+                if seq in wurcss:
+                    seq = wurcss[seq]
+                else:
+                    seq = None
+                    error.append("Unexpected GlyTouCan accession")
+                
             result = []
 
-            h = self.str2hash(seq)
-            if h in hash2seq:
-                acc = hash2seq[h]
-                result.append(acc)
+            if seq != None:
+                h = self.str2hash(seq)
+                if h in hash2acc:
+                    acc = hash2acc[h]
+                    result.append(acc)
 
-            if len(result) == 0:
+            if len(result) == 0 and seq != None:
                 query_glycan = None
                 try:
                     if "RES" in seq:
@@ -108,18 +128,20 @@ class GlyLookup(APIFrameworkWithFrontEnd):
                         error.append("Error in calculating mass")
 
                 if len(error) == 0:
-                    if query_glycan_mass not in glycan_by_mass:
-                        error.append("The mass is not supported")
-
-                if len(error) == 0:
-                    potential_accs = glycan_by_mass[query_glycan_mass]
+                    potential_accs = glycan_by_mass.get(query_glycan_mass,[])
 
                     for acc in potential_accs:
                         glycan = wp.toGlycan(wurcss[acc])
                         if gie.eq(query_glycan, glycan):
                             result.append(acc)
+                            hash2seq[h] = acc
 
-
+            result1 = []
+            for acc in result:
+                r = dict(accession=acc,
+                         sequences=[dict(seq=wurcss[acc],hash=self.str2hash(wurcss[acc]),format='WURCS',source='GlyTouCan')]+otherseq[acc],
+                         membership=['GlyTouCan']+member[acc])
+                result1.append(r)
 
             calculation_end_time = time.time()
             calculation_time_cost = calculation_end_time - calculation_start_time
@@ -132,7 +154,7 @@ class GlyLookup(APIFrameworkWithFrontEnd):
                 "end time": calculation_end_time,
                 "runtime": calculation_time_cost,
                 "error": error,
-                "result": result
+                "result": result1
             }
 
             self.output(2, "Job (%s): %s" % (list_id, res))
@@ -142,6 +164,7 @@ class GlyLookup(APIFrameworkWithFrontEnd):
 
     def pre_start(self, para):
 
+        ggacc = set(GlyGen().allglycans())
         gtc = GlyTouCanNoCache()
         wp = WURCS20Format()
 
@@ -165,7 +188,10 @@ class GlyLookup(APIFrameworkWithFrontEnd):
                 continue
 
             if acc not in data:
-                data[acc] = ["", "", ""]
+                data[acc] = ["", "", "", "" ]
+
+            if acc in ggacc:
+                data[acc][3] = 'true'
 
             if f == "glycoct":
                 data[acc][2] = s
@@ -198,13 +224,4 @@ if __name__ == '__main__':
     glylookup_app = GlyLookup()
     glylookup_app.find_config("GlyLookup.ini")
     glylookup_app.start()
-
-
-
-
-
-
-
-
-
 
