@@ -99,7 +99,10 @@ LIN
 
         let para = {};
         let seq = document.getElementById("input_seq").value.trim();
-        para["seq"] = seq;
+        // console.log(seq);
+        para["seq"] = seq.replace(/\\n/g,'\n');
+        // console.log(para["seq"]);
+
 
         let submitoptions = document.getElementById("submitoption");
         for (let formEle of submitoptions.getElementsByTagName("form")){
