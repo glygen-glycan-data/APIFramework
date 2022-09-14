@@ -47,7 +47,7 @@ class GlyLookup(APIFrameworkWithFrontEnd):
         member = defaultdict(list)
         glycan_by_mass = defaultdict(list)
 
-        hash2acc = {}
+        hash2acc = defaultdict(set)
 
         for line in open(glycan_file_path):
 
@@ -62,15 +62,16 @@ class GlyLookup(APIFrameworkWithFrontEnd):
             for s in [wseq, gseq]:
                 if s != "":
                     h = self.str2hash(s)
-                    hash2acc[h] = acc
+                    if acc not in hash2acc[h]:
+                        hash2acc[h].add(acc)
 
             wurcss[acc] = wseq
             for s in [gseq,]:
                 if s != "":
-                    otherseq[acc].append(dict(seq=s,hash=self.str2hash(s),format='GlycoCT',source='GlyTouCan'))
+                    otherseq[acc].append(dict(seq=s,hash=self.str2hash(s),format='GlycoCT',source='GlyTouCan:'+acc))
 
             if glygen == "true":
-                member[acc].append("GlyGen")
+                member[acc].append("GlyGen:"+acc)
 
             if mass == "":
                 continue
@@ -90,9 +91,11 @@ class GlyLookup(APIFrameworkWithFrontEnd):
 
             list_id = task_detail["id"]
             seq = str(task_detail["seq"])
+            wurcsfromgtcacc = False
             if re.search(r'^G[0-9]{5}[A-Z]{2}$',seq):
                 if seq in wurcss:
                     seq = wurcss[seq]
+                    wurcsfromgtcacc = True
                 else:
                     seq = None
                     error.append("Unexpected GlyTouCan accession")
@@ -100,20 +103,19 @@ class GlyLookup(APIFrameworkWithFrontEnd):
             result = []
 
             if seq != None:
-                h = self.str2hash(seq)
-                if h in hash2acc:
-                    acc = hash2acc[h]
+                seqh = self.str2hash(seq)
+                for acc in sorted(hash2acc[seqh]):
                     result.append(acc)
 
             if len(result) == 0 and seq != None:
                 query_glycan = None
                 try:
-                    if "RES" in seq:
+                    if seq.startswith("RES"):
                         query_glycan = gp.toGlycan(seq)
-                    elif "WURCS" in seq:
+                    elif seq.startswith("WURCS"):
                         query_glycan = wp.toGlycan(seq)
                     else:
-                        raise RuntimeError
+                        error.append("Unable to parse")
                 except:
                     error.append("Unable to parse")
 
@@ -130,17 +132,21 @@ class GlyLookup(APIFrameworkWithFrontEnd):
                 if len(error) == 0:
                     potential_accs = glycan_by_mass.get(query_glycan_mass,[])
 
-                    for acc in potential_accs:
+                    for acc in sorted(potential_accs):
                         glycan = wp.toGlycan(wurcss[acc])
                         if gie.eq(query_glycan, glycan):
                             result.append(acc)
-                            hash2seq[h] = acc
+                            hash2acc[seqh].add(acc)
 
             result1 = []
             for acc in result:
                 r = dict(accession=acc,
-                         sequences=[dict(seq=wurcss[acc],hash=self.str2hash(wurcss[acc]),format='WURCS',source='GlyTouCan')]+otherseq[acc],
-                         membership=['GlyTouCan']+member[acc])
+                         sequences=[dict(seq=wurcss[acc],hash=self.str2hash(wurcss[acc]),format='WURCS',source='GlyTouCan:'+acc)]+otherseq[acc],
+                         membership=['GlyTouCan:'+acc]+member[acc])
+                if seq.startswith('RES'):
+                    r['sequences'].append(dict(seq=seq,hash=seqh,format='GlycoCT',source='UserInput'))
+                elif not wurcsfromgtcacc and seq.startswith('WURCS'):
+                    r['sequences'].append(dict(seq=seq,hash=seqh,format='WURCS',source='UserInput'))
                 result1.append(r)
 
             calculation_end_time = time.time()
