@@ -110,6 +110,7 @@ class APIFramework(object):
         self._port = 10980
 
         self._max_worker_num = 1
+        self._min_worker_num = 1
         self._clean_start = True
         self._file_based_job = False
 
@@ -168,6 +169,12 @@ class APIFramework(object):
 
     def set_max_worker_num(self, w):
         self._max_worker_num = w
+
+    def min_worker_num(self):
+        return self._min_worker_num
+
+    def set_min_worker_num(self, w):
+        self._min_worker_num = w
 
     def verbose_level(self):
         return self._verbose_level
@@ -313,6 +320,9 @@ class APIFramework(object):
             if "max_cpu_core" in res["basic"]:
                 self.set_max_worker_num(int(res["basic"]["max_cpu_core"]))
 
+            if "min_cpu_core" in res["basic"]:
+                self.set_min_worker_num(int(res["basic"]["min_cpu_core"]))
+
             if "clean_start" in res["basic"]:
                 self._clean_start = self.bool(res["basic"]["clean_start"])
 
@@ -380,6 +390,9 @@ class APIFramework(object):
 
         if "WEBSERVICE_BASIC_MAX_CPU_CORE" in os.environ:
             self.set_max_worker_num(int(os.environ["WEBSERVICE_BASIC_MAX_CPU_CORE"]))
+
+        if "WEBSERVICE_BASIC_MIN_CPU_CORE" in os.environ:
+            self.set_min_worker_num(int(os.environ["WEBSERVICE_BASIC_MIN_CPU_CORE"]))
 
         if "WEBSERVICE_BASIC_GOOGLE_ANALYTICS_TAG_ID" in os.environ:
             self.set_google_analytics_tag_id(os.environ["WEBSERVICE_BASIC_GOOGLE_ANALYTICS_TAG_ID"])
@@ -852,6 +865,7 @@ class APIFramework(object):
 
         self.output(0, "Host: %s" % self._host)
         self.output(0, "Port: %s" % self._port)
+        self.output(0, "Min_Worker_Num: %s" % self._min_worker_num)
         self.output(0, "Max_Worker_Num: %s" % self._max_worker_num)
 
         for k,v in self._worker_para.items():
@@ -913,7 +927,7 @@ class APIFramework(object):
     def new_worker_processes(self):
 
         process_pool = {}
-        for i in range(self._max_worker_num):
+        for i in range(self._min_worker_num):
             pid, proc = self.new_worker_process()
             process_pool[pid] = proc
 
@@ -993,7 +1007,7 @@ class APIFramework(object):
             self.deamon_process_pool_update()
 
             require_new_worker = False
-            if unfinished_job_count > 10:
+            if unfinished_job_count > 10 or len(self._deamon_process_pool) < self.min_worker_num():
                 require_new_worker = True
             if len(self._deamon_process_pool) >= self.max_worker_num():
                 require_new_worker = False
@@ -1017,7 +1031,7 @@ class APIFramework(object):
 
                 self.deamon_process_pool_update()
 
-                if len(self._deamon_process_pool) > 1:
+                if len(self._deamon_process_pool) > self.min_worker_num():
                     self.approve_suicide_queue.put(True)
                     self.output(0, "Sending KILL-SIGNAL to worker")
                 self.deamon_process_pool_update()
