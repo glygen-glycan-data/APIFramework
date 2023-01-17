@@ -27,9 +27,8 @@ if [ "$tag" != "TEST" ]; then
     docker push glyomics/apiframework:$tag
     docker push glyomics/apiframework:latest
 else:
-    docker build -t glyomics/apiframework:$tag glyomics/apiframework:latest ./
+    docker build -t glyomics/apiframework:latest ./
 fi
-
 
 rm -rf pygly pygly-scripts
 rm APIFramework.py
