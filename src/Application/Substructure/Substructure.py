@@ -33,14 +33,25 @@ class Substructure(APIFrameworkWithFrontEnd):
 
         loose_matcher = pygly.alignment.MotifInclusive(connected_nodes_cache=nodes_cache)
         loose_nred_matcher = pygly.alignment.NonReducingEndMotifInclusive(connected_nodes_cache=nodes_cache)
+        loose_whole_matcher = pygly.alignment.WholeGlycanEqualMotifInclusive()
 
         strict_matcher = pygly.alignment.MotifStrict(connected_nodes_cache=nodes_cache)
         strict_nred_matcher = pygly.alignment.NonReducingEndMotifStrict(connected_nodes_cache=nodes_cache)
+        strict_whole_matcher = pygly.alignment.WholeGlycanEqualMotifStrict()
 
         glycans = {}
+        glycanmw = defaultdict(dict)
         for line in open(structure_list_file_path):
             acc, s = line.strip().split()
-            glycans[acc] = wp.toGlycan(s)
+            g = wp.toGlycan(s)
+            if not g.has_root():
+                continue
+            glycans[acc] = g
+            try:
+                mw = str(round(g.underivitized_molecular_weight(),2))
+                glycanmw[mw][acc] = g
+            except (KeyError,ValueError,TypeError):
+                pass
 
         self.output(2, "Worker-%s is ready to take job" % (pid))
 
@@ -77,26 +88,46 @@ class Substructure(APIFrameworkWithFrontEnd):
                 error.append("Unable to parse")
 
             if len(error) == 0:
+                if not motif.has_root():
+                    error.append("Motif is not a structure")
+
+            glyiter = glycans.items()
+            motifmw = 0.0
+            if align == 'wholeglycan':
+                try:
+                    motifmw = str(round(motif.underivitized_molecular_weight(),2))
+                except (KeyError,ValueError,TypeError):
+                    pass
+                print(motifmw)
+                if motifmw > 0:
+                    glyiter = glycanmw[motifmw].items()
+
+            if len(error) == 0:
                 motif_node_num = len(list(motif.all_nodes()))
-                if motif_node_num > max_motif_size:
+                if motif_node_num > max_motif_size and motifmw == 0.0:
                     error.append("Motif is too big")
 
-            for acc, glycan in glycans.items():
+            for acc, glycan in glyiter:
+               
 
                 if len(error) != 0:
                     for e in error:
                         print("Processor-%s: Issues (%s) is found with task %s" % (pid, e, task_detail["id"]))
                     break
+                
+                print(acc)
 
                 # Loose match first
-                loose_core = loose_matcher.leq(motif, glycan, rootOnly=True, anywhereExceptRoot=False, underterminedLinkage=True)
+                loose_core = (motifmw == 0) and loose_matcher.leq(motif, glycan, rootOnly=True, anywhereExceptRoot=False, underterminedLinkage=True)
                 loose_substructure_partial = False
                 if not loose_core and align in ('substructure','nonreducingend','all'):
                     loose_substructure_partial = loose_matcher.leq(motif, glycan, rootOnly=False, anywhereExceptRoot=True, underterminedLinkage=True)
                 loose_substructure = loose_core or loose_substructure_partial
 
                 loose_whole = False
-                if loose_core and loose_matcher.whole_glycan_match_check(motif, glycan):
+                if (motifmw == 0) and loose_core and loose_matcher.whole_glycan_match_check(motif, glycan):
+                    loose_whole = True
+                elif (motifmw > 0) and loose_whole_matcher.leq(motif,glycan):
                     loose_whole = True
 
                 loose_nred = False
@@ -114,7 +145,9 @@ class Substructure(APIFrameworkWithFrontEnd):
 
                 strict_substructure = strict_core or strict_substructure_partial
 
-                if strict_core and strict_matcher.whole_glycan_match_check(motif, glycan):
+                if (motifmw == 0) and strict_core and strict_matcher.whole_glycan_match_check(motif, glycan):
+                    strict_whole = True
+                elif (motifmw > 0) and strict_whole_matcher.leq(motif,glycan):
                     strict_whole = True
 
                 if loose_nred and strict_substructure:
@@ -187,7 +220,6 @@ class Substructure(APIFrameworkWithFrontEnd):
 
             elif not glygen:
                 f1.write("%s\t%s\n" % (acc, s))
-
 
         f1.close()
 
