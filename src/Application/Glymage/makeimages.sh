@@ -15,12 +15,18 @@ mkdir -p work/wurcs work/glycoct work/genglycoct
 $DUMPSEQ /work/wurcs
 $ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f png -o /work/snfg/extended /work/wurcs
 $ALLIMG -N 20 -P 2 -n snfg -d compact -f png -o /work/snfg/compact /work/wurcs
+$ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f svg -o /work/snfg/compact /work/wurcs
+$ALLIMG -N 20 -P 2 -n snfg -d compact -f svg -o /work/snfg/compact /work/wurcs
 $DUMPSEQ /work/glycoct
 $ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f png -o /work/snfg/extended /work/glycoct
 $ALLIMG -N 20 -P 2 -n snfg -d compact -f png -o /work/snfg/compact /work/glycoct
+$ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f svg -o /work/snfg/extended /work/glycoct
+$ALLIMG -N 20 -P 2 -n snfg -d compact -f svg -o /work/snfg/compact /work/glycoct
 $DUMPSEQ /work/genglycoct
 $ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f png -o /work/snfg/extended /work/genglycoct
 $ALLIMG -N 20 -P 2 -n snfg -d compact -f png -o /work/snfg/compact /work/genglycoct
+$ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f svg -o /work/snfg/extended /work/genglycoct
+$ALLIMG -N 20 -P 2 -n snfg -d compact -f svg -o /work/snfg/compact /work/genglycoct
 
 kill $XSCR
 
@@ -29,4 +35,4 @@ rm -rf image/hash
 ( cd work; python2 $CURDIR/image2hash.py ../image/hash )
 rm -rf image/snfg
 python2 $CURDIR/link.py
-( cd image; tar czf image.tgz hash snfg error.png imageinfo.tsv shash2acc.tsv )
+( cd image; tar czf image.tgz hash snfg error.png imageinfo.tsv shash2acc.tsv cannonseq.tsv )

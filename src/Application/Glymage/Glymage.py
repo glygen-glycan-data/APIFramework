@@ -13,12 +13,17 @@ import urllib, urllib2
 import hashlib
 import multiprocessing
 import traceback
+import StringIO
+from collections import defaultdict
 from APIFramework import APIFramework, queue
 
 
 import pygly.GlycanImage
 import pygly.GlycanResource
-
+import pygly.GlycanFormatter
+import pygly.GlycanFormatterExceptions
+import pygly.GlycanBuilderSVGParser
+import pygly.alignment
 
 class Glymage(APIFramework):
 
@@ -124,6 +129,11 @@ class Glymage(APIFramework):
         except:
             pass
 
+        cannonseq = dict()
+        for l in open(os.path.join(self._static_folder,"cannonseq.tsv")):
+            acc,seq = l.split('\t')
+            cannonseq[acc.strip()] = seq.strip()
+
         gtc = pygly.GlycanResource.GlyTouCanNoPrefetch()
         self.output(2, "Worker-%s is ready to take job" % (pid))
 
@@ -159,16 +169,18 @@ class Glymage(APIFramework):
             ge.opaque(opaque)
             ge.reducing_end(redend)
             ge.format(image_format)
+            ge.verbose(True)
 
             seq_hashs = []
 
-            glycoct = None
             wurcs = None
             if acc != None:
                 seq_hashs.append(acc)
 
-                wurcs   = gtc.getseq(acc, format="wurcs")
-                glycoct = gtc.getseq(acc, format="glycoct")
+                if acc in cannonseq:
+                    wurcs = cannonseq[acc]
+                else:
+                    wurcs = gtc.getseq(acc, format="wurcs")
 
                 if wurcs == None:
                     error.append("GlyTouCan Accession (%s) is not present in triple store" % acc)
@@ -176,12 +188,8 @@ class Glymage(APIFramework):
                     seq = wurcs
                     seq_hashs.append(self.str2hash(wurcs))
 
-                if glycoct != None:
-                    seq_hashs.append(self.str2hash(glycoct))
-
             else:
                 seq_hashs.append(self.str2hash(seq))
-
 
             str_image = ""
             image_md5_hash = ""
@@ -234,8 +242,6 @@ class Glymage(APIFramework):
 
 
     def error_image(self):
-        fp = self.abspath(os.path.join(self._static_folder, "error.png"))
-
         try:
             notfoundurl = str(flask.request.url)
             content = notfoundurl.split("/")
@@ -243,6 +249,10 @@ class Glymage(APIFramework):
             notation = content[4]
             display = content[5]
             filename = content[6]
+
+            acc, image_format = filename.split(".")
+            if image_format not in ["png","svg","jpg","jpeg"]:
+                raise RuntimeError
 
             if imageword != "image":
                 raise RuntimeError
@@ -253,9 +263,6 @@ class Glymage(APIFramework):
             if display not in ["compact", "extended"]:
                 raise RuntimeError
 
-            acc, image_format = filename.split(".")
-            if image_format not in ["png"]:
-                raise RuntimeError
 
             acc = acc.upper()
             if not self.glytoucan_accession_detection(acc):
@@ -272,12 +279,116 @@ class Glymage(APIFramework):
         except:
             pass
 
+        fp = self.abspath(os.path.join(self._static_folder, "error.png"))
+        image_format = (flask.request.url).split(".")[-1]
+        if image_format == "json":
+            fp = self.abspath(os.path.join(self._static_folder, "error.json"))
+            return flask.send_file(fp, mimetype='application/json')
         return flask.send_file(fp, mimetype='image/png')
 
     def glytoucan_accession_detection(self, s):
         gtcp = re.compile(r"^G\d{5}\w{2}$")
         return len(gtcp.findall(s)) > 0
 
+    highlight_css_expand = """
+                .glycanimage:hover .highlight_mono {
+                       fill:white;
+                       text-rendering: optimizeSpeed;
+                       stroke:white;
+                       transform: scale(1.3);
+                       transform-origin: center;
+                       transform-box: fill-box;
+                }
+    """
+
+    # This is the default...
+    highlight_css_outline = """
+                .glycanimage:hover .highlight_mono * {
+                       stroke: rgb(247, 71, 62) !important; 
+                       stroke-width: 4;
+                } 
+                .glycanimage:hover .highlight_link * {
+                       stroke: rgb(247, 71, 62) !important; 
+                       stroke-width: 4;
+                } 
+    """
+    gbsp = pygly.GlycanBuilderSVGParser.GlycanBuilderSVG()
+    gctp = pygly.GlycanFormatter.GlycoCTFormat()
+    wp   = pygly.GlycanFormatter.WURCS20Format()
+    glyeq  = pygly.alignment.GlycanImageEqual()
+    gtc  = pygly.GlycanResource.GlyTouCanNoPrefetch()
+    def highlightsvg(self, svgfile, glyseq, highlight, style='outline'):
+        svg = open(svgfile).read()
+        # print(svg)
+        try:
+            gly1 = self.gbsp.toGlycan(svg)
+        except pygly.GlycanFormatterExceptions.GlycanParseError:
+            gly1 = None
+        except:
+            traceback.print_exc(file=sys.stderr)
+            gly1 = None
+        if gly1 == None:
+            self.output(2,"Highlight SVG: Can't parse the SVG image")
+            return StringIO.StringIO(svg)
+        # print(self.gctp.toStr(gly1))
+        gly0 = None
+        if glyseq.strip().startswith('RES'):
+            try:
+                gly0 = self.gctp.toGlycan(glyseq)
+            except pygly.GlycanFormatterExceptions.GlycanParseError:
+                gly0 = None
+            except:
+                traceback.print_exc(file=sys.stderr)
+                gly0 = None
+        elif glyseq.strip().startswith('WURCS'):
+            try:
+                gly0 = self.wp.toGlycan(glyseq)
+            except pygly.GlycanFormatterExceptions.GlycanParseError:
+                gly0 = None
+            except:
+                traceback.print_exc(file=sys.stderr)
+                gly0 = None
+        if gly0 == None:
+            self.output(2,"Highlight SVG: Can't parse the provided sequence")
+            return StringIO.StringIO(svg)
+        # print(self.gctp.toStr(gly0))
+        idmap = []
+        if not self.glyeq.eq(gly0,gly1,idmap=idmap):
+            self.output(2,"Highlight SVG: SVG and provided structures cannot be aligned")
+            return StringIO.StringIO(svg)
+        svgidmap = defaultdict(list)
+        for f,t in idmap:
+            svgidmap[f.id()].extend(t.external_descriptor_id().split(';'))
+        for l in gly0.all_links():
+            for parent_svgid in svgidmap[l.parent().id()]:
+                for child_svgid in svgidmap[l.child().id()]:
+                    svgidbase,parent_svgid1 = parent_svgid.rsplit(':',1)
+                    svgidbase = svgidbase.split('-',1)[1]
+                    child_svgid1 = child_svgid.rsplit(':',1)[1]
+                    svgidmap[(l.parent().id(),l.child().id())].append('l-%s:%s,%s'%(svgidbase,parent_svgid1,child_svgid1))
+        svg = svg.replace('<!--Generated by the Batik Graphics2D SVG Generator-->',"""
+           <defs id="highlightcss">
+              <style type="text/css"><![CDATA[
+              %s
+              ]]></style>
+           </defs>
+        """%(getattr(self,"highlight_css_"+style),))
+        svg = svg.replace('  /><g','  /><g class="glycanimage"')
+        ids = map(int,filter(lambda id: '-' not in id, highlight.split(',')))
+        linkids = filter(lambda id: '-' in id, highlight.split(','))
+        if linkids != ['*-*']:
+            linkids = map(lambda id: tuple(map(int,id.split('-'))),linkids)
+        for id in ids:
+            for svgid in svgidmap[id]:
+                # svgid = "r-1:%d"%(id,)
+                svg = svg.replace(' ID="%s" '%(svgid,),' ID="%s" class="highlight highlight_mono" '%(svgid,))
+                break # first "id" only...
+            for id1 in ids:
+                if linkids == ["*-*"] or (id,id1) in linkids:
+                  for svgid in svgidmap[(id,id1)]:
+                    svg = svg.replace(' ID="%s" '%(svgid,),' ID="%s" class="highlight highlight_link" '%(svgid,))
+                    break # first "id" only...
+        return StringIO.StringIO(svg)
 
     def image_generation_submit(self, option):
         imagegenerationwebservicebaseurl = "http://%s:%s/" % (self.host(), self.port()) + "submit"
@@ -294,7 +405,7 @@ class Glymage(APIFramework):
         return jobid
 
 
-    def image_generation(self, notation, display, image_format, query="", query_type=""):
+    def image_generation(self, query, query_type, **option):
 
         result_path = ""
 
@@ -303,10 +414,13 @@ class Glymage(APIFramework):
         assert query_type in ["sequence", "accession", "task"]
         query = query.strip()
 
-        option = {}
-        option["notation"] = notation
-        option["display"] = display
-        option["image_format"] = image_format
+        # option = {}
+        # option["notation"] = notation
+        # option["display"] = display
+        # option["image_format"] = image_format
+        notation = option["notation"]
+        display = option["display"]
+        image_format = option["image_format"]
 
         if query_type == "accession":
             option["acc"] = query
@@ -332,7 +446,25 @@ class Glymage(APIFramework):
             result_path = os.path.join(self.data_folder, notation, display, locater + "." + image_format)
 
             if os.path.exists(result_path):
-                return flask.send_file(result_path, mimetype='image/%s' % mimetype)
+                if image_format == "svg" and option.get("highlight"):
+                    query_seq = query
+                    if query_type == "accession":
+                        if query not in self.cannonseq:
+                            query_seq = self.gtc.getseq(query,format="wurcs")
+                            self.cannonseq[query] = query_seq
+                        else:
+                            query_seq =  self.cannonseq[query]
+                    try:
+                        return flask.send_file(self.highlightsvg(result_path, query_seq,
+                                                                 option.get('highlight'), 
+                                                                 option.get('highlight_style','outline')), 
+                                               mimetype='image/%s' % mimetype)
+                    except:
+                        traceback.print_exc(file=sys.stderr)
+                        print >>sys.stderr, "Exception in highlightsvg..."
+                        return flask.send_file(result_path, mimetype='image/%s' % mimetype)
+                else:
+                    return flask.send_file(result_path, mimetype='image/%s' % mimetype)
 
             # Nope, submit the task
             task_id = self.image_generation_submit(option)
@@ -350,6 +482,8 @@ class Glymage(APIFramework):
                 errors = response_obj["error"]
                 image_hash = response_obj["result"]
                 image_format = response_obj["task"]["image_format"]
+                query_acc = response_obj["task"].get("acc")
+                query_seq = response_obj["task"].get("seq")
                 result_path = os.path.join(self.data_folder, "hash", image_hash + "." + image_format)
 
                 mimetype = image_format
@@ -361,7 +495,23 @@ class Glymage(APIFramework):
 
 
         if os.path.exists(result_path):
-            return flask.send_file(result_path, mimetype='image/%s' % mimetype)
+            if image_format == "svg" and option.get("highlight"):
+                if query_acc:
+                    if query_acc not in self.cannonseq:
+                        query_seq = self.gtc.getseq(query_acc,format="wurcs")
+                        self.cannonseq[query_acc] = query_seq
+                    else:
+                        query_seq = self.cannonseq[query_acc]
+                try:
+                    return flask.send_file(self.highlightsvg(result_path, query_seq, option.get('highlight'), 
+                                                             option.get('highlight_style','outline')),
+                                           mimetype='image/%s' % mimetype)
+                except:
+                    traceback.print_exc(file=sys.stderr)
+                    print >>sys.stderr, "Exception in highlightsvg..."
+                    return flask.send_file(result_path, mimetype='image/%s' % mimetype)
+            else:
+                return flask.send_file(result_path, mimetype='image/%s' % mimetype)
         else:
             return self.error_image(), 404
 
@@ -369,6 +519,11 @@ class Glymage(APIFramework):
     def load_additional_route(self, app):
         # TODO
         self.data_folder = self._static_folder
+
+        self.cannonseq = dict()
+        for l in open(os.path.join(self._static_folder,"cannonseq.tsv")):
+            acc,seq = l.split('\t')
+            self.cannonseq[acc.strip()] = seq.strip()
 
         @app.errorhandler(404)
         def error_handling(e):
@@ -387,8 +542,10 @@ class Glymage(APIFramework):
             p = {}
             for k in dict(para).keys():
                 v = para.get(k)
-                p[k] = str(v)
+                if v:
+                    p[k] = str(v)
 
+            # print >>sys.stderr, p
             query, query_type = "", ""
             if "seq" in p:
                 query = p["seq"].strip()
@@ -410,26 +567,25 @@ class Glymage(APIFramework):
             if query == "" or query_type == "":
                 raise RuntimeError
 
+            p["notation"] = p.get("notation","snfg").lower()
+            if p["notation"] not in ("snfg",):
+                return self.error_image(), 404
 
-            notation = "snfg"
-            if "notation" in p:
-                notation = p["notation"].lower()
-                if notation not in ["snfg"]:
-                    return self.error_image(), 404
+            p["display"] = p.get("display","extended").lower()
+            if p["display"] not in ("extended","compact"):
+                return self.error_image(), 404
 
-            display = "extended"
-            if "display" in p:
-                display = p["display"].lower()
-                if display not in ["compact", "extended"]:
-                    return self.error_image(), 404
+            p["image_format"] = p.get("image_format","png").lower()
+            if p["image_format"] not in ("png","jpg","jpeg","svg"):
+                return self.error_image(), 404
 
-            image_format = "png"
-            if "image_format" in p:
-                image_format = p["image_format"].lower()
-                if image_format not in ["png", "svg"]:
-                    return self.error_image(), 404
+            for k in ("task_id","list_id","seq","acc"):
+                if p.get(k) == None and k in p:
+                    del p[k]
 
-            return self.image_generation(notation, display, image_format, query=query, query_type=query_type)
+            # print >>sys.stderr, query, query_type, p
+
+            return self.image_generation(query, query_type, **p)
 
 
 if __name__ == '__main__':

@@ -19,6 +19,7 @@ def s2h(s):
 
 seq_hash_to_acc = {}
 acc_to_seq_hash = {}
+acc_to_cannonseq= {}
 
 # Key: sequence hash + image options -> Value: images hash
 seqhash_to_imagehash = {}
@@ -31,7 +32,10 @@ for seqtype in ("wurcs","glycoct"):
 		continue
             if not re.search(r'^G[0-9]{5}[A-Z]{2}$',acc):
 		continue
+            print f,acc,extn
             s = open(os.path.join(dirpath,f)).read()
+            if seqtype == "wurcs":
+                acc_to_cannonseq[acc] = s
             h = s2h(s)
             seq_hash_to_acc[h] = acc
             if acc not in acc_to_seq_hash:
@@ -43,8 +47,6 @@ try:
 except:
     pass
 
-
-
 for dirpath, dirnames, filenames in os.walk("./snfg/"):
 
     display = dirpath.split("/")[-1]
@@ -53,10 +55,10 @@ for dirpath, dirnames, filenames in os.walk("./snfg/"):
 
     for fn in filenames:
 
-        if not fn.endswith(".png"):
+        if not fn.endswith(".png") and not fn.endswith(".svg"):
             continue
 
-        acc = fn.split('.',1)[0]
+        acc,ext = fn.split('.',1)
 
         fp = os.path.join(dirpath, fn)
 
@@ -64,7 +66,7 @@ for dirpath, dirnames, filenames in os.walk("./snfg/"):
         imgh = s2h(imgstr)
 
 
-        fph = sys.argv[1] + "/%s.png"%imgh
+        fph = sys.argv[1] + "/%s.%s"%(imgh,ext)
         if not os.path.exists(fph):
             shutil.copyfile(fp, fph)
 
@@ -72,21 +74,22 @@ for dirpath, dirnames, filenames in os.walk("./snfg/"):
             continue
 
         for sh in acc_to_seq_hash[acc]:
-            seqhash_to_imagehash[(sh, "snfg", display)] = imgh
+            seqhash_to_imagehash[(sh, "snfg", display, ext)] = imgh
 
 
-seqhashtable = open(sys.argv[1] + "/shash2acc.tsv", "w")
+seqhashtable = open(sys.argv[1] + "/../shash2acc.tsv", "w")
 for acc, shs in acc_to_seq_hash.items():
     for sh in shs:
         seqhashtable.write("%s\t%s\n" % (sh, acc))
 seqhashtable.close()
 
+cannonseqtable = open(sys.argv[1] + "/../cannonseq.tsv", "w")
+for acc, seq in acc_to_cannonseq.items():
+    cannonseqtable.write("%s\t%s\n" % (acc, seq))
+cannonseqtable.close()
 
-imagetable = open(sys.argv[1] + "/imageinfo.tsv", "w")
+imagetable = open(sys.argv[1] + "/../imageinfo.tsv", "w")
 for key, ih in seqhash_to_imagehash.items():
     imagetable.write("%s\t%s\n" % ("\t".join(key), ih))
 imagetable.close()
-
-
-
 

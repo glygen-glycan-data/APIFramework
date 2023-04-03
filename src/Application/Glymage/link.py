@@ -39,12 +39,12 @@ for notation in ["snfg"]:
 
 i = 0
 for l in imagetable.read().strip().split("\n"):
-    shash, notation, display, ihash = l.strip().split()
+    shash, notation, display, extn, ihash = l.strip().split()
 
     if display == "normalinfo":
         display = "extended"
 
-    src = os.path.join(image_home, "hash", ihash + ".png")
+    src = os.path.join(image_home, "hash", ihash + "." + extn)
     src_abs = os.path.abspath(src)
     # i+=1
     # if i > 1000:
@@ -58,7 +58,7 @@ for l in imagetable.read().strip().split("\n"):
 
 
     for t in destination:
-        dst = os.path.join(image_home, notation, display, t + ".png")
+        dst = os.path.join(image_home, notation, display, t + "." + extn)
         dst_abs = os.path.abspath(dst)
 
         try:
