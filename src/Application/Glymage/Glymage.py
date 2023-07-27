@@ -319,7 +319,6 @@ class Glymage(APIFramework):
     gtc  = pygly.GlycanResource.GlyTouCanNoPrefetch()
     def highlightsvg(self, svgfile, glyseq, highlight, style='outline'):
         svg = open(svgfile).read()
-        # print(svg)
         try:
             gly1 = self.gbsp.toGlycan(svg)
         except pygly.GlycanFormatterExceptions.GlycanParseError:
@@ -373,20 +372,25 @@ class Glymage(APIFramework):
               ]]></style>
            </defs>
         """%(getattr(self,"highlight_css_"+style),))
-        svg = svg.replace('  /><g','  /><g class="glycanimage"')
+        svg = svg.replace('<g>','<g class="glycanimage">')
         ids = map(int,filter(lambda id: '-' not in id, highlight.split(',')))
         linkids = filter(lambda id: '-' in id, highlight.split(','))
         if linkids != ['*-*']:
             linkids = map(lambda id: tuple(map(int,id.split('-'))),linkids)
+        highlighted = set()
         for id in ids:
             for svgid in svgidmap[id]:
                 # svgid = "r-1:%d"%(id,)
-                svg = svg.replace(' ID="%s" '%(svgid,),' ID="%s" class="highlight highlight_mono" '%(svgid,))
+                if svgid not in highlighted:
+                    svg = svg.replace(' ID="%s" '%(svgid,),' ID="%s" class="highlight highlight_mono" '%(svgid,))
+                    highlighted.add(svgid)
                 break # first "id" only...
             for id1 in ids:
                 if linkids == ["*-*"] or (id,id1) in linkids:
                   for svgid in svgidmap[(id,id1)]:
-                    svg = svg.replace(' ID="%s" '%(svgid,),' ID="%s" class="highlight highlight_link" '%(svgid,))
+                    if svgid not in highlighted:
+                        svg = svg.replace(' ID="%s" '%(svgid,),' ID="%s" class="highlight highlight_link" '%(svgid,))
+                        highlighted.add(svgid)
                     break # first "id" only...
         return StringIO.StringIO(svg)
 
@@ -528,6 +532,18 @@ class Glymage(APIFramework):
         @app.errorhandler(404)
         def error_handling(e):
             return self.error_image(), 404
+
+        @app.route('/js/<path:path>')
+        def serve_js(path):
+            return flask.send_from_directory('js', path)
+
+        @app.route('/css/<path:path>')
+        def serve_css(path):
+            return flask.send_from_directory('css', path)
+
+        @app.route('/demo/<path:path>')
+        def serve_demo(path):
+            return flask.send_from_directory('demo', path)
 
         @app.route('/getimage', methods=["GET", "POST"])
         def getimage():

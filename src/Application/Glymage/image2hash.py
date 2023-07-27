@@ -32,7 +32,7 @@ for seqtype in ("wurcs","glycoct"):
 		continue
             if not re.search(r'^G[0-9]{5}[A-Z]{2}$',acc):
 		continue
-            print f,acc,extn
+            # print f,acc,extn
             s = open(os.path.join(dirpath,f)).read()
             if seqtype == "wurcs":
                 acc_to_cannonseq[acc] = s
@@ -55,10 +55,11 @@ for dirpath, dirnames, filenames in os.walk("./snfg/"):
 
     for fn in filenames:
 
-        if not fn.endswith(".png") and not fn.endswith(".svg"):
+        if not fn.endswith(".png") and not fn.endswith(".svg") and not fn.endswith('.json'):
             continue
 
         acc,ext = fn.split('.',1)
+        print acc,ext
 
         fp = os.path.join(dirpath, fn)
 

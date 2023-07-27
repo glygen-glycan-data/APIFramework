@@ -1,0 +1,46 @@
+.glycanimage:hover .highlight_link_hover * {
+    stroke: rgb(247, 71, 62) !important;
+    stroke-width: 4;
+}
+
+
+.glycanimage:hover .highlight_hover_outline_red * {
+    stroke: rgb(247, 71, 62) !important;
+    stroke-width: 4;
+}
+
+.glycanimage:hover .highlight_hover_outline_green * {
+    stroke: rgb(96, 247, 62) !important;
+    stroke-width: 4;
+}
+
+.glycanimage .highlight_static_outline_green * {
+    stroke: rgb(96, 247, 62) !important;
+    stroke-width: 4;
+}
+
+
+
+.glycanimage .highlight_link_static * {
+    stroke: rgb(247, 71, 62) !important;
+    stroke-width: 4;
+}
+
+
+.glycanimage .highlight_mono_static * {
+    stroke: rgb(247, 71, 62) !important;
+    stroke-width: 4;
+}
+
+
+.change_text {
+    background-color: rgb(96, 247, 62) !important;
+}
+
+
+
+.change_text_yellow {
+    background-color: yellow !important;
+}
+
+

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<script src="/js/glymagesvg.js"></script>
+<link rel="stylesheet" href="/css/glymagesvg.css">
+<script>
+var glymagesvg_params = {
+  "baseurl": "/image"
+}
+</script>
+<body onload="glymagesvg.init(glymagesvg_params)">
+<div>
+<h2>Setup, configuration</h2>
+<pre>
+&lt;script src="https://glymage.glyomics.org/js/glymagesvg.js"></script>
+&lt;link rel="stylesheet" href="https://glymage.glyomics.org/css/glymagesvg.css">
+&lt;body onload="glymagesvg.init()">
+&lt;/body>
+</pre>
+</div>
+<hr>
+
+<div style="overflow:auto;">
+<div style="display: inline-block; float: right;">
+<img src="http://localhost:10986/image/snfg/extended/G00058MO.png">
+</div>
+<div style="display: inline-block;">
+<h2>PNG glycan image, by GlyTouCan accession, using img tag.</h2>
+<pre>
+&lt;img src="https://glymage.glyomics.org/image/snfg/extended/G00058MO.png">
+</pre>
+</div>
+</div>
+<hr>
+
+<div style="overflow:auto;">
+<div style="display: inline-block; float: right;">
+<img src="http://localhost:10986/image/snfg/extended/G00058MO.svg">
+</div>
+<div style="display: inline-block;">
+<h2>SVG glycan image, by GlyTouCan accession, using img tag.</h2>
+<pre>
+&lt;img src="https://glymage.glyomics.org/image/snfg/extended/G00058MO.svg">
+</pre>
+</div>
+</div>
+<hr>
+
+<div style="overflow:auto;">
+<div style="display: inline-block; float: right;">
+<img width="400px" src="http://localhost:10986/image/snfg/extended/G00058MO.svg">
+</div>
+<div style="display: inline-block;">
+<h2>Scaled SVG glycan image, by GlyTouCan accession, using img tag.</h2>
+<pre>
+&lt;img width="400px" src="https://glymage.glyomics.org/image/snfg/extended/G00058MO.svg">
+</pre>
+</div>
+</div>
+<hr>
+
+<div style="overflow:auto;">
+<div style="display: inline-block; float: right;">
+<object data="http://localhost:10986/getimage?notation=snfg&display=extended&image_format=svg&acc=G00053MO&highlight=2"></object>
+</div>
+<div style="display: inline-block;">
+<h2>SVG glycan image, by GlyTouCan accession, using img tag,<br>with known canonical monosaccharide ids highlighted.</h2>
+<pre>
+&lt;object data="https://glymage.glyomics.org/getimage?notation=snfg&display=extended&image_format=svg&acc=G00053MO&highlight=2"></object>
+</pre>
+</div>
+</div>
+<hr>
+
+<div style="overflow:auto;">
+<div style="display: inline-block; float: right;">
+<figure glymagesvg_accession="G00058MO"/>
+</div>
+<div style="display: inline-block;">
+<h2>SVG glycan image using figure tag with GlymageSVG accession attribute.</h2>
+<pre>
+&lt;figure glymagesvg_accession="G00058MO"/>
+</pre>
+</div>
+</div>
+<hr>
+
+<div style="overflow:auto;">
+<div style="display: inline-block; float: right;">
+<figure glymagesvg_accession="G74353FF" 
+        glymagesvg_annotation="IUPAC.HexNAc"
+	glymagesvg_monoclass="highlight_hover_outline_red"
+/>
+</div>
+<div style="display: inline-block;">
+<h2>SVG glycan image using figure tag with GlymageSVG accession attribute,<br>HexNAc monosaccharides highlighted.</h2>
+<pre>
+&lt;figure glymagesvg_accession="G74353FF" 
+        glymagesvg_annotation="IUPAC.HexNAc"
+        glymagesvg_monoclass="highlight_hover_outline_red" />
+</pre>
+</div>
+</div>
+<hr>
+
+
+</body>
+</html>
