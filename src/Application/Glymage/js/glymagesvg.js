@@ -22,8 +22,8 @@ var glymagesvg = {
         console.log(glymagesvg.params);
 
         let svgcontainers = document.querySelectorAll('[glymagesvg_accession]');
-        for (var i=0; i<svgcontainers.length; i++) {
-	    var glysvgobj = new glymagesvg.GlymageSVG(svgcontainers[i]);
+        for (let svgcont of svgcontainers) {
+	    var glysvgobj = new glymagesvg.GlymageSVG(svgcont);
         } 
 
     },
@@ -78,9 +78,6 @@ var glymagesvg = {
                             let svgElement = doc.documentElement;
                             svgElement.setAttribute("class", this.params.imageclass);			    
                             this.svgContainer.appendChild(svgElement);
-		            if (!this.svgContainer.style.margin) {
-				this.svgContainer.style.margin = "0px";
-                            }
 			    this.svgElement = svgElement;
 			    this.setclass();
 			})
