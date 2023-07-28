@@ -9,6 +9,11 @@
     stroke-width: 4;
 }
 
+.glycanimage .highlight_outline_red * {
+    stroke: rgb(247, 71, 62) !important;
+    stroke-width: 4;
+}
+
 .glycanimage:hover .highlight_hover_outline_green * {
     stroke: rgb(96, 247, 62) !important;
     stroke-width: 4;
