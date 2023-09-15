@@ -28,14 +28,16 @@ class Subsumption(APIFrameworkWithFrontEnd):
 
     def form_task(self, p):
         res = {}
-        task_str = json.dumps(p["seqs"], sort_keys=True).encode("utf-8")
+        if "seq" in p and "seqs" not in p:
+            seqs = {'Query': p["seq"]}
+            task_str = json.dumps(seqs).encode("utf-8")
+            res["seq"] = p["seq"]
+        else:
+            task_str = json.dumps(p["seqs"], sort_keys=True).encode("utf-8")
+            res["seqs"] = p["seqs"]
         list_id = self.str2hash(task_str)
-
         res["id"] = list_id
-        res["seqs"] = p["seqs"]
-
         return res
-
 
     def worker(self, pid, task_queue, result_queue, suicide_queue_pair, params):
 
@@ -80,7 +82,10 @@ class Subsumption(APIFrameworkWithFrontEnd):
 
 
             list_id = task_detail["id"]
-            seqs = task_detail["seqs"]
+            if "seq" in task_detail and "seqs" not in task_detail:
+                seqs = {'Query': task_detail["seq"]}
+            else:
+                seqs = task_detail["seqs"]
             query_glycans = {}
             masses = set()
 
