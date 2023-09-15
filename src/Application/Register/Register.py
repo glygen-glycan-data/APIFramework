@@ -5,11 +5,13 @@ import sys
 import time
 import hashlib
 import multiprocessing
+import traceback
 from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 
 import pygly.alignment
 from pygly.GlycanResource.GlyTouCan import GlyTouCanNoCache, GlyTouCan
-from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat
+from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat, IUPACLinearFormat, GlycanParseError
+from pygly.CompositionFormatter import CompositionFormat
 
 
 class Register(APIFrameworkWithFrontEnd):
@@ -33,14 +35,11 @@ class Register(APIFrameworkWithFrontEnd):
 
         glytoucan_userid = params["userid"].strip()
         glytoucan_apikey = params["apikey"].strip()
-        hashupdateinterval = int(params["hashupdateinterval"].strip())
 
         gtc = GlyTouCan(verbose=True, prefetch=False, user=glytoucan_userid, apikey=glytoucan_apikey)
-
-        hashedseqs = []
-        for row in gtc.query_hashedseq():
-            hashedseqs.append((row['hash'], row['accession'], row['error']))
-        hashedseqs_lastupdated = time.time()
+        gp = GlycoCTFormat()
+        cp = CompositionFormat()
+        ip = IUPACLinearFormat()
 
         self.output(2, "Worker-%s is ready to take job" % (pid))
 
@@ -52,57 +51,77 @@ class Register(APIFrameworkWithFrontEnd):
             error = []
             calculation_start_time = time.time()
 
-            if time.time() - hashedseqs_lastupdated > hashupdateinterval:
-                hashedseqs = []
-                for row in gtc.query_hashedseq():
-                    hashedseqs.append((row['hash'], row['accession'], row['error']))
-                hashedseqs_lastupdated = time.time()
-                self.output(2, "Worker-%s just updated the hashed sequence from GlyTouCan Triple Store" % (pid, ))
-
-
             task_id = task_detail["id"]
 
             # TODO seq conversions?
-            seq = str(task_detail["seq"])
+            seq = str(task_detail["seq"]).strip()
             result = {
                 "status": "",
+                "submitted_sequence": seq
             }
 
-
-            glytoucan_seq_hash, acc, e = None, None, None
-            thehash = hashlib.sha256(seq.strip()).hexdigest().lower()
-            for h, a, e in hashedseqs:
-                if thehash == h:
-                    glytoucan_seq_hash, acc, e = h, a, e
-
-
-            if not glytoucan_seq_hash:
-                # Never submitted to GlyTouCan
-                hsh = gtc.register(seq)
-                if hsh and re.search(r'^[0-9a-f]{64}$',hsh):
-                    result["status"] = "Submitted"
-                    result["seqhash"] = hsh
-		else:
-                    result["status"] = "Error"
-                    error.append("Submission failed.")
-		    if hsh:
-                        error.append(hsh)
-
-            elif not acc:
-                # Submitted, but no accession
-                if e:
-                    result["status"] = "Error"
-                    result["seqhash"] = glytoucan_seq_hash
-                    error.append(e)
-		else:
-                    result["status"] = "Processing"
-                    result["seqhash"] = glytoucan_seq_hash
-    
+            inputerror = False
+            if seq.startswith('WURCS'):
+                pass
+            elif seq.startswith('RES'):
+                pass
             else:
-                result["status"] = "Registered"
-                result["seqhash"] = glytoucan_seq_hash
-                result["accession"] = acc
+                newseq = None
+                if not newseq:
+                    # see if it parses as a composition
+                    try:
+                        gly = cp.toGlycan(seq)
+                        newseq = cp.toSequence(seq)
+                        result["submitted_sequence"] = newseq
+                    except GlycanParseError:
+                        pass
+                if not newseq:
+                    # see if it parses as IUPAC
+                    try:
+                        gly = ip.toGlycan(seq)
+                        newseq = gp.toStr(gly)
+                        result["submitted_sequence"] = newseq
+                    except GlycanParseError:
+                        traceback.print_exc()
+                        pass
+                if newseq:
+                    seq = newseq.strip()
+                else:
+                    inputerror = True
 
+            if not inputerror:
+
+                glytoucan_seq_hash, acc, e = gtc.gethashedseq(seq=seq.strip())
+    
+                if not glytoucan_seq_hash:
+                    # Never submitted to GlyTouCan
+                    hsh = gtc.register(seq)
+                    if hsh and re.search(r'^[0-9a-f]{64}$',hsh):
+                        result["status"] = "Submitted"
+                        result["seqhash"] = hsh
+		    else:
+                        result["status"] = "Error"
+                        error.append("Submission failed.")
+		        if hsh:
+                            error.append(hsh)
+
+                elif not acc:
+                    # Submitted, but no accession
+                    if e:
+                        result["status"] = "Error"
+                        result["seqhash"] = glytoucan_seq_hash
+                        error.append(e)
+		    else:
+                        result["status"] = "Processing"
+                        result["seqhash"] = glytoucan_seq_hash
+        
+                else:
+                    result["status"] = "Registered"
+                    result["seqhash"] = glytoucan_seq_hash
+                    result["accession"] = acc
+            else:
+                result["status"] = "Error"
+                error.append("Can't parse supplied composition or IUPAC sequence")
 
             calculation_end_time = time.time()
             calculation_time_cost = calculation_end_time - calculation_start_time

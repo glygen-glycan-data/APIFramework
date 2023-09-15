@@ -19,7 +19,7 @@ function renderResultMore(){
 
 
     let imgurl = "https://glymage.glyomics.org/getimage?";
-    let s = retrieve_result.task.seq;
+    let s = retrieve_result.result.submitted_sequence;
     if ( !s.startsWith("WURCS") ){
         s = encodeURIComponent(s);
     }
@@ -27,7 +27,11 @@ function renderResultMore(){
 
 
     result_container_additional.innerHTML += "<br><img src='"+imgurl+"'>";
-    result_container_additional.innerHTML += "<br>"+JSON.stringify(retrieve_result.result)+"</a>"
+    result_container_additional.innerHTML += "<br>"+"Status: "+ retrieve_result.result.status;
+    if (retrieve_result.result.status == "Registered") {
+      result_container_additional.innerHTML += "<br>"+"Accession: <A href=\"https://glytoucan.org/Structures/Glycans/"+retrieve_result.result.accession+"\">"+ retrieve_result.result.accession + "</A>";
+    }
+    result_container_additional.innerHTML += "<p></p>";
 
 
 }
