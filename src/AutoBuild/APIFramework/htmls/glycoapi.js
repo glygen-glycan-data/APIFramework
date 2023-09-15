@@ -80,8 +80,10 @@ function APIFrameworkJS(url) {
         });
     }
 
-    this.request = async function (para) {
+    this.request = async function (para,callback) {
         let tid = await this.submit(para);
+        let dateobj = Date()
+        let start = dateobj.getTime()
         let finish = false;
         while (!finish) {
             let res = await this.retrieve(tid);
@@ -90,9 +92,13 @@ function APIFrameworkJS(url) {
             if (finish) {
                 return res
             }
+            if (callback != undefined) {
+                if (callback(dateobj.getTime()-start) == false) {
+                    return res;
+                }
+            }
         }
     }
-
 
     this.parameterCheck = function (para) {
         // Parameter check before send it to service backend
@@ -154,9 +160,8 @@ function Subsumption (url) {
 
     this.parameterCheck = function (para) {
 
-        // Notice: this parameter is different - seqs vs seq
-        if ( !Object.keys(para).includes("seqs") ){
-            throw new Error("Please provide glycan sequence(s)")
+        if ( !Object.keys(para).includes("seq") ){
+            throw new Error("Please provide glycan sequence")
         }
 
     }
