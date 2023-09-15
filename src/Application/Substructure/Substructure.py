@@ -87,10 +87,6 @@ class Substructure(APIFrameworkWithFrontEnd):
             except:
                 error.append("Unable to parse")
 
-            if len(error) == 0:
-                if not motif.has_root():
-                    error.append("Motif is not a structure")
-
             glyiter = glycans.items()
             motifmw = 0.0
             if align == 'wholeglycan':
@@ -98,9 +94,13 @@ class Substructure(APIFrameworkWithFrontEnd):
                     motifmw = str(round(motif.underivitized_molecular_weight(),2))
                 except (KeyError,ValueError,TypeError):
                     pass
-                print(motifmw)
+                # print(motifmw)
                 if motifmw > 0:
                     glyiter = glycanmw[motifmw].items()
+
+            if len(error) == 0:
+                if not motif.has_root():
+                    error.append("Motif is not a structure")
 
             if len(error) == 0:
                 motif_node_num = len(list(motif.all_nodes()))
@@ -108,14 +108,13 @@ class Substructure(APIFrameworkWithFrontEnd):
                     error.append("Motif is too big")
 
             for acc, glycan in glyiter:
-               
 
                 if len(error) != 0:
                     for e in error:
                         print("Processor-%s: Issues (%s) is found with task %s" % (pid, e, task_detail["id"]))
                     break
                 
-                print(acc)
+                # print(acc)
 
                 # Loose match first
                 loose_core = (motifmw == 0) and loose_matcher.leq(motif, glycan, rootOnly=True, anywhereExceptRoot=False, underterminedLinkage=True)
