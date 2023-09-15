@@ -9,9 +9,12 @@ fi
 
 
 cp ../../Application/Glymage/Glymage.* ./
-mkdir -p ./image ./htmls
-cp  ../../Application/Glymage/htmls/*.html ./htmls
-cp  ../../Application/Glymage/image/image.tgz ./image
+cp -r -L ../../Application/Glymage/htmls ./htmls
+mkdir -p ./js ./css ./demo ./image
+cp ../../Application/Glymage/css/*.js ./js
+cp ../../Application/Glymage/css/*.css ./css
+cp ../../Application/Glymage/demo/*.html ./demo
+cp ../../Application/Glymage/image/image.tgz ./image
 
 docker build -t glyomics/glymage:$tag -t glyomics/glymage:latest ./
 # docker run -p 10986:10986 glyomics/glymage:latest
@@ -23,5 +26,4 @@ if [ "$tag" != "TEST" ];
 fi
 
 rm Glymage.*
-rm -rf htmls
-rm -rf image
+rm -rf htmls css js demo image

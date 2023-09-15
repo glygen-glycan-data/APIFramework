@@ -8,7 +8,7 @@ if [ -z "$1" ]
 fi
 
 
-cp -r ../../Application/MotifMatch/htmls ./htmls
+cp -r -L ../../Application/MotifMatch/htmls ./htmls
 cp ../../Application/MotifMatch/MotifMatch.* ./
 cp ../../Application/MotifMatch/motif.tsv ./
 

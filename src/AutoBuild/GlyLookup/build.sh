@@ -8,7 +8,7 @@ if [ -z "$1" ]
 fi
 
 
-cp -r ../../Application/GlyLookup/htmls ./htmls
+cp -r -L ../../Application/GlyLookup/htmls ./htmls
 cp ../../Application/GlyLookup/GlyLookup.* ./
 cp ../../Application/GlyLookup/glycans.tsv ./
 

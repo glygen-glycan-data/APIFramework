@@ -8,7 +8,7 @@ if [ -z "$1" ]
 fi
 
 
-cp -r ../../Application/Converter/htmls ./htmls
+cp -r -L ../../Application/Converter/htmls ./htmls
 cp ../../Application/Converter/Converter.* ./
 
 

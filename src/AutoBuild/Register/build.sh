@@ -8,7 +8,7 @@ if [ -z "$1" ]
 fi
 
 
-cp -r ../../Application/Register/htmls ./htmls
+cp -r -L ../../Application/Register/htmls ./htmls
 cp ../../Application/Register/Register.* ./
 
 

@@ -8,7 +8,7 @@ if [ -z "$1" ]
 fi
 
 
-cp -r ../../Application/Subsumption/htmls ./htmls
+cp -r -L ../../Application/Subsumption/htmls ./htmls
 cp ../../Application/Subsumption/Subsumption.* ./
 cp ../../Application/Subsumption/glycans.tsv ./
 

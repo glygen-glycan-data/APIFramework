@@ -7,7 +7,7 @@ if [ -z "$1" ]
     tag="TEST"
 fi
 
-cp -r ../../Application/Substructure/htmls ./htmls
+cp -r -L ../../Application/Substructure/htmls ./htmls
 cp ../../Application/Substructure/Substructure.* ./
 cp ../../Application/Substructure/*.tsv ./
 
