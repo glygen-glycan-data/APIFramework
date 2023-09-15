@@ -17,6 +17,8 @@ SHSCR="pygly-scripts"
 DUMPSEQ="$PYSCR/dumpgtcseq.py"
 ALLIMG="$SHSCR/allimg.sh"
 CREJSON="$PYSCR/resmap_tojson.py"
+JSONMOTIF="$PYSCR/resmap_motifaligntojson.py"
+JSONENZ="$PYSCR/resmap_sandboxtojson.py"
 
 docker pull glyomics/apiframework:latest
 mkdir -p work/wurcs work/glycoct work/genglycoct
@@ -40,6 +42,10 @@ kill $XSCR
 
 dockerrun $CREJSON /work/wurcs /work/snfg/extended /work/snfg/extended
 dockerrun $CREJSON /work/wurcs /work/snfg/compact /work/snfg/compact
+dockerrun $JSONENZ /work/snfg/extended
+dockerrun $JSONENZ /work/snfg/compact
+dockerrun $JSONMOTIF /work/snfg/extended
+dockerrun $JSONMOTIF /work/snfg/compact
 
 CURDIR=`pwd`
 rm -rf image/hash

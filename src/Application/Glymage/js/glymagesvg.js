@@ -1,11 +1,18 @@
 
+function getglymagesvgloc() {
+   let scripts = document.getElementsByTagName("script");
+   let jsurl = scripts[scripts.length-1].src;
+   return jsurl.substring(0,jsurl.length-'/js/glymagesvg.js'.length)
+}
+
 var glymagesvg = {
 
     params: {
-        baseurl: "http://glymage.glyomics.org/",
+        baseurl: getglymagesvgloc(),
         display: "snfg",
         style: "extended",
-	imageclass: "glycanimage"
+	imageclass: "glymagesvg_glycanimage",
+        clickaction: "multi"
     },
 
     config: function(params) {
@@ -20,6 +27,8 @@ var glymagesvg = {
         }
         console.log("GlymageSVG Global Parameters:");
         console.log(glymagesvg.params);
+        var head = document.getElementsByTagName('head')[0];
+        head.innerHTML += '<link rel="stylesheet" href="'+glymagesvg.params.baseurl+'/css/glymagesvg.css" type="text/css" />';
 
         let svgcontainers = document.querySelectorAll('[glymagesvg_accession]');
         for (let svgcont of svgcontainers) {
@@ -28,32 +37,46 @@ var glymagesvg = {
 
     },
 
-    GlymageSVG: function(__element__) {
+    GlymageSVG: function(__element__, __params__) {
 
 	this.initialize = function(params,elt) {
-	    this.mono_clicked = {};
-            this.text_clicked = {};
-            this.type_last_clicked = "";
-            this.classes_to_remove = new Set ();
+            this.click_mode = "";
+            this.clicked = new Set();
+	    this.remann2remelt = {};
+	    this.remann2class = {};
+	    this.monoid2monoelt = {};
+	    this.remann2monoid = {};
+	    this.monoid2remann = {};
+
 	    this.params = params;
 	    this.svgContainer = elt;
 	    this.acc = elt.getAttribute('glymagesvg_accession');
 	    this.container_id = elt.getAttribute('id');
-	    this.annotation = elt.getAttribute('glymagesvg_annotation');
-	    this.monoclass = elt.getAttribute('glymagesvg_monoclass');
-	    this.linkclass = elt.getAttribute('glymagesvg_linkclass');
+	    this.annotation = elt.getAttribute('glymagesvg_annotation') || params.annotation;
+	    this.monoclass = elt.getAttribute('glymagesvg_monoclass') || params.monoclass;
+	    this.linkclass = elt.getAttribute('glymagesvg_linkclass') || params.linkclass;
+	    this.tooltip = elt.getAttribute('glymagesvg_tooltip') || params.tooltip;
+            this.clickaction = elt.getAttribute('glymagesvg_clickaction') || params.clickaction;
 	    if (!this.monoclass) {
                 this.monoclass = elt.getAttribute('glymagesvg_class');
             }
 	    if (!this.linkclass) {
                 this.linkclass = elt.getAttribute('glymagesvg_class');
             }
+
+            if (this.params.imageurl != null) {
+                this.imageurl = this.params.imageurl;
+            }
+            if (this.params.jsonurl != null) {
+                this.jsonurl = this.params.jsonurl;
+            }
+
 	    this.dofetch();
         }
 
 	this.dofetch = function() {
 	    
-	    fetch(this.imageurl())
+	    fetch(this.imageurl(this.acc))
 		.then((response) => {
 		    if (response.ok) {
 			return response.text();
@@ -63,7 +86,7 @@ var glymagesvg = {
 		    }
 		})
 		.then((svgText) => {
-		    fetch(this.jsonurl())
+		    fetch(this.jsonurl(this.acc))
 			.then((response) => {
 			    if (response.ok) {
 				return response.json();
@@ -79,7 +102,9 @@ var glymagesvg = {
                             svgElement.setAttribute("class", this.params.imageclass);			    
                             this.svgContainer.appendChild(svgElement);
 			    this.svgElement = svgElement;
+			    this.settooltip();
 			    this.setclass();
+			    this.setremotes();
 			})
 			.catch((error) => {
 			    console.error('JSON file not Found:', this.acc, error);
@@ -90,10 +115,27 @@ var glymagesvg = {
 		}); // SVG get
 	}
 
+	this.settooltip = function() {
+	    if ((this.tooltip != null) && (this.tooltip != "-")) {
+		let svgid2title = {};
+		for (let res of this.data.residues) {
+		    let resid = res.residueid;
+		    let svgid = this.data.residuemap[resid][0];
+		    svgid2title[svgid] = res[this.tooltip];
+		}
+		for (let elt of this.svgElement.getElementsByTagName("g")) {
+		    let svgid = elt.getAttribute("ID");
+		    if (svgid in svgid2title) {
+			elt.innerHTML += '<title>' + svgid2title[svgid] + '</title>';
+		    }
+		}
+	    }
+	}
+
 	this.setclass = function() {
             if (this.annotation && this.data.annotations) {
 		let annotation_dict = this.annotation.split(".")[0]
-		let annotation = this.annotation.split(".")[1]
+		let annotation = this.annotation.substring(annotation_dict.length+1,this.annotation.length);
 		if (this.data.annotations[annotation_dict]) {
 		    if (!this.data.annotations[annotation_dict][annotation] && 
 			 this.data.annotations[annotation_dict]['__synonyms__'] && 
@@ -124,160 +166,139 @@ var glymagesvg = {
 	    }
 	}
 
-        this.jsonurl = function() {
-            return this.params.baseurl + "/" + this.params.display + "/" + this.params.style + "/" + this.acc + ".json";
-        }
-
-        this.imageurl = function() {
-            return this.params.baseurl + "/" + this.params.display + "/" + this.params.style + "/" + this.acc + ".svg";
-        }
-
-        // event handlers (such as for onclick) take event as an argument
-
-        this.callback = function(event) {
-            //console.log("Type Last Clicked", this.type_last_clicked)
-            //console.log("text_clicked:", this.text_clicked)
-            //console.log("mono_clicked:", this.mono_clicked)
-            //console.log("classes to remove:", this.classes_to_remove)
-            //console.log("string classes to remove:", String(this.classes_to_remove))
-            
-
-           for (e of this.classes_to_remove){
-            const els = document.querySelectorAll('.' + e);
-            els.forEach((element) => { element.classList.remove(e)
-             });
-           }
-           
-           
-           
-        //const allElements = document.querySelectorAll('*');
-          // allElements.forEach((element) => {
-
-              // for (e of this.classes_to_remove) {
-              //element.classList.remove(e);}
-               
-            //});
-
-            
-            this.classes_to_remove = new Set ()
-
-
-
-
-            for (k in this.text_clicked) {
-                figure_id = k.split("-")[0]
-                annot = k.split("-")[1]
-                selected_figure = document.getElementById(figure_id)
-                selected_svg = selected_figure.children[0]
-                //console.log(selected_svg)
-                selected_monos = this.text_clicked[k]
-                //console.log(selected_monos)
-                for (m of selected_monos) {
-                    selected_mono = selected_svg.getElementById(m)
-                    //selected_mono.classList.add("highlight_static_outline_green")
-                    selected_mono.classList.add(document.getElementById(this.container_id).getAttribute("svg_class"))
-                    hl_text = document.querySelector(`[glymagesvg_annotation="${annot}"][glymagesvg_forid="${figure_id}"]`)
-                    //console.log(hl_text)
-                    //hl_text.classList.add("change_text")
-                    hl_text.classList.add(hl_text.getAttribute("glymagesvg_textclass"))
-                    console.log("text test",hl_text )
-
-                    this.classes_to_remove.add(document.getElementById(this.container_id).getAttribute("svg_class"))
-                    this.classes_to_remove.add(hl_text.getAttribute("glymagesvg_textclass"))
-
-                    //console.log ("class", document.getElementById(this.container_id).getAttribute("svg_class"))
-                }
-
+	this.setremotes = function() {
+	    let remoteelts = document.querySelectorAll('[glymagesvg_forid='+this.container_id+']');
+	    let anyremotes = false;
+            for (let remelt of remoteelts) {
+		anyremotes = true;
+		let remelt_annotation = remelt.getAttribute("glymagesvg_annotation")
+		if (remelt_annotation && this.data.annotations) {
+		    let annotation_dict = remelt_annotation.split(".")[0]
+		    let annotation = remelt_annotation.substring(annotation_dict.length+1,remelt_annotation.length);
+		    if (this.data.annotations[annotation_dict]) {
+			if (!this.data.annotations[annotation_dict][annotation] && 
+			    this.data.annotations[annotation_dict]['__synonyms__'] && 
+			    this.data.annotations[annotation_dict]['__synonyms__'][annotation]) {
+			    annotation = this.data.annotations[annotation_dict]['__synonyms__'][annotation];
+			}
+			var svgids = new Set();
+			if (this.data.annotations[annotation_dict][annotation]) {
+			    for (let canonid of this.data.annotations[annotation_dict][annotation]) {
+				if (this.data.residuemap[canonid]){
+				    for (let svgid of this.data.residuemap[canonid]) {
+					svgids.add(svgid);
+				    }
+				}
+			    }
+			}
+			this.remann2remelt[remelt_annotation] = remelt;
+			this.remann2monoid[remelt_annotation] = svgids;
+			this.remann2class[remelt_annotation] = remelt.getAttribute('glymagesvg_textclass');
+			for (let svgid of svgids) {
+			    if (!(svgid in this.monoid2remann)) {
+				this.monoid2remann[svgid] = [];
+			    }
+			    this.monoid2remann[svgid].push(remelt_annotation);
+			}
+			remelt.onclick = this.handler("handle_remote_click", remelt_annotation);
+			remelt.style.cursor = 'pointer';
+		    }
+		}
             }
+	    if (anyremotes) {
+		for (let elt of this.svgElement.getElementsByTagName("g")) {
+		    let svgid = elt.getAttribute("ID");
+		    if (elt.getAttribute("data.type") == "Monosaccharide") {
+			this.monoid2monoelt[svgid] = elt;
+			if (!(svgid in this.monoid2remann)) {
+			    this.monoid2remann[svgid] = [];
+			}
+			elt.onclick = this.handler("handle_mono_click", svgid);
+			elt.style.cursor = 'pointer';
+		    } else if (elt.getAttribute("data.type") == "Linkage") {
+			if (svgid in this.monoid2remann) {
+			    this.monoid2monoelt[svgid] = elt;
+			}
+		    }
+		}
+	    }
+	}
 
-            for (k in this.mono_clicked) {
-                selected_text = this.mono_clicked[k]
-                for (let t of selected_text) {
-                    figure_id = t.split("-")[0]
-                    annot = t.split("-")[1]
-                    hl_text = document.querySelector(`[glymagesvg_annotation="${annot}"][glymagesvg_forid="${figure_id}"]`)
-                    //console.log(hl_text)
-                    //hl_text.classList.add("change_text")
-                    hl_text.classList.add(hl_text.getAttribute("glymagesvg_textclass"))
-                    selected_figure = document.getElementById(figure_id)
-                    selected_svg = selected_figure.children[0]
-                    selected_mono = selected_svg.getElementById(k)
-                    //selected_mono.classList.add("highlight_static_outline_green")
-                    selected_mono.classList.add(document.getElementById(this.container_id).getAttribute("svg_class"))
-                    
-                    this.classes_to_remove.add(document.getElementById(this.container_id).getAttribute("svg_class"))
-                    this.classes_to_remove.add(hl_text.getAttribute("glymagesvg_textclass"))
-                
-                } // end of for t 
-
-            }
-
-
-
-
-            return true;
-
-
-        }
-
-
-
-
-        // event with additional (optional) argument with default value
-
-        this.incx = function(event, container_id, clicked_dict, clicked_id, element_type) {
-
-
-            this.container_id = container_id
-            this.clicked_dict = clicked_dict
-            this.clicked_id = clicked_id
-            this.element_type = element_type
-            
-            //console.log(this.element_type)
-            //console.log(this)
-
-
-            if (this.element_type == "mono") {
-
-                if (this.type_last_clicked == "text") {
-                    this.text_clicked = {}
-                    this.mono_clicked = {}
-                }
-
-                this.type_last_clicked = this.element_type
-
-                if (this.clicked_id in this.mono_clicked) {
-                    delete this.mono_clicked[this.clicked_id];
-                } else {
-                    //console.log ("here:", this.clicked_dict, this.clicked_id)
-                    this.mono_clicked[this.clicked_id] = this.clicked_dict[this.clicked_id]
-                }
-            } else {
-
-                //console.log(this.clicked_dict)
-
-                if (this.type_last_clicked == "mono") {
-                    this.text_clicked = {}
-                    this.mono_clicked = {}
-                }
-                this.type_last_clicked = this.element_type
-                //console.log(this.clicked_id)
-                if (this.clicked_id in this.text_clicked) {
-                    delete this.text_clicked[this.clicked_id];
-                } else {
-                    this.text_clicked[this.clicked_id] = this.clicked_dict[this.clicked_id]
+	this.handle_remote_click = function(event, remann) {
+	    if (this.click_mode != "remote") {
+		this.clicked = new Set();
+		this.click_mode = "remote";
+	    }
+	    if (this.clicked.has(remann)) {
+	        this.clicked.delete(remann);
+	    } else {
+                if (this.clickaction == "multi") {
+		    this.clicked.add(remann);
+	        } else {
+		    this.clicked = new Set([remann]);
                 }
             }
+	    this.refresh();
+	}
 
+	this.handle_mono_click = function(event, monoid) {
+	    if (this.click_mode != "mono") {
+		this.clicked = new Set();
+		this.click_mode = "mono";		
+	    }
+	    if (this.clicked.has(monoid)) {
+		this.clicked.delete(monoid);
+	    } else {
+                if (this.clickaction == "multi") {
+		    this.clicked.add(monoid);
+	        } else {
+		    this.clicked = new Set([monoid]);
+                }
+	    }
+	    this.refresh();
+	}
+	
+	this.refresh = function() {
+	    let highlight_monoids = new Set();
+	    let highlight_remann = new Set();
+	    if (this.click_mode == "remote") {
+		for (let remann of this.clicked) {
+		    highlight_remann.add(remann);
+		    for (let monoid of this.remann2monoid[remann]) {
+			highlight_monoids.add(monoid);
+		    }
+		}
+	    } else {
+		for (let monoid of this.clicked) {
+		    highlight_monoids.add(monoid);
+		    for (let remann of this.monoid2remann[monoid]) {
+			highlight_remann.add(remann);
+		    }
+		}
+	    }
+	    for (let monoid in this.monoid2monoelt) {
+		this.monoid2monoelt[monoid].classList.remove(this.monoclass);		
+		if (highlight_monoids.has(monoid)) {
+		    this.monoid2monoelt[monoid].classList.add(this.monoclass);
+		}
+            }
+	    for (let remann in this.remann2remelt) {
+		this.remann2remelt[remann].classList.remove(this.remann2class[remann]);
+		if (highlight_remann.has(remann)) {
+		    this.remann2remelt[remann].classList.add(this.remann2class[remann]);
+		}
+	    }
+	}
 
-            return this.callback(event);
+        this.jsonurl = function(acc) {
+            return this.params.baseurl + "/image/" + this.params.display + "/" + this.params.style + "/" + acc + ".json";
         }
 
-
-
+        this.imageurl = function(acc) {
+            return this.params.baseurl + "/image/" + this.params.display + "/" + this.params.style + "/" + acc + ".svg";
+        }
 
         // use this handler to deal with "anonymous" instances.
-
         this.handler = function(methodname, arg1, arg2, arg3, arg4, arg5, arg6) {
             var that = this;
             var a1 = arg1;
@@ -291,8 +312,8 @@ var glymagesvg = {
             }
         }
 
-        this.initialize(glymagesvg.params,__element__);
+        this.initialize(__params__||glymagesvg.params,__element__);
 
     }
 
-} // end of var NameSpace 
+} // end of var glymagesvg 
