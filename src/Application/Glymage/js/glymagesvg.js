@@ -28,11 +28,15 @@ var glymagesvg = {
         console.log("GlymageSVG Global Parameters:");
         console.log(glymagesvg.params);
         var head = document.getElementsByTagName('head')[0];
-        head.innerHTML += '<link rel="stylesheet" href="'+glymagesvg.params.baseurl+'/css/glymagesvg.css" type="text/css" />';
+        if (!(head.innerHTML.includes('glymagesvg.css'))) {
+            head.innerHTML += '<link rel="stylesheet" href="'+glymagesvg.params.baseurl+'/css/glymagesvg.css" type="text/css" />';
+        }
 
         let svgcontainers = document.querySelectorAll('[glymagesvg_accession]');
         for (let svgcont of svgcontainers) {
-	    var glysvgobj = new glymagesvg.GlymageSVG(svgcont);
+            if (svgcont.getAttribute('glymagesvg_processed') == null) {
+	        var glysvgobj = new glymagesvg.GlymageSVG(svgcont);
+            }
         } 
 
     },
@@ -57,21 +61,23 @@ var glymagesvg = {
 	    this.linkclass = elt.getAttribute('glymagesvg_linkclass') || params.linkclass;
 	    this.tooltip = elt.getAttribute('glymagesvg_tooltip') || params.tooltip;
             this.clickaction = elt.getAttribute('glymagesvg_clickaction') || params.clickaction;
+            this.width = elt.getAttribute('glymagesvg_width') || params.width;
+            this.height = elt.getAttribute('glymagesvg_height') || params.height;
+            this.position = elt.getAttribute('glymagesvg_insertpos') || params.insertpos;
 	    if (!this.monoclass) {
                 this.monoclass = elt.getAttribute('glymagesvg_class');
             }
 	    if (!this.linkclass) {
                 this.linkclass = elt.getAttribute('glymagesvg_class');
             }
-
             if (this.params.imageurl != null) {
                 this.imageurl = this.params.imageurl;
             }
             if (this.params.jsonurl != null) {
                 this.jsonurl = this.params.jsonurl;
             }
-
 	    this.dofetch();
+            elt.setAttribute('glymagesvg_processed',"true");
         }
 
 	this.dofetch = function() {
@@ -100,7 +106,24 @@ var glymagesvg = {
                             const doc = parser.parseFromString(svgText, "image/svg+xml");
                             let svgElement = doc.documentElement;
                             svgElement.setAttribute("class", this.params.imageclass);			    
-                            this.svgContainer.appendChild(svgElement);
+                            if (this.width != null) {
+                                svgElement.setAttribute("width", this.width);
+				if (this.height == null) {
+                                    svgElement.setAttribute("height", "auto");
+                                }
+			    } 
+                            if (this.height != null) {
+                                svgElement.setAttribute("height", this.height);
+				if (this.width == null) {
+                                    svgElement.setAttribute("width", "auto");
+                                }
+                            }
+			    if (this.position != null) {
+				var refnode = this.svgContainer.childNodes[this.position];
+				this.svgContainer.insertBefore(svgElement,refnode);
+			    } else {
+				this.svgContainer.appendChild(svgElement);
+			    }
 			    this.svgElement = svgElement;
 			    this.settooltip();
 			    this.setclass();
