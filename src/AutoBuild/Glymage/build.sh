@@ -11,7 +11,7 @@ fi
 cp ../../Application/Glymage/Glymage.* ./
 cp -r -L ../../Application/Glymage/htmls ./htmls
 mkdir -p ./js ./css ./demo ./image
-cp ../../Application/Glymage/css/*.js ./js
+cp ../../Application/Glymage/js/*.js ./js
 cp ../../Application/Glymage/css/*.css ./css
 cp ../../Application/Glymage/demo/*.html ./demo
 cp ../../Application/Glymage/image/image.tgz ./image
