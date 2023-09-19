@@ -159,15 +159,22 @@ var glymagesvg = {
             if (this.annotation && this.data.annotations) {
 		let annotation_dict = this.annotation.split(".")[0]
 		let annotation = this.annotation.substring(annotation_dict.length+1,this.annotation.length);
-		if (this.data.annotations[annotation_dict]) {
-		    if (!this.data.annotations[annotation_dict][annotation] && 
-			 this.data.annotations[annotation_dict]['__synonyms__'] && 
-			 this.data.annotations[annotation_dict]['__synonyms__'][annotation]) {
+		if (this.data.annotations[annotation_dict] || (annotation_dict == "CanonicalResidueIDs")) {
+		    if (this.data.annotations[annotation_dict] &&
+			!this.data.annotations[annotation_dict][annotation] && 
+			this.data.annotations[annotation_dict]['__synonyms__'] && 
+			this.data.annotations[annotation_dict]['__synonyms__'][annotation]) {
 			annotation = this.data.annotations[annotation_dict]['__synonyms__'][annotation];
 		    }
-		    if (this.data.annotations[annotation_dict][annotation]) {
+		    var thecanonids = null;
+		    if (annotation_dict == "CanonicalResidueIDs") {
+                        thecanonids = annotation.split(",");
+		    } else if (this.data.annotations[annotation_dict][annotation]) {
+			thecanonids = this.data.annotations[annotation_dict][annotation];
+                    }
+		    if (thecanonids) {
 			var svgids = new Set();
-			for (let canonid of this.data.annotations[annotation_dict][annotation]) {
+			for (let canonid of thecanonids) {
 			    if (this.data.residuemap[canonid]){
 				for (let svgid of this.data.residuemap[canonid]) {
 				    svgids.add(svgid);
@@ -192,21 +199,30 @@ var glymagesvg = {
 	this.setremotes = function() {
 	    let remoteelts = document.querySelectorAll('[glymagesvg_forid='+this.container_id+']');
 	    let anyremotes = false;
+	    let remeltind = -1;
             for (let remelt of remoteelts) {
-		anyremotes = true;
+		remeltind += 1;
 		let remelt_annotation = remelt.getAttribute("glymagesvg_annotation")
 		if (remelt_annotation && this.data.annotations) {
 		    let annotation_dict = remelt_annotation.split(".")[0]
 		    let annotation = remelt_annotation.substring(annotation_dict.length+1,remelt_annotation.length);
-		    if (this.data.annotations[annotation_dict]) {
-			if (!this.data.annotations[annotation_dict][annotation] && 
+		    if (this.data.annotations[annotation_dict] || (annotation_dict == "CanonicalResidueIDs")) {
+		        anyremotes = true;
+			if (this.data.annotations[annotation_dict] &&
+			    !this.data.annotations[annotation_dict][annotation] && 
 			    this.data.annotations[annotation_dict]['__synonyms__'] && 
 			    this.data.annotations[annotation_dict]['__synonyms__'][annotation]) {
 			    annotation = this.data.annotations[annotation_dict]['__synonyms__'][annotation];
 			}
 			var svgids = new Set();
-			if (this.data.annotations[annotation_dict][annotation]) {
-			    for (let canonid of this.data.annotations[annotation_dict][annotation]) {
+			var thecanonids = null;
+			if (annotation_dict == "CanonicalResidueIDs") {
+                            thecanonids = annotation.split(",");
+			} else if (this.data.annotations[annotation_dict][annotation]) {
+			    thecanonids = this.data.annotations[annotation_dict][annotation];
+                        }
+			if (thecanonids) {
+			    for (let canonid of thecanonids) {
 				if (this.data.residuemap[canonid]){
 				    for (let svgid of this.data.residuemap[canonid]) {
 					svgids.add(svgid);
@@ -214,16 +230,17 @@ var glymagesvg = {
 				}
 			    }
 			}
-			this.remann2remelt[remelt_annotation] = remelt;
-			this.remann2monoid[remelt_annotation] = svgids;
-			this.remann2class[remelt_annotation] = remelt.getAttribute('glymagesvg_textclass');
+			let remeltindstr = remeltind.toString();
+			this.remann2remelt[remeltindstr] = remelt;
+			this.remann2monoid[remeltindstr] = svgids;
+			this.remann2class[remeltindstr] = remelt.getAttribute('glymagesvg_textclass');
 			for (let svgid of svgids) {
 			    if (!(svgid in this.monoid2remann)) {
 				this.monoid2remann[svgid] = [];
 			    }
-			    this.monoid2remann[svgid].push(remelt_annotation);
+			    this.monoid2remann[svgid].push(remeltindstr);
 			}
-			remelt.onclick = this.handler("handle_remote_click", remelt_annotation);
+			remelt.onclick = this.handler("handle_remote_click", remeltindstr);
 			remelt.style.cursor = 'pointer';
 		    }
 		}
@@ -282,6 +299,7 @@ var glymagesvg = {
 	}
 	
 	this.refresh = function() {
+	    // console.log(this.click_mode,this.clicked)
 	    let highlight_monoids = new Set();
 	    let highlight_remann = new Set();
 	    if (this.click_mode == "remote") {
@@ -299,6 +317,8 @@ var glymagesvg = {
 		    }
 		}
 	    }
+	    // console.log(highlight_monoids);
+	    // console.log(highlight_remann);
 	    for (let monoid in this.monoid2monoelt) {
 		this.monoid2monoelt[monoid].classList.remove(this.monoclass);		
 		if (highlight_monoids.has(monoid)) {
