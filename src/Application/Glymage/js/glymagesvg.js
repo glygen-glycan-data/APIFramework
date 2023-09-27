@@ -57,10 +57,14 @@ var glymagesvg = {
 	    this.acc = elt.getAttribute('glymagesvg_accession');
 	    this.container_id = elt.getAttribute('id');
 	    this.annotation = elt.getAttribute('glymagesvg_annotation') || params.annotation;
+	    this.imageclass = elt.getAttribute('glymagesvg_imageclass') || params.imageclass
 	    this.monoclass = elt.getAttribute('glymagesvg_monoclass') || params.monoclass;
 	    this.linkclass = elt.getAttribute('glymagesvg_linkclass') || params.linkclass;
+	    this.linkinfoclass = elt.getAttribute('glymagesvg_linkinfoclass') || params.linkinfoclass;
 	    this.tooltip = elt.getAttribute('glymagesvg_tooltip') || params.tooltip;
             this.clickaction = elt.getAttribute('glymagesvg_clickaction') || params.clickaction;
+            this.clickhlparentlink = (elt.getAttribute('glymagesvg_clickhlparentlink') || params.clickhlparentlink) == "true";
+            this.addmonoonclick = (elt.getAttribute('glymagesvg_addmonoonclick') || params.addmonoonclick) == "true";
             this.width = elt.getAttribute('glymagesvg_width') || params.width;
             this.height = elt.getAttribute('glymagesvg_height') || params.height;
             this.position = elt.getAttribute('glymagesvg_insertpos') || params.insertpos;
@@ -98,6 +102,7 @@ var glymagesvg = {
 				return response.json();
 			    } else {
 				console.log("error check");
+                                throw new Error('JSON file not available !!!!');
 			    }
 			})
 			.then((data) => {
@@ -105,7 +110,31 @@ var glymagesvg = {
                             const parser = new DOMParser();
                             const doc = parser.parseFromString(svgText, "image/svg+xml");
                             let svgElement = doc.documentElement;
-                            svgElement.setAttribute("class", this.params.imageclass);			    
+			    			    let grelts = Array.from(svgElement.getElementsByTagName("g"));
+			    for (let elt of grelts) {
+				if ((elt.getAttribute("ID") != null) && (elt.getAttribute("data.type") == "Monosaccharide")) {
+				    let newelt = elt.cloneNode();
+				    for (let attr of newelt.attributes) {
+					if (attr.name.includes("data.")) {
+					    newelt.removeAttribute(attr.name);
+                                        }
+				    }
+				    newelt.removeAttribute("ID");
+				    newelt.classList.add("glymagesvg_monomask");
+				    for (let ch of elt.children) {
+					let newch = ch.cloneNode();
+					if (newch.style.fill.includes("rgb(")) {
+					    newch.style.fill = 'rgb(255,255,255)';
+					} else if (newch.style.stroke == "black") {
+					    newch.style.stroke = "white";
+					}
+					newelt.appendChild(newch);
+				    }
+				    svgElement.children[1].insertBefore(newelt,elt);
+				    // svgElement.children[1].removeChild(elt);
+				}
+			    }
+			    svgElement.classList.add(this.params.imageclass);
                             if (this.width != null) {
                                 svgElement.setAttribute("width", this.width);
 				if (this.height == null) {
@@ -118,6 +147,7 @@ var glymagesvg = {
                                     svgElement.setAttribute("width", "auto");
                                 }
                             }
+
 			    if (this.position != null) {
 				var refnode = this.svgContainer.childNodes[this.position];
 				this.svgContainer.insertBefore(svgElement,refnode);
@@ -181,14 +211,22 @@ var glymagesvg = {
 				}
 			    }
 			}
+			if (this.imageclass) {
+			    this.svgElement.classList.add(this.imageclass);
+			}
 			for (let elt of this.svgElement.getElementsByTagName("g")) {
+			    if (!elt.getAttribute("ID")) {
+				continue;
+			    }
 			    if (svgids.has(elt.getAttribute("ID"))) {
 				if (elt.getAttribute("data.type") == "Monosaccharide" && this.monoclass) {
-				    elt.setAttribute("class",this.monoclass);
+				    elt.classList.add(this.monoclass);
 				}
-				if (elt.getAttribute("data.type") == "Linkage" && this.linkclass) {
-				    elt.setAttribute("class",this.linkclass);
+				else if (elt.getAttribute("data.type") == "Linkage" && this.linkclass) {
+				    elt.classList.add(this.linkclass);
 				}
+			    } else if (svgids.has(elt.getAttribute("ID").replace("li","l")) && this.linkinfoclass) {
+				elt.classList.add(this.linkinfoclass);
 			    }
 			}
 		    }
@@ -226,6 +264,9 @@ var glymagesvg = {
 				if (this.data.residuemap[canonid]){
 				    for (let svgid of this.data.residuemap[canonid]) {
 					svgids.add(svgid);
+					if (svgid.startsWith('l-1:')) {
+					    svgids.add(svgid.replace('l','li'));
+					}
 				    }
 				}
 			    }
@@ -246,6 +287,7 @@ var glymagesvg = {
 		}
             }
 	    if (anyremotes) {
+                this.monoid2relatedmonoid = {};
 		for (let elt of this.svgElement.getElementsByTagName("g")) {
 		    let svgid = elt.getAttribute("ID");
 		    if (elt.getAttribute("data.type") == "Monosaccharide") {
@@ -255,13 +297,43 @@ var glymagesvg = {
 			}
 			elt.onclick = this.handler("handle_mono_click", svgid);
 			elt.style.cursor = 'pointer';
+                        if (!(svgid in this.monoid2relatedmonoid)) {
+                            this.monoid2relatedmonoid[svgid] = [];
+                        }
 		    } else if (elt.getAttribute("data.type") == "Linkage") {
-			if (svgid in this.monoid2remann) {
-			    this.monoid2monoelt[svgid] = elt;
-			}
+			this.monoid2monoelt[svgid] = elt;
+                        if (this.clickhlparentlink) {
+                            let ids = svgid.split(':')[1].split(',');
+                            let nodesvgid = "r-1:"+ids[1];
+                            // console.log(svgid,nodesvgid);
+                            if (!(nodesvgid in this.monoid2relatedmonoid)) {
+                                this.monoid2relatedmonoid[nodesvgid] = [];
+                            }
+                            this.monoid2relatedmonoid[nodesvgid].push(svgid);
+                        }
+		    } else if (svgid && svgid.startsWith("li-1")) {
+			this.monoid2monoelt[svgid] = elt;
+                        if (this.clickhlparentlink) {
+                            let ids = svgid.split(':')[1].split(',');
+                            let nodesvgid = "r-1:"+ids[1];
+                            // console.log(svgid,nodesvgid);
+                            if (!(nodesvgid in this.monoid2relatedmonoid)) {
+                                this.monoid2relatedmonoid[nodesvgid] = [];
+                            }
+                            this.monoid2relatedmonoid[nodesvgid].push(svgid);
+                        }
 		    }
 		}
+		this.svgElement.children[1].children[1].onclick = this.handler("handle_reset_click");
+		this.svgElement.children[1].children[1].style.cursor = 'pointer';
+                // console.log(this.monoid2relatedmonoid);
 	    }
+	}
+
+	this.handle_reset_click = function(event) {
+	    this.clicked = new Set();
+	    this.click_mode = null;
+	    this.refresh();
 	}
 
 	this.handle_remote_click = function(event, remann) {
@@ -288,11 +360,25 @@ var glymagesvg = {
 	    }
 	    if (this.clicked.has(monoid)) {
 		this.clicked.delete(monoid);
+                if (this.addmonoonclick) {
+		    for (let remann of this.monoid2remann[monoid]) {
+		      for (let monoid2 of this.remann2monoid[remann]) {
+			 this.clicked.delete(monoid2);
+                      }
+                    }
+                }
 	    } else {
                 if (this.clickaction == "multi") {
 		    this.clicked.add(monoid);
 	        } else {
 		    this.clicked = new Set([monoid]);
+                }
+                if (this.addmonoonclick) {
+		    for (let remann of this.monoid2remann[monoid]) {
+		      for (let monoid2 of this.remann2monoid[remann]) {
+			 this.clicked.add(monoid2);
+                      }
+                    }
                 }
 	    }
 	    this.refresh();
@@ -307,28 +393,49 @@ var glymagesvg = {
 		    highlight_remann.add(remann);
 		    for (let monoid of this.remann2monoid[remann]) {
 			highlight_monoids.add(monoid);
+                        if (this.monoid2relatedmonoid[monoid]) {
+                            for (let monoid1 of this.monoid2relatedmonoid[monoid]) {
+                                highlight_monoids.add(monoid1);
+                            }
+                        }
 		    }
 		}
 	    } else {
 		for (let monoid of this.clicked) {
 		    highlight_monoids.add(monoid);
+                    if (this.monoid2relatedmonoid[monoid]) {
+                        for (let monoid1 of this.monoid2relatedmonoid[monoid]) {
+                            highlight_monoids.add(monoid1);
+                        }
+                    }
 		    for (let remann of this.monoid2remann[monoid]) {
 			highlight_remann.add(remann);
 		    }
 		}
 	    }
+            // console.log(highlight_monoids);
+            // console.log(highlight_remann);
+	    if (this.imageclass) {
+		if (this.clicked.size > 0) {
+		    this.svgElement.classList.add(this.imageclass);
+		} else {
+		    this.svgElement.classList.remove(this.imageclass);
+		}
+	    } 
 	    // console.log(highlight_monoids);
 	    // console.log(highlight_remann);
 	    for (let monoid in this.monoid2monoelt) {
-		this.monoid2monoelt[monoid].classList.remove(this.monoclass);		
 		if (highlight_monoids.has(monoid)) {
 		    this.monoid2monoelt[monoid].classList.add(this.monoclass);
+		} else {
+		    this.monoid2monoelt[monoid].classList.remove(this.monoclass);		
 		}
             }
 	    for (let remann in this.remann2remelt) {
-		this.remann2remelt[remann].classList.remove(this.remann2class[remann]);
 		if (highlight_remann.has(remann)) {
 		    this.remann2remelt[remann].classList.add(this.remann2class[remann]);
+		} else {
+		    this.remann2remelt[remann].classList.remove(this.remann2class[remann]);
 		}
 	    }
 	}
