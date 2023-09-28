@@ -63,8 +63,9 @@ var glymagesvg = {
 	    this.linkinfoclass = elt.getAttribute('glymagesvg_linkinfoclass') || params.linkinfoclass;
 	    this.tooltip = elt.getAttribute('glymagesvg_tooltip') || params.tooltip;
             this.clickaction = elt.getAttribute('glymagesvg_clickaction') || params.clickaction;
-            this.clickhlparentlink = (elt.getAttribute('glymagesvg_clickhlparentlink') || params.clickhlparentlink) == "true";
-            this.addmonoonclick = (elt.getAttribute('glymagesvg_addmonoonclick') || params.addmonoonclick) == "true";
+
+            this.monoclick_highlights_parent_link = (elt.getAttribute('glymagesvg_monoclick_highlights_parent_link') || params.monoclick_highlights_parent_link) == "true";
+            this.monoclick_highlights_related_monos = (elt.getAttribute('glymagesvg_monoclick_highlights_related_monos') || params.monoclick_highlights_related_monos) == "true";
             this.width = elt.getAttribute('glymagesvg_width') || params.width;
             this.height = elt.getAttribute('glymagesvg_height') || params.height;
             this.position = elt.getAttribute('glymagesvg_insertpos') || params.insertpos;
@@ -302,7 +303,7 @@ var glymagesvg = {
                         }
 		    } else if (elt.getAttribute("data.type") == "Linkage") {
 			this.monoid2monoelt[svgid] = elt;
-                        if (this.clickhlparentlink) {
+                        if (this.monoclick_highlights_parent_link) {
                             let ids = svgid.split(':')[1].split(',');
                             let nodesvgid = "r-1:"+ids[1];
                             // console.log(svgid,nodesvgid);
@@ -313,7 +314,7 @@ var glymagesvg = {
                         }
 		    } else if (svgid && svgid.startsWith("li-1")) {
 			this.monoid2monoelt[svgid] = elt;
-                        if (this.clickhlparentlink) {
+                        if (this.monoclick_highlights_parent_link) {
                             let ids = svgid.split(':')[1].split(',');
                             let nodesvgid = "r-1:"+ids[1];
                             // console.log(svgid,nodesvgid);
@@ -360,7 +361,7 @@ var glymagesvg = {
 	    }
 	    if (this.clicked.has(monoid)) {
 		this.clicked.delete(monoid);
-                if (this.addmonoonclick) {
+                if (this.monoclick_highlights_related_monos) {
 		    for (let remann of this.monoid2remann[monoid]) {
 		      for (let monoid2 of this.remann2monoid[remann]) {
 			 this.clicked.delete(monoid2);
@@ -373,7 +374,7 @@ var glymagesvg = {
 	        } else {
 		    this.clicked = new Set([monoid]);
                 }
-                if (this.addmonoonclick) {
+                if (this.monoclick_highlights_related_monos) {
 		    for (let remann of this.monoid2remann[monoid]) {
 		      for (let monoid2 of this.remann2monoid[remann]) {
 			 this.clicked.add(monoid2);
@@ -425,11 +426,19 @@ var glymagesvg = {
 	    // console.log(highlight_monoids);
 	    // console.log(highlight_remann);
 	    for (let monoid in this.monoid2monoelt) {
-		if (highlight_monoids.has(monoid)) {
-		    this.monoid2monoelt[monoid].classList.add(this.monoclass);
-		} else {
-		    this.monoid2monoelt[monoid].classList.remove(this.monoclass);		
-		}
+                let theclass = this.monoclass;
+                if (monoid.startsWith("l-1")) {
+                    theclass = this.linkclass;
+                } else if (monoid.startsWith("li-1")) {
+                    theclass = this.linkinfoclass;
+                }
+                if (theclass) {
+		    if (highlight_monoids.has(monoid)) {
+		        this.monoid2monoelt[monoid].classList.add(theclass);
+		    } else {
+		        this.monoid2monoelt[monoid].classList.remove(theclass);		
+		    }
+                }
             }
 	    for (let remann in this.remann2remelt) {
 		if (highlight_remann.has(remann)) {
