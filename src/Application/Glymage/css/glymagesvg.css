@@ -13,6 +13,35 @@
     stroke-width: 4;
 }
 
+.glymagesvg_glycanimage:hover .glymagesvg_hover_text_red text {
+    fill: rgb(247, 71, 62) !important;
+    font-weight: bold;
+}
+
+.glymagesvg_glycanimage .glymagesvg_text_red text {
+    fill: rgb(247, 71, 62) !important;
+    font-weight: bold;
+}
+
+.glymagesvg_checkbox {
+    font-weight: bold;
+    background-color: white;
+    color: white;
+    border-color: black;
+    border-width: 2px;
+    border-style: solid;
+    cursor: pointer;
+    display: inline;
+}
+
+.glymagesvg_checkbox_red_checked {
+    color: rgb(247, 71, 62);
+}
+
+.glymagesvg_checkbox_black_checked {
+    color: black;
+}
+
 .glymagesvg_glycanimage:hover .glymagesvg_hover_outline_green * {
     stroke: rgb(96, 247, 62) !important;
     stroke-width: 4;
