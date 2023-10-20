@@ -73,6 +73,12 @@
 .glymagesvg_glycanimage g g.glymagesvg_high_opacity {
    opacity: 1.0;
 }
+.glymagesvg_glycanimage g g.glymagesvg_high_opacity_anomer {
+   opacity: 1.0;
+}
+.glymagesvg_glycanimage g g.glymagesvg_high_opacity_anomer text:nth-last-child(n + 2) {
+   opacity: 0.2;
+}
 .glymagesvg_hover_low_opacity:hover g g {
    opacity: 0.2;
 }
@@ -81,4 +87,10 @@
 }
 .glymagesvg_glycanimage:hover g g.glymagesvg_hover_high_opacity {
    opacity: 1.0;
+}
+.glymagesvg_glycanimage:hover g g.glymagesvg_hover_high_opacity_anomer {
+   opacity: 1.0;
+}
+.glymagesvg_glycanimage:hover g g.glymagesvg_hover_high_opacity_anomer text:nth-last-child(n + 2) {
+   opacity: 0.2;
 }

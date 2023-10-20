@@ -62,12 +62,14 @@ var glymagesvg = {
 	    this.monoclass = elt.getAttribute('glymagesvg_monoclass') || params.monoclass;
 	    this.substclass = elt.getAttribute('glymagesvg_substclass') || params.substclass;
 	    this.linkclass = elt.getAttribute('glymagesvg_linkclass') || params.linkclass;
+	    this.parentlinkclass = elt.getAttribute('glymagesvg_parentlinkclass') || params.parentlinkclass;
 	    this.linkinfoclass = elt.getAttribute('glymagesvg_linkinfoclass') || params.linkinfoclass;
+	    this.parentlinkinfoclass = elt.getAttribute('glymagesvg_parentlinkinfoclass') || params.parentlinkinfoclass;
 	    this.tooltip = elt.getAttribute('glymagesvg_tooltip') || params.tooltip;
             this.clickaction = elt.getAttribute('glymagesvg_clickaction') || params.clickaction;
 
-            this.monoclick_highlights_parent_link = (elt.getAttribute('glymagesvg_monoclick_highlights_parent_link') || params.monoclick_highlights_parent_link) == "true";
-            this.monoclick_highlights_related_monos = (elt.getAttribute('glymagesvg_monoclick_highlights_related_monos') || params.monoclick_highlights_related_monos) == "true";
+            this.highlight_parent_link = (elt.getAttribute('glymagesvg_highlight_parent_link') || params.highlight_parent_link) == "true";
+            this.highlight_related_monos = (elt.getAttribute('glymagesvg_highlight_related_monos') || params.highlight_related_monos) == "true";
             this.width = elt.getAttribute('glymagesvg_width') || params.width;
             this.height = elt.getAttribute('glymagesvg_height') || params.height;
             this.position = elt.getAttribute('glymagesvg_insertpos') || params.insertpos;
@@ -76,6 +78,12 @@ var glymagesvg = {
             }
 	    if (!this.linkclass) {
                 this.linkclass = elt.getAttribute('glymagesvg_class');
+            }
+            if (!this.parentlinkclass) {
+                this.parentlinkclass = this.linkclass;
+            }
+            if (!this.parentlinkinfoclass) {
+                this.parentlinkinfoclass = this.linkinfoclass;
             }
             if (this.params.imageurl != null) {
                 this.imageurl = this.params.imageurl;
@@ -212,6 +220,25 @@ var glymagesvg = {
 				}
 			    }
 			}
+                        // console.log(svgids)
+			var parsvgids = new Set();
+                        if (this.highlight_parent_link) {
+			    for (let elt of this.svgElement.getElementsByTagName("g")) {
+                                let svgid = elt.getAttribute("ID");
+			        if (!svgid) {
+				    continue;
+			        }
+				if (svgid.startsWith('l-1:') || elt.getAttribute("data.type") == "Linkage") {
+                                    let ids = svgid.split(':')[1].split(',');
+                                    let nodesvgid = "r-1:"+ids[1];
+                                    if (svgids.has(nodesvgid) && !svgids.has(svgid)) {
+                                        svgids.add(svgid);
+                                        parsvgids.add(svgid);
+                                    }
+                                }
+                            }
+                        }
+                        console.log(svgids,parsvgids)
 			if (this.imageclass) {
 			    this.svgElement.classList.add(this.imageclass);
 			}
@@ -219,18 +246,27 @@ var glymagesvg = {
 			    if (!elt.getAttribute("ID")) {
 				continue;
 			    }
-			    if (svgids.has(elt.getAttribute("ID"))) {
+                            let svgid = elt.getAttribute("ID");
+			    if (svgids.has(svgid)) {
 				if (elt.getAttribute("data.type") == "Monosaccharide" && this.monoclass) {
 				    elt.classList.add(this.monoclass);
 				}
 				else if (elt.getAttribute("data.type") == "Substituent" && this.substclass) {
 				    elt.classList.add(this.substclass);
 				}
-				else if (elt.getAttribute("data.type") == "Linkage" && this.linkclass) {
-				    elt.classList.add(this.linkclass);
+				else if ((svgid.startsWith('l-1:') || elt.getAttribute("data.type") == "Linkage") && this.linkclass) {
+                                    if (parsvgids.has(svgid)) {
+				        elt.classList.add(this.parentlinkclass);
+                                    } else {
+				        elt.classList.add(this.linkclass);
+                                    }
 				}
-			    } else if (svgids.has(elt.getAttribute("ID").replace("li","l")) && this.linkinfoclass) {
-				elt.classList.add(this.linkinfoclass);
+			    } else if (svgids.has(svgid.replace("li","l")) && this.linkinfoclass) {
+                                if (parsvgids.has(svgid.replace("li","l"))) {
+				    elt.classList.add(this.parentlinkinfoclass);
+                                } else {
+				    elt.classList.add(this.linkinfoclass);
+                                }
 			    }
 			}
 		    }
@@ -316,10 +352,10 @@ var glymagesvg = {
                         if (!(svgid in this.monoid2relatedmonoid)) {
                             this.monoid2relatedmonoid[svgid] = [];
                         }
-		    } else if (elt.getAttribute("data.type") == "Linkage") {
+		    } else if (elt.getAttribute("data.type") == "Linkage" || (svgid && svgid.startsWith('l-1:'))) {
 			this.svgid2elt[svgid] = elt;
 			this.svgid2type[svgid] = "Linkage";
-                        if (this.monoclick_highlights_parent_link) {
+                        if (this.highlight_parent_link) {
                             let ids = svgid.split(':')[1].split(',');
                             let nodesvgid = "r-1:"+ids[1];
                             // console.log(svgid,nodesvgid);
@@ -328,10 +364,10 @@ var glymagesvg = {
                             }
                             this.monoid2relatedmonoid[nodesvgid].push(svgid);
                         }
-		    } else if (svgid && svgid.startsWith("li-1")) {
+		    } else if (svgid && svgid.startsWith("li-1:")) {
 			this.svgid2elt[svgid] = elt;
 			this.svgid2type[svgid] = "LinkInfo";			
-                        if (this.monoclick_highlights_parent_link) {
+                        if (this.highlight_parent_link) {
                             let ids = svgid.split(':')[1].split(',');
                             let nodesvgid = "r-1:"+ids[1];
                             // console.log(svgid,nodesvgid);
@@ -378,7 +414,7 @@ var glymagesvg = {
 	    }
 	    if (this.clicked.has(monoid)) {
 		this.clicked.delete(monoid);
-                if (this.monoclick_highlights_related_monos) {
+                if (this.highlight_related_monos) {
 		    for (let remann of this.monoid2remann[monoid]) {
 		      for (let monoid2 of this.remann2monoid[remann]) {
 			 this.clicked.delete(monoid2);
@@ -391,7 +427,7 @@ var glymagesvg = {
 	        } else {
 		    this.clicked = new Set([monoid]);
                 }
-                if (this.monoclick_highlights_related_monos) {
+                if (this.highlight_related_monos) {
 		    for (let remann of this.monoid2remann[monoid]) {
 		      for (let monoid2 of this.remann2monoid[remann]) {
 			 this.clicked.add(monoid2);
@@ -440,8 +476,8 @@ var glymagesvg = {
 		    this.svgElement.classList.remove(this.imageclass);
 		}
 	    } 
-	    console.log(highlight_monoids);
-	    console.log(highlight_remann);
+	    // console.log(highlight_monoids);
+	    // console.log(highlight_remann);
 	    for (let svgid in this.svgid2elt) {
                 let theclass = this.monoclass;
 		if (this.svgid2type[svgid] == "Substituent") {
