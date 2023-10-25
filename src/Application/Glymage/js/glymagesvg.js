@@ -9,6 +9,7 @@ var glymagesvg = {
 
     params: {
         baseurl: getglymagesvgloc(),
+        cssurl: "css/glymagesvg.css",
         display: "snfg",
         style: "extended",
 	imageclass: "glymagesvg_glycanimage",
@@ -27,9 +28,14 @@ var glymagesvg = {
         }
         console.log("GlymageSVG Global Parameters:");
         console.log(glymagesvg.params);
-        var head = document.getElementsByTagName('head')[0];
-        if (!(head.innerHTML.includes('glymagesvg.css'))) {
-            head.innerHTML += '<link rel="stylesheet" href="'+glymagesvg.params.baseurl+'/css/glymagesvg.css" type="text/css" />';
+
+        if (glymagesvg.params.cssurl) {
+            let head = document.getElementsByTagName('head')[0];
+            let cssurl = glymagesvg.params.cssurl;
+            if (!cssurl.startsWith('http')) {
+                cssurl = glymagesvg.params.baseurl + '/' + cssurl;
+            }
+            head.innerHTML += '<link rel="stylesheet" href="'+cssurl+'" type="text/css" />';
         }
 
         let svgcontainers = document.querySelectorAll('[glymagesvg_accession]');
@@ -102,7 +108,6 @@ var glymagesvg = {
 		    if (response.ok) {
 			return response.text();
 		    } else { 
-			console.log("I need an svg file:", svg_file, response.text())
 			throw new Error('SVG file not available !!!!');
 		    }
 		})

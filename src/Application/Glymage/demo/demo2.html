@@ -11,7 +11,8 @@ function jsonurl(acc) {
 function init() {
     var params = {
         imageurl: svgurl,
-        // jsonurl: jsonurl,
+        jsonurl: jsonurl,
+        cssurl: 'https://glymage.glyomics.org/css/glymagesvg.css'
     };
     glymagesvg.init(params);
 }
@@ -32,6 +33,7 @@ function init() {
     var params = {
         imageurl: svgurl,
         jsonurl: jsonurl,
+        cssurl: 'https://glymage.glyomics.org/css/glymagesvg.css'
     };
     glymagesvg.init(params);
 }
