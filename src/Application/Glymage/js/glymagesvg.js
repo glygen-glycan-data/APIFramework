@@ -12,7 +12,6 @@ var glymagesvg = {
         cssurl: "css/glymagesvg.css",
         display: "snfg",
         style: "extended",
-	imageclass: "glymagesvg_glycanimage",
         clickaction: "multi"
     },
 
@@ -47,11 +46,59 @@ var glymagesvg = {
 
     },
 
+    highlight: function(selector,annotation) {
+	if (!selector) {
+	    selector = '[glymagesvg_accession]';
+        }
+	let svgcontainers = document.querySelectorAll(selector);
+        for (let svgcont of svgcontainers) {
+            let glysvgobj = svgcont.glymagesvg;
+	    if (annotation) {
+		svgcont.setAttribute('glymagesvg_annotation',annotation);
+		glysvgobj.annotation = annotation;
+            }
+	    glysvgobj.clearclass();
+	    glysvgobj.setclass();
+        } 
+    },
+
+    reset: function(selector) {
+	if (!selector) {
+	    selector = '[glymagesvg_accession]';
+        }
+	let svgcontainers = document.querySelectorAll(selector);
+        for (let svgcont of svgcontainers) {
+            let glysvgobj = svgcont.glymagesvg;
+	    glysvgobj.clearclass();
+        } 	
+    },
+
+    toggle: function(selector,annotation) {
+	if (!selector) {
+	    selector = '[glymagesvg_accession]';
+        }
+	let svgcontainers = document.querySelectorAll(selector);
+        for (let svgcont of svgcontainers) {
+            let glysvgobj = svgcont.glymagesvg;
+	    if (!glysvgobj.highlighted) {
+	        if (annotation) {
+		    svgcont.setAttribute('glymagesvg_annotation',annotation);
+		    glysvgobj.annotation = annotation;
+                }
+	        glysvgobj.clearclass();
+		glysvgobj.setclass();
+	    } else {
+		glysvgobj.clearclass();
+            }
+        } 	
+    },
+	
     GlymageSVG: function(__element__, __params__) {
 
 	this.initialize = function(params,elt) {
             this.click_mode = "";
             this.clicked = new Set();
+	    this.highlighted = false;
 	    this.remann2remelt = {};
 	    this.remann2class = {};
 	    this.svgid2elt = {};
@@ -61,6 +108,7 @@ var glymagesvg = {
 
 	    this.params = params;
 	    this.svgContainer = elt;
+	    elt.glymagesvg = this;
 	    this.acc = elt.getAttribute('glymagesvg_accession');
 	    this.container_id = elt.getAttribute('id');
 	    this.annotation = elt.getAttribute('glymagesvg_annotation') || params.annotation;
@@ -138,7 +186,7 @@ var glymagesvg = {
 		    	    svgElement.children[1].insertBefore(newelt,elt);
 		    	}
 		    }
-		    svgElement.classList.add(this.params.imageclass);
+		    svgElement.classList.add("glymagesvg_glycanimage");
                     if (this.width != null) {
                         svgElement.setAttribute("width", this.width);
 		    	if (this.height == null) {
@@ -201,6 +249,7 @@ var glymagesvg = {
 
 	this.setclass = function() {
             if (this.annotation && this.data.annotations) {
+		this.highlighted = true;
 		let annotation_dict = this.annotation.split(".")[0]
 		let annotation = this.annotation.substring(annotation_dict.length+1,this.annotation.length);
 		if (this.data.annotations[annotation_dict] || (annotation_dict == "CanonicalResidueIDs")) {
@@ -243,8 +292,7 @@ var glymagesvg = {
                                 }
                             }
                         }
-                        console.log(svgids,parsvgids)
-			if (this.imageclass) {
+			if (this.imageclass && svgids.size > 0) {
 			    this.svgElement.classList.add(this.imageclass);
 			}
 			for (let elt of this.svgElement.getElementsByTagName("g")) {
@@ -275,6 +323,33 @@ var glymagesvg = {
 			    }
 			}
 		    }
+		}
+	    }
+	}
+
+	this.clearclass = function() {
+	    this.highlighted = false;
+	    if (this.imageclass) {
+		this.svgElement.classList.remove(this.imageclass);
+            }
+	    for (let elt of this.svgElement.getElementsByTagName("g")) {
+		if (!elt.getAttribute("ID")) {
+		    continue;
+		}
+                let svgid = elt.getAttribute("ID");
+		if (elt.getAttribute("data.type") == "Monosaccharide" && this.monoclass) {
+		    elt.classList.remove(this.monoclass);
+		}
+		else if (elt.getAttribute("data.type") == "Substituent" && this.substclass) {
+		    elt.classList.remove(this.substclass);
+		}
+		else if (svgid.startsWith('l-1:') && this.linkclass) {
+		    elt.classList.remove(this.linkclass);
+		    elt.classList.remove(this.parentlinkclass);
+		}
+                else if (svgid.startsWith('li-1:') && this.linkinfoclass) {
+		    elt.classList.remove(this.linkinfoclass);
+		    elt.classList.remove(this.parentlinkinfoclass);
 		}
 	    }
 	}
