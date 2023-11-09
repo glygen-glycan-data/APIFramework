@@ -5,4 +5,5 @@ rdflib==4.2.2
 SPARQLWrapper==1.8.5
 
 requests
+psutil
 
