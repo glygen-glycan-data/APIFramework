@@ -22,21 +22,24 @@ JSONENZ="$PYSCR/resmap_sandboxtojson.py"
 
 docker pull glyomics/apiframework:latest
 mkdir -p work/wurcs work/glycoct work/genglycoct
-dockerrun $DUMPSEQ /work/wurcs
-dockerrun $ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f png -o /work/snfg/extended /work/wurcs
-dockerrun $ALLIMG -N 20 -P 2 -n snfg -d compact -f png -o /work/snfg/compact /work/wurcs
-dockerrun $ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f svg -o /work/snfg/extended /work/wurcs
-dockerrun $ALLIMG -N 20 -P 2 -n snfg -d compact -f svg -o /work/snfg/compact /work/wurcs
-dockerrun $DUMPSEQ /work/glycoct
-dockerrun $ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f png -o /work/snfg/extended /work/glycoct
-dockerrun $ALLIMG -N 20 -P 2 -n snfg -d compact -f png -o /work/snfg/compact /work/glycoct
-dockerrun $ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f svg -o /work/snfg/extended /work/glycoct
-dockerrun $ALLIMG -N 20 -P 2 -n snfg -d compact -f svg -o /work/snfg/compact /work/glycoct
-dockerrun $DUMPSEQ /work/genglycoct
-dockerrun $ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f png -o /work/snfg/extended /work/genglycoct
-dockerrun $ALLIMG -N 20 -P 2 -n snfg -d compact -f png -o /work/snfg/compact /work/genglycoct
-dockerrun $ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f svg -o /work/snfg/extended /work/genglycoct
-dockerrun $ALLIMG -N 20 -P 2 -n snfg -d compact -f svg -o /work/snfg/compact /work/genglycoct
+
+if [ "$1" != "json" ]; then
+  dockerrun $DUMPSEQ /work/wurcs
+  dockerrun $ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f png -o /work/snfg/extended /work/wurcs
+  dockerrun $ALLIMG -N 20 -P 2 -n snfg -d compact -f png -o /work/snfg/compact /work/wurcs
+  dockerrun $ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f svg -o /work/snfg/extended /work/wurcs
+  dockerrun $ALLIMG -N 20 -P 2 -n snfg -d compact -f svg -o /work/snfg/compact /work/wurcs
+  dockerrun $DUMPSEQ /work/glycoct
+  dockerrun $ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f png -o /work/snfg/extended /work/glycoct
+  dockerrun $ALLIMG -N 20 -P 2 -n snfg -d compact -f png -o /work/snfg/compact /work/glycoct
+  dockerrun $ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f svg -o /work/snfg/extended /work/glycoct
+  dockerrun $ALLIMG -N 20 -P 2 -n snfg -d compact -f svg -o /work/snfg/compact /work/glycoct
+  dockerrun $DUMPSEQ /work/genglycoct
+  dockerrun $ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f png -o /work/snfg/extended /work/genglycoct
+  dockerrun $ALLIMG -N 20 -P 2 -n snfg -d compact -f png -o /work/snfg/compact /work/genglycoct
+  dockerrun $ALLIMG -N 20 -P 2 -n snfg -d normalinfo -f svg -o /work/snfg/extended /work/genglycoct
+  dockerrun $ALLIMG -N 20 -P 2 -n snfg -d compact -f svg -o /work/snfg/compact /work/genglycoct
+fi
 
 kill $XSCR
 
