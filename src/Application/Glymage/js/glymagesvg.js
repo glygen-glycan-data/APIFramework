@@ -12,7 +12,8 @@ var glymagesvg = {
         cssurl: "css/glymagesvg.css",
         display: "snfg",
         style: "extended",
-        clickaction: "multi"
+        clickaction: "multi",
+	clicktarget: "remote_element,figure_mono,figure_background"
     },
 
     config: function(params) {
@@ -121,6 +122,7 @@ var glymagesvg = {
 	    this.parentlinkinfoclass = elt.getAttribute('glymagesvg_parentlinkinfoclass') || params.parentlinkinfoclass;
 	    this.tooltip = elt.getAttribute('glymagesvg_tooltip') || params.tooltip;
             this.clickaction = elt.getAttribute('glymagesvg_clickaction') || params.clickaction;
+            this.clicktarget = elt.getAttribute('glymagesvg_clicktarget') || params.clicktarget;
 
             this.highlight_parent_link = (elt.getAttribute('glymagesvg_highlight_parent_link') || params.highlight_parent_link) == "true";
             this.highlight_related_monos = (elt.getAttribute('glymagesvg_highlight_related_monos') || params.highlight_related_monos) == "true";
@@ -401,8 +403,10 @@ var glymagesvg = {
 			    }
 			    this.monoid2remann[svgid].push(remeltindstr);
 			}
-			remelt.onclick = this.handler("handle_remote_click", remeltindstr);
-			remelt.style.cursor = 'pointer';
+			if (this.clicktarget.includes("remote_element")) {
+			    remelt.onclick = this.handler("handle_remote_click", remeltindstr);
+			    remelt.style.cursor = 'pointer';
+                        }
 		    }
 		}
             }
@@ -416,8 +420,10 @@ var glymagesvg = {
 			if (!(svgid in this.monoid2remann)) {
 			    this.monoid2remann[svgid] = [];
 			}
-			elt.onclick = this.handler("handle_mono_click", svgid);
-			elt.style.cursor = 'pointer';
+			if (this.clicktarget.includes("figure_mono")) {
+			    elt.onclick = this.handler("handle_mono_click", svgid);
+			    elt.style.cursor = 'pointer';
+                        }
                         if (!(svgid in this.monoid2relatedmonoid)) {
                             this.monoid2relatedmonoid[svgid] = [];
                         }
@@ -427,8 +433,10 @@ var glymagesvg = {
 			if (!(svgid in this.monoid2remann)) {
 			    this.monoid2remann[svgid] = [];
 			}
-			elt.onclick = this.handler("handle_mono_click", svgid);
-			elt.style.cursor = 'pointer';
+			if (this.clicktarget.includes("figure_mono")) {
+			    elt.onclick = this.handler("handle_mono_click", svgid);
+			    elt.style.cursor = 'pointer';
+                        }
                         if (!(svgid in this.monoid2relatedmonoid)) {
                             this.monoid2relatedmonoid[svgid] = [];
                         }
@@ -458,8 +466,10 @@ var glymagesvg = {
                         }
 		    }
 		}
-		this.svgElement.children[1].children[1].onclick = this.handler("handle_reset_click");
-		this.svgElement.children[1].children[1].style.cursor = 'pointer';
+		if (this.clicktarget.includes("figure_background")) {
+		    this.svgElement.children[1].children[1].onclick = this.handler("handle_reset_click");
+		    this.svgElement.children[1].children[1].style.cursor = 'pointer';
+		}
                 // console.log(this.monoid2relatedmonoid);
 	    }
 	}
