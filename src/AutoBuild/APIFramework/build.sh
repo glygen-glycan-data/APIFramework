@@ -31,7 +31,8 @@ fi
 # COMMIT="7d98f90d34cbc202819a139d3957621bf56e963a"
 # COMMIT="4a38fc4242d8340aa66ebfefc7e1413754c5f503"
 # COMMIT="f904ea72f1d05f0fbc2158195674d394ea9433ef"
-COMMIT="f3dcd564306024b79f62207e74ca3ae25b7d16d9"
+# COMMIT="f3dcd564306024b79f62207e74ca3ae25b7d16d9"
+COMMIT="fd9a1bb79e19ef6750062ab99109415d6d06ef3d"
 
 wget https://github.com/glygen-glycan-data/PyGly/archive/${COMMIT}.zip -O PyGly.zip
 unzip PyGly.zip
