@@ -1,9 +1,9 @@
 #!/bin/sh
 
 set -x
-Xvfb :1 &
-XSCR=$!
-export DISPLAY=localhost:1.0
+# Xvfb :1 &
+# XSCR=$!
+# export DISPLAY=localhost:1.0
 
 DOCKER="docker run -d --rm -u `id -u`:`id -g` -v `pwd`/work:/work glyomics/apiframework:latest"
 function dockerrun() {
@@ -41,7 +41,7 @@ if [ "$1" != "json" ]; then
   dockerrun $ALLIMG -N 20 -P 2 -n snfg -d compact -f svg -o /work/snfg/compact /work/genglycoct
 fi
 
-kill $XSCR
+# kill $XSCR
 
 dockerrun $CREJSON /work/wurcs /work/snfg/extended /work/snfg/extended
 dockerrun $CREJSON /work/wurcs /work/snfg/compact /work/snfg/compact
