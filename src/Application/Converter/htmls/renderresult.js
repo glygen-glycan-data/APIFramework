@@ -35,7 +35,7 @@ function renderResultMore(){
 
 
     result_container_additional.innerHTML += "<br><img src='"+imgurl+"'>";
-    result_container_additional.innerHTML += "<br><p>"+retrieve_result.result.replaceAll("\n", "<br>")+"</p>"
+    result_container_additional.innerHTML += "<br><div style='text-align: center;'><div style='display: inline-block; text-align: left;'>"+retrieve_result.result.replaceAll("\n", "<br>")+"</div></div>"
 
     if (result.length == 0){
         return

@@ -7,7 +7,8 @@ from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 
 import pygly.alignment
 from pygly.GlycanResource.GlyTouCan import GlyTouCanNoCache, GlyTouCan
-from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat, IUPACGlycamFormat
+from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat, IUPACGlycamFormat, IUPACLinearFormat, IUPACParserExtended1, GlycanParseError
+from pygly.CompositionFormatter import CompositionFormat
 
 def round2str(n):
     return str(round(n, 2))
@@ -37,6 +38,9 @@ class Converter(APIFrameworkWithFrontEnd):
 
         gp = GlycoCTFormat()
         wp = WURCS20Format()
+        cp = CompositionFormat()
+        ip = IUPACLinearFormat()
+        ip1 = IUPACParserExtended1()
         glycam_parser = IUPACGlycamFormat()
 
         self.output(2, "Worker-%s is ready to take job" % (pid))
@@ -61,10 +65,25 @@ class Converter(APIFrameworkWithFrontEnd):
                 elif "WURCS" in seq:
                     query_glycan = wp.toGlycan(seq)
                 else:
-                    raise RuntimeError
+                    if not query_glycan:
+                        try:
+                            query_glycan = cp.toGlycan(seq)
+                        except GlycanParseError:
+                            pass
+                    if not query_glycan:
+                        try:
+                           query_glycan = ip.toGlycan(seq)
+                        except GlycanParseError:
+                           pass
+                    if not query_glycan:
+                        try:
+                            query_glycan = ip1.toGlycan(seq)
+                        except GlycanParseError:
+                            pass
+                    if not query_glycan:
+                        raise GlycanParseError
             except:
                 error.append("Unable to parse your sequence")
-
 
             if len(error) == 0:
                 try:
