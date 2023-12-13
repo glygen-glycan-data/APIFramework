@@ -21,6 +21,7 @@ from APIFramework import APIFramework, queue
 import pygly.GlycanImage
 import pygly.GlycanResource
 import pygly.GlycanFormatter
+import pygly.CompositionFormatter
 import pygly.GlycanFormatterExceptions
 import pygly.GlycanBuilderSVGParser
 import pygly.alignment
@@ -148,7 +149,7 @@ class Glymage(APIFramework):
 
             list_id = task_detail["id"]
             acc = task_detail["acc"]
-            seq = task_detail["seq"]
+            seq = task_detail["seq"].encode('utf8')
             scale = task_detail["scale"]
             notation = task_detail["notation"]
             display = task_detail["display"]
@@ -190,6 +191,28 @@ class Glymage(APIFramework):
 
             else:
                 seq_hashs.append(self.str2hash(seq))
+                if not (seq.startswith('RES') or seq.startswith('WURCS')):
+                    newseq = None
+                    if not newseq:
+                        try:
+                            gly = self.cp.toGlycan(seq)
+                            newseq = gly.glycoct()
+                        except pygly.GlycanFormatter.GlycanParseError:
+                            pass
+                    if not newseq:
+                        try:
+                            gly = self.ip.toGlycan(seq)
+                            newseq = gly.glycoct()
+                        except pygly.GlycanFormatter.GlycanParseError:
+                            pass
+                    if not newseq:
+                        try:
+                            gly = self.ip1.toGlycan(seq)
+                            newseq = gly.glycoct()
+                        except pygly.GlycanFormatter.GlycanParseError:
+                            pass
+                    if newseq:
+                        seq = newseq
 
             str_image = ""
             image_md5_hash = ""
@@ -519,7 +542,9 @@ class Glymage(APIFramework):
         else:
             return self.error_image(), 404
 
-
+    ip = pygly.GlycanFormatter.IUPACLinearFormat()
+    ip1 = pygly.GlycanFormatter.IUPACParserExtended1()
+    cp = pygly.CompositionFormatter.CompositionFormat()
     def load_additional_route(self, app):
         # TODO
         self.data_folder = self._static_folder
@@ -561,11 +586,34 @@ class Glymage(APIFramework):
                 if v:
                     p[k] = str(v)
 
-            # print >>sys.stderr, p
+            print >>sys.stderr, p
             query, query_type = "", ""
             if "seq" in p:
                 query = p["seq"].strip()
                 query_type = "sequence"
+                if not (query.startswith('RES') or query.startswith('WURCS')):
+                    newquery = None
+                    if not newquery:
+                        try:
+                            gly = self.cp.toGlycan(query)
+                            newquery = gly.glycoct()
+                        except pygly.GlycanFormatter.GlycanParseError:
+                            pass
+                    if not newquery:
+                        try:
+                            gly = self.ip.toGlycan(query)
+                            newquery = gly.glycoct()
+                        except pygly.GlycanFormatter.GlycanParseError:
+                            pass
+                    if not newquery:
+                        try:
+                            gly = self.ip1.toGlycan(query)
+                            newquery = gly.glycoct()
+                        except pygly.GlycanFormatter.GlycanParseError:
+                            pass
+                    if not newquery:
+                        raise RuntimeError
+                    query = newquery
 
             if "acc" in p:
                 query = p["acc"].strip()
