@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import re
+import traceback
 from collections import defaultdict
 import multiprocessing
 from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
@@ -10,7 +11,8 @@ from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 import pygly.alignment
 from pygly.GlycanResource.GlyTouCan import GlyTouCanNoCache, GlyTouCan
 from pygly.GlycanResource.GlyGen import GlyGen
-from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat
+from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat, IUPACLinearFormat, IUPACParserExtended1, GlycanParseError
+from pygly.CompositionFormatter import CompositionFormat
 
 def round2str(n):
     return str(round(n, 2))
@@ -39,6 +41,9 @@ class GlyLookup(APIFrameworkWithFrontEnd):
 
         gp = GlycoCTFormat()
         wp = WURCS20Format()
+        cp = CompositionFormat()
+        ip = IUPACLinearFormat()
+        ip1 = IUPACParserExtended1()
 
         gie = pygly.alignment.GlycanEqual()
 
@@ -115,8 +120,24 @@ class GlyLookup(APIFrameworkWithFrontEnd):
                     elif seq.startswith("WURCS"):
                         query_glycan = wp.toGlycan(seq)
                     else:
-                        error.append("Unable to parse")
-                except:
+                        if not query_glycan:
+                            try:
+                                query_glycan = cp.toGlycan(seq)
+                            except GlycanParseError:
+                                pass
+                        if not query_glycan:
+                            try:
+                                query_glycan = ip.toGlycan(seq)
+                            except GlycanParseError:
+                                pass
+                        if not query_glycan:
+                            try:
+                                query_glycan = ip1.toGlycan(seq)
+                            except GlycanParseError:
+                                pass
+                        if not query_glycan:
+                            raise GlycanParseError
+                except GlycanParseError:
                     error.append("Unable to parse")
 
                 if len(error) != 0:
