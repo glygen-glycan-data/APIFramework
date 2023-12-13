@@ -5,12 +5,14 @@ import time
 import json
 import urllib
 import multiprocessing
+import traceback
 from APIFramework import APIFrameworkWithFrontEnd
 
 import pygly.alignment
 import pygly.GNOme
 import pygly.GlycanResource.GlyTouCan
-from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat
+from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat, IUPACLinearFormat, IUPACParserExtended1, GlycanParseError
+from pygly.CompositionFormatter import CompositionFormat
 
 def round2str(n):
     return str(round(n, 2))
@@ -47,6 +49,9 @@ class Subsumption(APIFrameworkWithFrontEnd):
 
         gp = GlycoCTFormat()
         wp = WURCS20Format()
+        ip = IUPACLinearFormat()
+        ip1 = IUPACParserExtended1()
+        cp = CompositionFormat()
 
         gie = pygly.alignment.GlycanEqual()
         gsc = pygly.alignment.GlycanSubsumption()
@@ -98,9 +103,28 @@ class Subsumption(APIFrameworkWithFrontEnd):
                     elif "WURCS" in seq:
                         query_glycan = wp.toGlycan(seq)
                     else:
-                        raise RuntimeError
+                        query_glycan = None
+                        seq = seq.encode('utf8')
+                        if not query_glycan:
+                            try:
+                                query_glycan = cp.toGlycan(seq)
+                            except GlycanParseError:
+                                pass
+                        if not query_glycan:
+                            try:
+                                query_glycan = ip.toGlycan(seq)
+                            except GlycanParseError:
+                                pass
+                        if not query_glycan:
+                            try:
+                                query_glycan = ip1.toGlycan(seq)
+                            except GlycanParseError:
+                                pass
+                        if not query_glycan:
+                            raise GlycanParseError
                     query_glycans[name] = query_glycan
                 except:
+                    traceback.print_exc()
                     error.append("Unable to parse %s: %s" % (name, seq))
 
             # Calculating MW
