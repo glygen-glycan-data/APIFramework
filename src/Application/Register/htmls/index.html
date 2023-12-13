@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>{{app_name}}</title>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="/renderer.js"></script>
+    <script src="renderer.js"></script>
     {{google_analytics_html|safe}}
 </head>
 <body style='margin: 0; font-family: "adobe-caslon-pro",Georgia,"Times New Roman",serif; '>
@@ -15,7 +15,8 @@
         <p style="width: 100%; ">
             Query: GlycoCT, WURCS, or IUPAC sequence, or monosaccharide composition.<br/>
             IUPAC Example: <tt>Mana1-6(Mana1-3)Manb1-4GlcNAcb1-4GlcNAcb</tt><br/>
-            Monosaccharide Composition Example: <tt>HexNAc4Hex4Fuc1NeuAc1</tt>
+            IUPAC Example: <tt>Man(a1-6)[Man(a1-3)]Man(b1-4)GlcNAc(b1-4)GlcNAc(b1-</tt><br/>
+            Composition Example: <tt>HexNAc4Hex4Fuc1NeuAc1</tt>
         </p>
         <textarea id="input_seq" rows="17" style="width: 100%; max-width: 100%; height: 100%; display: block; ">RES
 1b:x-dglc-HEX-x:x

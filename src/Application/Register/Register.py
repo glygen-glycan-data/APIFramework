@@ -10,7 +10,7 @@ from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 
 import pygly.alignment
 from pygly.GlycanResource.GlyTouCan import GlyTouCanNoCache, GlyTouCan
-from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat, IUPACLinearFormat, GlycanParseError
+from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat, IUPACLinearFormat, IUPACParserExtended1, GlycanParseError
 from pygly.CompositionFormatter import CompositionFormat
 
 
@@ -40,6 +40,7 @@ class Register(APIFrameworkWithFrontEnd):
         gp = GlycoCTFormat()
         cp = CompositionFormat()
         ip = IUPACLinearFormat()
+        ip1 = IUPACParserExtended1()
 
         self.output(2, "Worker-%s is ready to take job" % (pid))
 
@@ -82,7 +83,14 @@ class Register(APIFrameworkWithFrontEnd):
                         newseq = gp.toStr(gly)
                         result["submitted_sequence"] = newseq
                     except GlycanParseError:
-                        traceback.print_exc()
+                        pass
+                if not newseq:
+                    # see if it parses as IUPAC
+                    try:
+                        gly = ip1.toGlycan(seq)
+                        newseq = gp.toStr(gly)
+                        result["submitted_sequence"] = newseq
+                    except GlycanParseError:
                         pass
                 if newseq:
                     seq = newseq.strip()
