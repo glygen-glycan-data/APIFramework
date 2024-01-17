@@ -188,6 +188,7 @@ var glymagesvg = {
 		    	    svgElement.children[1].insertBefore(newelt,elt);
 		    	}
 		    }
+		    svgElement.children[1].children[1].classList.add("glymagesvg_monomask");
 		    svgElement.classList.add("glymagesvg_glycanimage");
                     if (this.width != null) {
                         svgElement.setAttribute("width", this.width);
