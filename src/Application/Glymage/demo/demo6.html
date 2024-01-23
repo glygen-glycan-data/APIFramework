@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<script src="../js/glymagesvg.js"></script>
+<script>
+function init() {
+    var params = {
+        imageclass:            "glymagesvg_low_opacity",
+        monoclass:             "glymagesvg_high_opacity",
+        substclass:            "glymagesvg_high_opacity",
+        linkclass:             "glymagesvg_high_opacity",
+        linkinfoclass:         "glymagesvg_high_opacity",
+        parentlinkclass:       "glymagesvg_low_opacity",
+        linkinfoclass:         "glymagesvg_high_opacity",
+        parentlinkinfoclass:   "glymagesvg_high_opacity_anomer",
+        highlight_parent_link: "true",
+        imageclass_byannotation: "true"
+    };
+    glymagesvg.init(params);
+}
+</script>
+<body onload="init();">
+<div>
+<h2>Setup, configuration</h2>
+<pre>
+&lt;script src="https://glymage.glyomics.org/js/glymagesvg.js"></script>
+&lt;script>
+function init() {
+    var params = {
+        imageclass:            "glymagesvg_low_opacity",
+        monoclass:             "glymagesvg_high_opacity",
+        substclass:            "glymagesvg_high_opacity",
+        linkclass:             "glymagesvg_high_opacity",
+        linkinfoclass:         "glymagesvg_high_opacity",
+        parentlinkclass:       "glymagesvg_low_opacity",
+        linkinfoclass:         "glymagesvg_high_opacity",
+        parentlinkinfoclass:   "glymagesvg_high_opacity_anomer",
+        highlight_parent_link: "true",
+        imageclass_byannotation: "true"
+    };
+    glymagesvg.init(params);
+}
+&lt;/script>
+&lt;body onload="init();">
+&lt;/body>
+</pre>
+</div>
+<hr>
+
+<div style="overflow:auto;">
+<div align="center" style="display: inline-block; float: right;">
+<div>
+<figure glymagesvg_marker1="" glymagesvg_accession="G01510MQ"></figure>
+</div>
+<div>
+<A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','MotifAlignments.GGM.000016'); return false;">GGM.000016</A>, 
+<A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','MotifAlignments.GGM.000035'); return false;">GGM.000035</A>, 
+<A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','MotifAlignments.GGM.000050'); return false;">GGM.000050</A>.<br>
+<A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','IUPAC.HexNAc'); return false;">HexNAc</A>, 
+<A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','IUPAC.Hex'); return false;">Hex</A>, 
+<A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','IUPAC.Fuc'); return false;">Fuc</A>, 
+<A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','IUPAC.NeuAc'); return false;">NeuAc</A>.<br>
+<A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','Enzyme.B4galnt3'); return false;">B4galnt3</A>, 
+<A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','Enzyme.St6galnac2'); return false;">St6galnac2</A><br>
+<A href="#" onclick="glymagesvg.reset('[glymagesvg_marker1]'); return false;">Reset</A><br>
+</div>
+</div>
+<div style="display: inline-block;">
+<h2>SVG glycan image using GlymageSVG accession attribute,<br>variety of annotation types, explicit onclick highlight,</br>single highlight at a time</h2>
+<pre>
+&lt;div>
+&lt;figure glymagesvg_marker1="" glymagesvg_accession="G01510MQ">&lt;/figure>
+&lt;/div>
+&lt;div>
+&lt;A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','MotifAlignments.GGM.000016'); return false;">GGM.000016&lt;/A>, 
+&lt;A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','MotifAlignments.GGM.000035'); return false;">GGM.000035&lt;/A>, 
+&lt;A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','MotifAlignments.GGM.000050'); return false;">GGM.000050&lt;/A>.&lt;br>
+&lt;A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','IUPAC.HexNAc'); return false;">HexNAc&lt;/A>, 
+&lt;A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','IUPAC.Hex'); return false;">Hex&lt;/A>, 
+&lt;A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','IUPAC.Fuc'); return false;">Fuc&lt;/A>, 
+&lt;A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','IUPAC.NeuAc'); return false;">NeuAc&lt;/A>.&lt;br>
+&lt;A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','Enzyme.B4galnt3'); return false;">B4galnt3&lt;/A>, 
+&lt;A href="#" onclick="glymagesvg.highlight('[glymagesvg_marker1]','Enzyme.St6galnac2'); return false;">St6galnac2&lt;/A>&lt;br>
+&lt;A href="#" onclick="glymagesvg.reset('[glymagesvg_marker1]'); return false;">Reset&lt;/A>&lt;br>
+&lt;/div>
+</pre>
+</div>
+</div>
+<hr>
+
+<div style="overflow:auto;">
+<div align="center" style="display: inline-block; float: right;">
+<div>
+<figure id="glymagesvg1" glymagesvg_accession="G01510MQ"></figure>
+</div>
+<div>
+<A glymagesvg_annotation="MotifAlignments.GGM.000016" glymagesvg_forid="glymagesvg1">GGM.000016</A>, 
+<A glymagesvg_annotation="MotifAlignments.GGM.000035" glymagesvg_forid="glymagesvg1">GGM.000035</A>, 
+<A glymagesvg_annotation="MotifAlignments.GGM.000050" glymagesvg_forid="glymagesvg1">GGM.000050</A>.<br>
+<A glymagesvg_annotation="IUPAC.HexNAc" glymagesvg_forid="glymagesvg1">HexNAc</A>, 
+<A glymagesvg_annotation="IUPAC.Hex" glymagesvg_forid="glymagesvg1">Hex</A>, 
+<A glymagesvg_annotation="IUPAC.Fuc" glymagesvg_forid="glymagesvg1">Fuc</A>, 
+<A glymagesvg_annotation="IUPAC.NeuAc" glymagesvg_forid="glymagesvg1">NeuAc</A>.<br>
+<A glymagesvg_annotation="Enzyme.B4galnt3" glymagesvg_forid="glymagesvg1">B4galnt3</A>, 
+<A glymagesvg_annotation="Enzyme.St6galnac2" glymagesvg_forid="glymagesvg1">St6galnac2</A>.<br>
+</div>
+</div>
+<div style="display: inline-block;">
+<h2>SVG glycan image using GlymageSVG accession attribute,<br>variety of annotation types, explicit onclick highlight,</br>single highlight at a time</h2>
+<pre>
+</pre>
+</div>
+</div>
+
+<hr>
+</body>
+</html>

@@ -1,4 +1,3 @@
-
 function getglymagesvgloc() {
    let scripts = document.getElementsByTagName("script");
    let jsurl = scripts[scripts.length-1].src;
@@ -97,11 +96,13 @@ var glymagesvg = {
     GlymageSVG: function(__element__, __params__) {
 
 	this.initialize = function(params,elt) {
-            this.click_mode = "";
+            this.click_mode = null;
+	    this.click_anncls = null;
             this.clicked = new Set();
 	    this.highlighted = false;
 	    this.remann2remelt = {};
 	    this.remann2class = {};
+	    this.remann2anncls = {};
 	    this.svgid2elt = {};
 	    this.svgid2type = {};
 	    this.remann2monoid = {};
@@ -126,6 +127,7 @@ var glymagesvg = {
 
             this.highlight_parent_link = (elt.getAttribute('glymagesvg_highlight_parent_link') || params.highlight_parent_link) == "true";
             this.highlight_related_monos = (elt.getAttribute('glymagesvg_highlight_related_monos') || params.highlight_related_monos) == "true";
+	    this.imageclass_byannotation = (elt.getAttribute('glymagesvg_imageclass_byannotation') || params.imageclass_byannotation) == "true";
             this.width = elt.getAttribute('glymagesvg_width') || params.width;
             this.height = elt.getAttribute('glymagesvg_height') || params.height;
             this.position = elt.getAttribute('glymagesvg_insertpos') || params.insertpos;
@@ -295,6 +297,24 @@ var glymagesvg = {
                                 }
                             }
                         }
+			if (this.imageclass_byannotation) {
+			    let anncls = this.annotation.split('.')[0].toLowerCase();
+			    let imgcls = 'glymagesvg_glycanimage' + "_" + anncls;
+			    let toremove = [];
+			    for (let cls of this.svgElement.classList) {
+				if (cls.startsWith("glymagesvg_glycanimage")) {
+				    toremove.push(cls);
+				}
+			    }
+			    for (let cls of toremove) {
+				this.svgElement.classList.remove(cls);
+			    }
+			    if (svgids.size > 0) {
+				this.svgElement.classList.add(imgcls);
+			    } else {
+				this.svgElement.classList.add('glymagesvg_glycanimage');
+			    }			    
+			}
 			if (this.imageclass && svgids.size > 0) {
 			    this.svgElement.classList.add(this.imageclass);
 			}
@@ -332,6 +352,18 @@ var glymagesvg = {
 
 	this.clearclass = function() {
 	    this.highlighted = false;
+	    if (this.imageclass_byannotation) {
+		let toremove = [];
+		for (let cls of this.svgElement.classList) {
+		    if (cls.startsWith("glymagesvg_glycanimage")) {
+			toremove.push(cls);
+                    }
+		}
+		for (let cls of toremove) {
+		    this.svgElement.classList.remove(cls);
+		}
+		this.svgElement.classList.add("glymagesvg_glycanimage");
+	    }
 	    if (this.imageclass) {
 		this.svgElement.classList.remove(this.imageclass);
             }
@@ -397,6 +429,7 @@ var glymagesvg = {
 			let remeltindstr = remeltind.toString();
 			this.remann2remelt[remeltindstr] = remelt;
 			this.remann2monoid[remeltindstr] = svgids;
+			this.remann2anncls[remeltindstr] = annotation_dict.toLowerCase();
 			this.remann2class[remeltindstr] = remelt.getAttribute('glymagesvg_textclass');
 			for (let svgid of svgids) {
 			    if (!(svgid in this.monoid2remann)) {
@@ -478,6 +511,7 @@ var glymagesvg = {
 	this.handle_reset_click = function(event) {
 	    this.clicked = new Set();
 	    this.click_mode = null;
+	    this.click_anncls = null;
 	    this.refresh();
 	}
 
@@ -486,6 +520,11 @@ var glymagesvg = {
 		this.clicked = new Set();
 		this.click_mode = "remote";
 	    }
+	    let anncls = this.remann2anncls[remann];
+	    if (this.click_anncls != anncls) {
+		this.clicked = new Set();
+		this.click_anncls = anncls;
+            }
 	    if (this.clicked.has(remann)) {
 	        this.clicked.delete(remann);
 	    } else {
@@ -502,6 +541,7 @@ var glymagesvg = {
 	    if (this.click_mode != "mono") {
 		this.clicked = new Set();
 		this.click_mode = "mono";		
+		this.click_anncls = null;
 	    }
 	    if (this.clicked.has(monoid)) {
 		this.clicked.delete(monoid);
@@ -532,6 +572,7 @@ var glymagesvg = {
 	this.refresh = function() {
 	    // console.log(this.click_mode,this.clicked)
 	    let highlight_monoids = new Set();
+	    let highlight_parent = new Set();
 	    let highlight_remann = new Set();
 	    if (this.click_mode == "remote") {
 		for (let remann of this.clicked) {
@@ -541,8 +582,14 @@ var glymagesvg = {
                         if (this.monoid2relatedmonoid[monoid]) {
                             for (let monoid1 of this.monoid2relatedmonoid[monoid]) {
                                 highlight_monoids.add(monoid1);
+                                highlight_parent.add(monoid1);
                             }
                         }
+		    }
+		}
+		for (let remann of this.clicked) {
+		    for (let monoid of this.remann2monoid[remann]) {
+			highlight_parent.delete(monoid);
 		    }
 		}
 	    } else {
@@ -551,17 +598,35 @@ var glymagesvg = {
                     if (this.monoid2relatedmonoid[monoid]) {
                         for (let monoid1 of this.monoid2relatedmonoid[monoid]) {
                             highlight_monoids.add(monoid1);
+                            highlight_parent.add(monoid1);
                         }
                     }
 		    for (let remann of this.monoid2remann[monoid]) {
 			highlight_remann.add(remann);
+			for (let monoid of this.remann2monoid[remann]) {
+			    highlight_parent.delete(monoid);
+			}
 		    }
 		}
 	    }
-            // console.log(highlight_monoids);
-            // console.log(highlight_remann);
+	    if (this.imageclass_byannotation && this.click_anncls) {
+		let toremove = [];
+		for (let cls of this.svgElement.classList) {
+		    if (cls.startsWith("glymagesvg_glycanimage")) {
+			toremove.push(cls);
+		    }
+		}
+		for (let cls of toremove) {
+		    this.svgElement.classList.remove(cls);
+		}
+		if (highlight_monoids.size > 0) {
+		    this.svgElement.classList.add('glymagesvg_glycanimage'+'_'+this.click_anncls);
+                } else {
+		    this.svgElement.classList.add('glymagesvg_glycanimage');
+                }
+            }
 	    if (this.imageclass) {
-		if (this.clicked.size > 0) {
+		if (highlight_monoids.size > 0) {
 		    this.svgElement.classList.add(this.imageclass);
 		} else {
 		    this.svgElement.classList.remove(this.imageclass);
@@ -571,22 +636,43 @@ var glymagesvg = {
 	    // console.log(highlight_remann);
 	    for (let svgid in this.svgid2elt) {
                 let theclass = this.monoclass;
+		let theclass1 = null;
 		if (this.svgid2type[svgid] == "Substituent") {
                     theclass = this.substclass;
                 }
 		else if (this.svgid2type[svgid] == "Linkage") {
-                    theclass = this.linkclass;
+		    if (!(highlight_parent.has(svgid))) {
+			theclass = this.linkclass;
+			theclass1 = this.parentlinkclass;
+		    } else {
+			theclass = this.parentlinkclass;
+			theclass1 = this.linkclass;
+		    }
 		}
 		else if (this.svgid2type[svgid] == "LinkInfo") {
-                    theclass = this.linkinfoclass;
+		    if (!(highlight_parent.has(svgid))) {
+			theclass = this.linkinfoclass;
+			theclass1 = this.parentlinkinfoclass;
+		    } else {
+			theclass = this.parentlinkinfoclass;
+			theclass1 = this.linkinfoclass;
+                    }
 		}
                 if (theclass) {
 		    if (highlight_monoids.has(svgid)) {
+			if (theclass1) {
+			    this.svgid2elt[svgid].classList.remove(theclass1);
+			}
 		        this.svgid2elt[svgid].classList.add(theclass);
 		    } else {
 		        this.svgid2elt[svgid].classList.remove(theclass);		
 		    }
                 }
+		if (theclass1) {
+		    if (!(highlight_monoids.has(svgid))) {
+			this.svgid2elt[svgid].classList.remove(theclass1);
+		    }
+		}
             }
 	    for (let remann in this.remann2remelt) {
 		if (highlight_remann.has(remann)) {
