@@ -149,7 +149,10 @@ class Glymage(APIFramework):
 
             list_id = task_detail["id"]
             acc = task_detail["acc"]
-            seq = task_detail["seq"].encode('utf8')
+            if task_detail.get("seq"):
+                seq = task_detail["seq"].encode('utf8')
+            else:
+                seq = ""
             scale = task_detail["scale"]
             notation = task_detail["notation"]
             display = task_detail["display"]
@@ -175,7 +178,7 @@ class Glymage(APIFramework):
             seq_hashs = []
 
             wurcs = None
-            if acc != None:
+            if acc:
                 seq_hashs.append(acc)
 
                 if acc in cannonseq:
@@ -189,7 +192,7 @@ class Glymage(APIFramework):
                     seq = wurcs
                     seq_hashs.append(self.str2hash(wurcs))
 
-            else:
+            elif seq:
                 seq_hashs.append(self.str2hash(seq))
                 if not (seq.startswith('RES') or seq.startswith('WURCS')):
                     newseq = None
@@ -213,6 +216,8 @@ class Glymage(APIFramework):
                             pass
                     if newseq:
                         seq = newseq
+            else:
+                error.append("No accession or sequence provided.")
 
             str_image = ""
             image_md5_hash = ""
