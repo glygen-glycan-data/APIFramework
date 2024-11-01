@@ -26,17 +26,17 @@ seqhash_to_imagehash = {}
 
 for seqtype in ("wurcs","glycoct"):
     for dirpath, dirnames, filenames in os.walk("./"+seqtype):
-	for f in filenames:
+        for f in filenames:
             acc,extn = f.rsplit('.',1)
-	    if extn != 'txt':
-		continue
+            if extn != 'txt':
+                continue
             if not re.search(r'^G[0-9]{5}[A-Z]{2}$',acc):
-		continue
+                continue
             # print f,acc,extn
             s = open(os.path.join(dirpath,f)).read()
             if seqtype == "wurcs":
                 acc_to_cannonseq[acc] = s
-            h = s2h(s)
+            h = s2h(s.encode())
             seq_hash_to_acc[h] = acc
             if acc not in acc_to_seq_hash:
                 acc_to_seq_hash[acc] = []
@@ -59,11 +59,11 @@ for dirpath, dirnames, filenames in os.walk("./snfg/"):
             continue
 
         acc,ext = fn.split('.',1)
-        print acc,ext
+        print(acc,ext)
 
         fp = os.path.join(dirpath, fn)
 
-        imgstr = open(fp).read()
+        imgstr = open(fp,'rb').read()
         imgh = s2h(imgstr)
 
 

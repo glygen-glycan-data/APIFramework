@@ -67,9 +67,9 @@ for l in imagetable.read().strip().split("\n"):
         except:
             continue
 
-            print src_abs
-            print dst_abs
-            print
+            print(src_abs)
+            print(dst_abs)
+            print()
 
 
     # print shash, notation, display

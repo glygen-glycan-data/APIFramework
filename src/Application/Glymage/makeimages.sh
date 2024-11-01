@@ -12,7 +12,7 @@ function dockerrun() {
   # docker wait $CID
 }
 
-PYSCR="python2 pygly-scripts"
+PYSCR="python3 pygly-scripts"
 SHSCR="pygly-scripts"
 DUMPSEQ="$PYSCR/dumpgtcseq.py"
 ALLIMG="$SHSCR/allimg.sh"
@@ -52,7 +52,7 @@ dockerrun $JSONMOTIF /work/snfg/compact
 
 CURDIR=`pwd`
 rm -rf image/hash
-( cd work; python2 $CURDIR/image2hash.py ../image/hash )
+( cd work; python3.12 $CURDIR/image2hash.py ../image/hash )
 rm -rf image/snfg
-python2 $CURDIR/link.py
+python3.12 $CURDIR/link.py
 ( cd image; tar czf image.tgz hash snfg error.png error.json imageinfo.tsv shash2acc.tsv cannonseq.tsv )

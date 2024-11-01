@@ -21,7 +21,7 @@ class Converter(APIFrameworkWithFrontEnd):
 
         p["seq"] = p["seq"].strip()
         p["format"] = p["format"].strip()
-        task_str = p["seq"].encode("utf-8") +"_"+ p["format"].encode("utf-8")
+        task_str = p["seq"] +"_"+ p["format"]
         list_id = self.str2hash(task_str)
 
         res["id"] = list_id

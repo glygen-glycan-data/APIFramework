@@ -168,7 +168,7 @@ class MotifMatch(APIFrameworkWithFrontEnd):
             site = worker_para["glycomotif_version"]
         assert site in ["", "dev", "test"]
 
-        gm = pygly.GlycanResource.GlycoMotif()
+        gm = pygly.GlycanResource.GlycoMotif(usecache=False)
         gm.endpt = "https://glycomotif.glyomics.org/glycomotif"+site+"/sparql/query"
 
         wp = WURCS20Format()

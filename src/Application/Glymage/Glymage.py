@@ -583,7 +583,7 @@ class Glymage(APIFramework):
             elif flask.request.method == "POST":
                 para = flask.request.form
             else:
-                raise RuntimeError
+                return self.error_image(), 404
 
             p = {}
             for k in dict(para).keys():
@@ -591,7 +591,6 @@ class Glymage(APIFramework):
                 if v:
                     p[k] = str(v)
 
-            print >>sys.stderr, p
             query, query_type = "", ""
             if "seq" in p:
                 query = p["seq"].strip()
@@ -617,7 +616,7 @@ class Glymage(APIFramework):
                         except pygly.GlycanFormatter.GlycanParseError:
                             pass
                     if not newquery:
-                        raise RuntimeError
+                        return self.error_image(), 404
                     query = newquery
 
             if "acc" in p:
@@ -634,7 +633,7 @@ class Glymage(APIFramework):
                 query_type = "task"
 
             if query == "" or query_type == "":
-                raise RuntimeError
+                return self.error_image(), 404
 
             p["notation"] = p.get("notation","snfg").lower()
             if p["notation"] not in ("snfg",):

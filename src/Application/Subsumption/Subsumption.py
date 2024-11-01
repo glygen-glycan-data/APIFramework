@@ -3,7 +3,7 @@ import os
 import re
 import time
 import json
-import urllib
+import urllib.request
 import multiprocessing
 import traceback
 from APIFramework import APIFrameworkWithFrontEnd
@@ -32,10 +32,10 @@ class Subsumption(APIFrameworkWithFrontEnd):
         res = {}
         if "seq" in p and "seqs" not in p:
             seqs = {'Query': p["seq"]}
-            task_str = json.dumps(seqs).encode("utf-8")
+            task_str = json.dumps(seqs)
             res["seq"] = p["seq"]
         else:
-            task_str = json.dumps(p["seqs"], sort_keys=True).encode("utf-8")
+            task_str = json.dumps(p["seqs"], sort_keys=True)
             res["seqs"] = p["seqs"]
         list_id = self.str2hash(task_str)
         res["id"] = list_id
@@ -104,7 +104,7 @@ class Subsumption(APIFrameworkWithFrontEnd):
                         query_glycan = wp.toGlycan(seq)
                     else:
                         query_glycan = None
-                        seq = seq.encode('utf8')
+                        # seq = seq.encode('utf8')
                         if not query_glycan:
                             try:
                                 query_glycan = cp.toGlycan(seq)
@@ -295,7 +295,7 @@ class Subsumption(APIFrameworkWithFrontEnd):
 
         mass_lut = {}
         header = True
-        for line in urllib.urlopen(
+        for line in urllib.request.urlopen(
                 "https://raw.githubusercontent.com/glygen-glycan-data/GNOme/master/data/mass_lookup_2decimal"):
             l = line.strip()
             if header:
@@ -332,7 +332,7 @@ class Subsumption(APIFrameworkWithFrontEnd):
 
                 for gacc in gnome.descendants(acc):
                     if gacc not in all_wurcs:
-                        print gacc, "wurcs issue!"
+                        print(gacc, "wurcs issue!")
                         continue
 
                     lvl = gnome.level(gacc)

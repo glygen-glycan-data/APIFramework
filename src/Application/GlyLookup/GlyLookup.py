@@ -24,7 +24,7 @@ class GlyLookup(APIFrameworkWithFrontEnd):
         res = {}
 
         p["seq"] = p["seq"].strip()
-        task_str = p["seq"].encode("utf-8")
+        task_str = p["seq"]
         list_id = self.str2hash(task_str)
 
         res["id"] = list_id

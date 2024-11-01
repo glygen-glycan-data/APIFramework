@@ -20,7 +20,7 @@ class Register(APIFrameworkWithFrontEnd):
         res = {}
 
         p["seq"] = p["seq"].strip()
-        task_str = p["seq"].encode("utf-8") + "_" + str(int(time.time()/600))
+        task_str = p["seq"] + "_" + str(int(time.time()/600))
         task_id = self.str2hash(task_str)
 
         res["id"] = task_id
@@ -107,10 +107,10 @@ class Register(APIFrameworkWithFrontEnd):
                     if hsh and re.search(r'^[0-9a-f]{64}$',hsh):
                         result["status"] = "Submitted"
                         result["seqhash"] = hsh
-		    else:
+                    else:
                         result["status"] = "Error"
                         error.append("Submission failed.")
-		        if hsh:
+                        if hsh:
                             error.append(hsh)
 
                 elif not acc:
@@ -119,7 +119,7 @@ class Register(APIFrameworkWithFrontEnd):
                         result["status"] = "Error"
                         result["seqhash"] = glytoucan_seq_hash
                         error.append(e)
-		    else:
+                    else:
                         result["status"] = "Processing"
                         result["seqhash"] = glytoucan_seq_hash
         

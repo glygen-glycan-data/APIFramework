@@ -12,7 +12,7 @@ import flask
 import werkzeug
 import atexit
 import hashlib
-import urllib2
+import urllib.request
 import random
 import string
 import datetime
@@ -191,7 +191,7 @@ class APIFramework(object):
         return self._google_analytics_tag_id
 
     def set_google_analytics_tag_id(self, tag):
-        assert type(tag) in [str, unicode]
+        assert type(tag) == str
         self._google_analytics_tag_id = tag
 
     def input_file_folder(self):
@@ -293,7 +293,7 @@ class APIFramework(object):
     def parse_config(self, config_file_name):
 
         config = configparser.ConfigParser()
-	if hasattr(config,"read_file"):
+        if hasattr(config,"read_file"):
             config.read_file(open(config_file_name))
         else:
             config.readfp(open(config_file_name))
@@ -465,7 +465,7 @@ class APIFramework(object):
 
     @staticmethod
     def str2hash(s):
-        return hashlib.md5(s).hexdigest()
+        return hashlib.md5(s.encode('utf8')).hexdigest()
 
     def submit(self):
         if flask.request.method in ['GET', 'POST']:
@@ -738,14 +738,14 @@ class APIFramework(object):
     # FLASK helper functions
     def form_task(self, params):
         task = {}
-	task_str = ""
-	for par in self.task_params:
+        task_str = ""
+        for par in self.task_params:
             if par in params:
-	        task[par] = params[par].strip()
+                task[par] = params[par].strip()
             elif self.task_params[par] != None:
                 task[par] = self.task_params[par].strip()
             task_str += "_" + task[par]
-        task["id"] = self.str2hash(task_str.encode("utf-8"))
+        task["id"] = self.str2hash(task_str)
         return task
 
     # @staticmethod
@@ -981,7 +981,7 @@ class APIFramework(object):
     def get_queue_length(self):
         url = "http://%s:%s/queue_length" % (self.host(), self.port())
 
-        req = urllib2.urlopen(url)
+        req = urllib.request.urlopen(url)
         x = req.read()
 
         return int(x)
@@ -1046,7 +1046,7 @@ class APIFramework(object):
 
 
     def terminate_all(self):
-        for i, p in self._deamon_process_pool.items():
+        for i, p in list(self._deamon_process_pool.items()):
             self.output(0, "Worker-%s is terminated" % (i))
             p.terminate()
             del self._deamon_process_pool[i]
