@@ -33,7 +33,7 @@ class Subsumption(APIFrameworkWithFrontEnd):
         if "seq" in p and "seqs" not in p:
             seqs = {'Query': p["seq"]}
             task_str = json.dumps(seqs)
-            res["seq"] = p["seq"]
+            res["seqs"] = seqs
         else:
             task_str = json.dumps(p["seqs"], sort_keys=True)
             res["seqs"] = p["seqs"]
@@ -181,6 +181,7 @@ class Subsumption(APIFrameworkWithFrontEnd):
                         if acc == acc2:
                             continue
 
+                        # print(acc2,"<?=",acc)
                         if gsc.leq(glycans[acc2], glycans[acc]):
                             relationship[acc].append(acc2)
 
