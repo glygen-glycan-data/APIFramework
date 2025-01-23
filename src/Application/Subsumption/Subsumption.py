@@ -15,7 +15,7 @@ from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat, IUPACLinearForma
 from pygly.CompositionFormatter import CompositionFormat
 
 def round2str(n):
-    return str(round(n, 2))
+    return "%.2f"%(n,)
 
 
 class GNOmeLevelComputing(pygly.GNOme.SubsumptionGraph):
@@ -143,7 +143,7 @@ class Subsumption(APIFrameworkWithFrontEnd):
 
             if len(error) == 0:
                 if query_glycan_mass not in glycan_by_mass:
-                    error.append("The mass is not supported")
+                    error.append("The mass %s is not supported"%(query_glycan_mass,))
 
 
             # Try to find GlyTouCan accession for submitted query sequences
