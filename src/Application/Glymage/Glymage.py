@@ -9,11 +9,10 @@ import copy
 import flask
 import base64
 import requests
-import urllib, urllib2
+import urllib
 import hashlib
 import multiprocessing
 import traceback
-import StringIO
 from collections import defaultdict
 from APIFramework import APIFramework, queue
 
@@ -150,7 +149,7 @@ class Glymage(APIFramework):
             list_id = task_detail["id"]
             acc = task_detail["acc"]
             if task_detail.get("seq"):
-                seq = task_detail["seq"].encode('utf8')
+                seq = task_detail["seq"]
             else:
                 seq = ""
             scale = task_detail["scale"]
@@ -228,9 +227,9 @@ class Glymage(APIFramework):
                 ge.writeImage(seq, tmp_image_file_name)
 
                 try:
-                    str_image = open(tmp_image_file_name).read()
+                    str_image = open(tmp_image_file_name,'rb').read()
 
-                    image_md5_hash = self.str2hash(str_image)
+                    image_md5_hash = self.bytes2hash(str_image)
                     img_actual_path = self.data_folder + "/hash/%s.%s" % (image_md5_hash, image_format)
                     os.rename(tmp_image_file_name, img_actual_path)
                 except:
@@ -507,7 +506,7 @@ class Glymage(APIFramework):
             retrieveurl = imagegenerationwebservicebaseurl + "retrieve?task_id="
             retrieveurl += task_id
 
-            response = urllib2.urlopen(retrieveurl)
+            response = urllib.request.urlopen(retrieveurl)
             response_obj = json.loads(response.read())[0]
 
             if response_obj["finished"]:
