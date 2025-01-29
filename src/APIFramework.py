@@ -464,6 +464,10 @@ class APIFramework(object):
         return ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(l))
 
     @staticmethod
+    def bytes2hash(s):
+        return hashlib.md5(s).hexdigest()
+
+    @staticmethod
     def str2hash(s):
         return hashlib.md5(s.encode('utf8')).hexdigest()
 
@@ -988,7 +992,7 @@ class APIFramework(object):
 
     def deamon_process_pool_update(self):
 
-        for pid, proc in self._deamon_process_pool.items():
+        for pid, proc in list(self._deamon_process_pool.items()):
 
             if not proc.is_alive():
                 self.output(0, "Worker-%s was terminated for some reasons... Please check the log for more info" % (pid))
