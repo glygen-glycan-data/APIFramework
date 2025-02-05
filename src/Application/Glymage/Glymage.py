@@ -224,6 +224,7 @@ class Glymage(APIFramework):
             if len(error) == 0:
 
                 tmp_image_file_name = "./%s/%s.%s" % (tmp_image_folder, list_id, image_format)
+                print("Sequence:",seq,file=sys.stderr)
                 ge.writeImage(seq, tmp_image_file_name)
 
                 try:
