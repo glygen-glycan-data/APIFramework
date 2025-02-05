@@ -197,8 +197,8 @@ class Glymage(APIFramework):
                     newseq = None
                     if not newseq:
                         try:
-                            gly = self.cp.toGlycan(seq)
-                            newseq = gly.glycoct()
+                            newseq = self.cp.toSequence(seq)
+                            ge.reducing_end(True)
                         except pygly.GlycanFormatter.GlycanParseError:
                             pass
                     if not newseq:
@@ -598,8 +598,7 @@ class Glymage(APIFramework):
                     newquery = None
                     if not newquery:
                         try:
-                            gly = self.cp.toGlycan(query)
-                            newquery = gly.glycoct()
+                            newquery = self.cp.toSequence(query)
                         except pygly.GlycanFormatter.GlycanParseError:
                             pass
                     if not newquery:
