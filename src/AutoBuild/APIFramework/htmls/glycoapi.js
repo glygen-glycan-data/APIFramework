@@ -7,6 +7,9 @@ function APIFrameworkJS(url) {
     if (this.ServicePublicURL == undefined){
         this.ServicePublicURL = "";
     }
+    if (!this.ServiceBaseURL && this.ServicePublicURL) {
+        this.ServiceBaseURL = this.ServicePublicURL;
+    }
 
     this.UserEmail = "";
 
@@ -194,13 +197,19 @@ function Glymage (url) {
             throw new Error("Please provide glycan sequence or accession")
         }
 
-    }
-
+    };
 
     this.getImageURL = async function (para) {
         let tid = await this.submit(para);
-        return this.ServicePublicURL + "getimage?task_id=" + tid
-    }
+        return this.ServicePublicURL + "getimage?task_id=" + tid;
+    };
+
+    this.setImageURL = async function(imgid,params) {
+        this.getImageURL(params).then((url) => {
+           let imgelt = document.getElementById(imgid);
+           imgelt.src = url;
+        });
+    };
 }
 
 function Register (url) {
