@@ -25,16 +25,9 @@ function renderResultMore(){
         result_container_status.innerHTML += "<p style='font-size: 25px; color: red; '>Error: "+tmp+"</p>";
     }
 
+    result_container_additional.innerHTML += "<br><img id='inputseqimg'>";
+    glymage.setOnDemandImageURL('inputseqimg',{'seq': retrieve_result.task.seq, 'image_format': 'svg'});
 
-    let imgurl = "https://glymage.glyomics.org/getimage?";
-    let s = retrieve_result.task.seq;
-    if ( !s.startsWith("WURCS") ){
-        s = encodeURIComponent(s);
-    }
-    imgurl += "notation=snfg&display=extended&format=png&seq=" + s;
-
-
-    result_container_additional.innerHTML += "<br><img src='"+imgurl+"'>";
     result_container_additional.innerHTML += "<br><div style='text-align: center;'><div style='display: inline-block; text-align: left;'>"+retrieve_result.result.replaceAll("\n", "<br>")+"</div></div>"
 
     if (result.length == 0){
