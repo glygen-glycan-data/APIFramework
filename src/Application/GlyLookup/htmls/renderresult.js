@@ -24,22 +24,14 @@ function renderResultMore(){
         }
     }
 
-    let imgurl = "https://glymage.glyomics.org/";
-    let s = retrieve_result.task.seq;
-    if (error.length == 0 && result.length == 0 && (s.startsWith("WURCS") || s.startsWith("RES"))) {
-        if ( !s.startsWith("WURCS") ){
-            s = encodeURIComponent(s);
-        }
-        imgurl += "getimage?" + "notation=snfg&display=extended&format=png&seq=" + s;
-        result_container_additional.innerHTML += "<br><img src='"+imgurl+"'>";
-    } else if (result.length > 0) {
-        imgurl += "image/snfg/extended/"+ result[0].accession +".png";
-        result_container_additional.innerHTML += "<br><img src='"+imgurl+"'>";
-    }
-
     if (result.length > 0) {
-        result_container_additional.innerHTML += "<br><a href='https://glytoucan.org/Structures/Glycans/"+result[0].accession+"'>"+result[0].accession+"</a>";
+        let glytoucanurl = "https://glytoucan.org/Structures/Glycans/"+result[0].accession
+        result_container_additional.innerHTML += "<br><a href='"+glytoucanurl+"'><img id='inputseqimg'></a>"
+        result_container_additional.innerHTML += "<br><a href='"+glytoucanurl+"'>"+result[0].accession+"</a>";
+        glymage.setPrecomputedImageURL('inputseqimg',{'acc': result[0].accession, 'image_format': 'svg'})
+    } else {
+        result_container_additional.innerHTML += "<br><img id='inputseqimg'>";
+        glymage.setOnDemandImageURL('inputseqimg',{'seq': retrieve_result.task.seq, 'image_format': 'svg'})
     }
-
 
 }
