@@ -1885,6 +1885,7 @@ GGM	001037	G98414DB	N-Glycan biantennary	WURCS=2.0/4,7,6/[u2122h_2*NCC/3=O][a212
 GGM	001038	G59096WE	N-Glycan triantennary	WURCS=2.0/4,8,7/[u2122h_2*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5]/1-2-3-4-2-2-4-2/a4-b1_b4-c1_c?-d1_c?-g1_d?-e1_d?-f1_g?-h1
 GGM	001039	G33451SJ	N-Glycan tetraantennary	WURCS=2.0/4,9,8/[u2122h_2*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5]/1-2-3-4-2-2-4-2-2/a4-b1_b4-c1_c?-d1_c?-g1_d?-e1_d?-f1_g?-h1_g?-i1
 GGM	001040	G66213AR	O-GlcNAc Core EGF Type	WURCS=2.0/2,2,1/[u2122h_2*NCC/3=O][a2112h-1b_1-5]/1-2/a4-b1
+GGM	001041	G59883YF	N-glycan core, truncated	WURCS=2.0/4,4,3/[u2122h_2*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5]/1-2-3-4/a4-b1_b4-c1_d1-c3|c6
 GGM	001101	G00012MO	Glycosphingolipid Isoglobo series	WURCS=2.0/4,4,3/[u2122h][a2112h-1b_1-5][a2112h-1a_1-5][a2112h-1b_1-5_2*NCC/3=O]/1-2-3-4/a4-b1_b3-c1_c3-d1
 GGM	001102	G00013MO	Glycosphingolipid Muco series	WURCS=2.0/2,4,3/[u2122h][a2112h-1b_1-5]/1-2-2-2/a4-b1_b4-c1_c3-d1
 GGM	001103	G00014MO	Glycosphingolipid Arthro series	WURCS=2.0/4,4,3/[u2122h][a1122h-1b_1-5][a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5_2*NCC/3=O]/1-2-3-4/a4-b1_b3-c1_c4-d1
@@ -2355,6 +2356,7 @@ GM	G59168YE	G59168YE		WURCS=2.0/3,3,2/[a2122h-1x_1-5_2*NCC/3=O][a2112h-1b_1-5][A
 GM	G59508TM	G59508TM		WURCS=2.0/4,4,3/[a2122h-1b_1-5][a2112h-1b_1-5_3*OSO/3=O/3=O][a2112h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5]/1-2-3-4/a4-b1_b4-c1_c3-d1
 GM	G59736KH	G59736KH		WURCS=2.0/4,4,3/[a2122h-1x_1-5][a2112h-1b_1-5][a2112h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5_3*OSO/3=O/3=O]/1-2-3-4/a4-b1_b4-c1_c3-d1
 GM	G59819BB	G59819BB		WURCS=2.0/4,9,8/[a2122h-1x_1-5_2*NCC/3=O][a1221m-1a_1-5][a2112h-1b_1-5][a2122h-1b_1-5_2*NCC/3=O]/1-2-3-4-2-3-4-2-3/a3-b1_a4-c1_c4-d1_d3-e1_d4-f1_f4-g1_g3-h1_g4-i1
+GM	G59883YF	G59883YF		WURCS=2.0/4,4,3/[u2122h_2*NCC/3=O][a2122h-1b_1-5_2*NCC/3=O][a1122h-1b_1-5][a1122h-1a_1-5]/1-2-3-4/a4-b1_b4-c1_d1-c3|c6
 GM	G60011XD	G60011XD		WURCS=2.0/1,1,0/[a2112h-1b_1-5_6*OSO/3=O/3=O]/1/
 GM	G60395SO	G60395SO		WURCS=2.0/4,5,4/[a2122h-1x_1-5_2*NCC/3=O][a2112h-1b_1-5][a1221m-1a_1-5][a2112h-1a_1-5]/1-2-3-4-3/a3-b1_a4-e1_b2-c1_b3-d1
 GM	G60606QD	G60606QD		WURCS=2.0/4,4,3/[a1122h-1x_1-5][a2122h-1b_1-5_2*NCC/3=O][a2112h-1b_1-5][a2122A-1b_1-5_3*OSO/3=O/3=O]/1-2-3-4/a2-b1_b4-c1_c3-d1
