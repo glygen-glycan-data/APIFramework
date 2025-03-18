@@ -1,7 +1,13 @@
+
 function getglymagesvgloc() {
    let scripts = document.getElementsByTagName("script");
-   let jsurl = scripts[scripts.length-1].src;
-   return jsurl.substring(0,jsurl.length-'/js/glymagesvg.js'.length)
+   for (var scr of scripts) {
+       if (scr.src.endsWith('/js/glymagesvg.js')) {
+           console.log(scr.src.substring(0,scr.src.length-'/js/glymagesvg.js'.length))
+           return scr.src.substring(0,scr.src.length-'/js/glymagesvg.js'.length)
+       }
+   }
+   return "https://glymage.glyomics.org"
 }
 
 var glymagesvg = {
