@@ -201,10 +201,17 @@ function Glymage (url) {
 
     this.getImageURL = async function (para) {
         let tid = await this.submit(para);
-        return this.ServicePublicURL + "getimage?task_id=" + tid;
+        return this.ServiceBaseURL + "getimage?task_id=" + tid;
     };
 
-    this.setImageURL = async function(imgid,params) {
+    this.setPrecomputedImageURL = async function(imgid,params) {
+        let imgdis = params.display || "extended";
+        let imgfmt = params.image_format || "png";
+        let imgelt = document.getElementById(imgid);
+        imgelt.src = this.ServiceBaseURL + 'image/snfg/' + imgdis + '/' + params.acc + "." + imgfmt;
+    };
+
+    this.setOnDemandImageURL = async function(imgid,params) {
         this.getImageURL(params).then((url) => {
            let imgelt = document.getElementById(imgid);
            imgelt.src = url;
