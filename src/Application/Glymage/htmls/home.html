@@ -223,13 +223,7 @@ LIN<br>
 
 
         document.getElementById("result").innerHTML = "Alignment Calculation Time: " + runtime.toFixed(5);
-
-        var original_task = d["task"];
-        var result_hash = d["result"];
-
-
-        var base_image_static_url = "./image/hash/"
-        var the_image_url = base_image_static_url + result_hash + "." + d.task.image_format;
+        var the_image_url = d["result"];
 
         document.getElementById("result").innerHTML += "<br><a href='"+the_image_url+"' target=\"_blank\">Open me in new tab</a><br>"
 
