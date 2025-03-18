@@ -1,6 +1,4 @@
 
-
-
 function renderResultMore(){
     show("result_container");
 
@@ -37,18 +35,8 @@ function renderResultMore(){
         result_container_status.innerHTML += "<p style='font-size: 25px;'>No " + align_text + " alignments found.</p>";
     }
 
-
-
-
-    let imgurl = "https://glymage.glyomics.org/getimage?";
-    let s = task.seq;
-    if ( !s.startsWith("WURCS") ){
-        s = encodeURIComponent(s);
-    }
-    imgurl += "notation=snfg&display=extended&format=png&seq=" + s;
-
-
-    result_container_additional.innerHTML += "<br><img src='"+imgurl+"'><p>Query</p>";
+    result_container_additional.innerHTML += "<br><img id='inputseqimg'><p>Query</p>";
+    glymage.setImageURL("inputseqimg",{'seq': task.seq, 'image_format': 'svg'});
 
     if (result[align].length == 0){
         return
@@ -59,7 +47,7 @@ function renderResultMore(){
             "<tr style='height: 28px; background-color: grey'><td>Results</td></tr>";
 
 
-    for (let i in result[align]){
+    for (let i in result[align].slice(0,50)){
         let lightstr = 'light';
         let r = result[align][i];
 
@@ -71,14 +59,16 @@ function renderResultMore(){
         if (r[1]){
             strictstr = " (strict)"
         }
+        
+        let canonids = r[2].join(",") + "," + r[3].join(",");
 
         sub_table += "" +
-            "<tr style='background-color: "+lightstr+"grey'><td><img src='https://glymage.glyomics.org/image/snfg/extended/"+r[0]+".png' style='max-width: 100%; max-height: 150px;'><br><a href='https://glytoucan.org/Structures/Glycans/"+r[0]+"'>"+ r[0] +"</a> "+strictstr+"</td></tr>";
+            "<tr style='background-color: "+lightstr+"grey'><td><figure glymagesvg_accession='"+r[0]+"' glymagesvg_annotation='CanonicalResidueIDs." + canonids + "' ></figure><br><a href='https://glytoucan.org/Structures/Glycans/"+r[0]+"'>"+ r[0] +"</a> "+strictstr+"</td></tr>";
 
     }
 
     sub_table += "</table>";
     result_container_additional.innerHTML += sub_table + "<br>";
-
+    glymagesvg_init();
 
 }
