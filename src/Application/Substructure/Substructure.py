@@ -6,7 +6,7 @@ from collections import defaultdict
 from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 
 import pygly.alignment
-from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat
+from pygly.GlycanMultiParser import GlycanMultiParser, GlycanParseError
 
 import pygly.GlycanResource.GlyGen
 import pygly.GlycanResource.GlyTouCan
@@ -26,9 +26,7 @@ class Substructure(APIFrameworkWithFrontEnd):
         structure_list_file_path = self.autopath(params[glycan_list])
         max_motif_size = int(params["max_motif_size"])
 
-
-        gp = GlycoCTFormat()
-        wp = WURCS20Format()
+        gp = GlycanMultiParser()
 
         nodes_cache = pygly.alignment.ConnectedNodesCache()
 
@@ -44,7 +42,7 @@ class Substructure(APIFrameworkWithFrontEnd):
         glycanmw = defaultdict(dict)
         for line in open(structure_list_file_path):
             acc, s = line.strip().split()
-            g = wp.toGlycan(s)
+            g = gp.toGlycan(s)
             if not g.has_root():
                 continue
             glycans[acc] = g
@@ -79,13 +77,8 @@ class Substructure(APIFrameworkWithFrontEnd):
             calculation_start_time = time.time()
 
             try:
-                if "RES" in seq:
-                    motif = gp.toGlycan(seq)
-                elif "WURCS" in seq:
-                    motif = wp.toGlycan(seq)
-                else:
-                    raise RuntimeError
-            except:
+                motif = gp.toGlycan(seq)
+            except GlycanParseError:
                 error.append("Unable to parse")
 
             glyiter = glycans.items()
@@ -255,7 +248,7 @@ class Substructure(APIFrameworkWithFrontEnd):
         for acc in gg.allglycans():
             glygen_set.add(acc.strip())
 
-        wp = WURCS20Format()
+        gp = GlycanMultiParser()
         gtc = pygly.GlycanResource.GlyTouCanNoCache()
 
         f1 = open(self.autopath("tmp1.txt", newfile=True), "w")
@@ -264,7 +257,7 @@ class Substructure(APIFrameworkWithFrontEnd):
         for acc, f, s in gtc.allseq(format="wurcs"):
 
             try:
-                g = wp.toGlycan(s)
+                g = gp.toGlycan(s)
             except:
                 continue
 

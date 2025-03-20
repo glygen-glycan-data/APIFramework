@@ -36,7 +36,7 @@ function renderResultMore(){
     }
 
     result_container_additional.innerHTML += "<br><img id='inputseqimg'><p>Query</p>";
-    glymage.setOnDemandImageURL("inputseqimg",{'seq': task.seq, 'image_format': 'svg'});
+    glymage.setOnDemandImageURL("#inputseqimg",{'seq': task.seq, 'image_format': 'svg'});
 
     if (result[align].length == 0){
         return

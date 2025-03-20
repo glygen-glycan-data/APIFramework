@@ -1,7 +1,7 @@
 
 function glymagesvg_init() {
     let params = {
-        baseurl:               "https://glymage.glyomics.org/",
+        baseurl:               "{{glymage_base_url}}",
         imageclass:            "glymagesvg_hover_low_opacity",
         monoclass:             "glymagesvg_hover_high_opacity",
         substclass:            "glymagesvg_hover_high_opacity",
@@ -17,13 +17,14 @@ function glymagesvg_init() {
 
 var script1 = document.createElement('script');
 // script1.onload = glymagesvg_init;
-script1.src = "https://glymage.glyomics.org/js/glymagesvg.js";
+script1.src = "{{glymage_base_url}}/js/glymagesvg.js";
 document.head.append(script1);
 
 var glymage;
 
 function glymage_init() {
     glymage = new Glymage();
+    glymage.setServiceURL("{{glymage_base_url}}");
     glymage.setUserEmail("SubstructureFrontEnd@glyomics.org");
 };
 
