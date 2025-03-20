@@ -1,20 +1,21 @@
 
 function getglymagesvgloc() {
    let scripts = document.getElementsByTagName("script");
+   let loc = "https://glymage.glyomics.org";
    for (var scr of scripts) {
        if (scr.src.endsWith('/js/glymagesvg.js')) {
-           console.log(scr.src.substring(0,scr.src.length-'/js/glymagesvg.js'.length))
-           return scr.src.substring(0,scr.src.length-'/js/glymagesvg.js'.length)
+           loc = scr.src.substring(0,scr.src.length-'/js/glymagesvg.js'.length)
+           return loc;
        }
    }
-   return "https://glymage.glyomics.org"
+   return loc;
 }
 
 var glymagesvg = {
 
     params: {
         baseurl: getglymagesvgloc(),
-        cssurl: "css/glymagesvg.css",
+        cssurl: "/css/glymagesvg.css",
         display: "snfg",
         style: "extended",
         clickaction: "multi",
@@ -38,7 +39,7 @@ var glymagesvg = {
             let head = document.getElementsByTagName('head')[0];
             let cssurl = glymagesvg.params.cssurl;
             if (!cssurl.startsWith('http')) {
-                cssurl = glymagesvg.params.baseurl + '/' + cssurl;
+                cssurl = glymagesvg.params.baseurl + cssurl;
             }
             head.innerHTML += '<link rel="stylesheet" href="'+cssurl+'" type="text/css" />';
         }

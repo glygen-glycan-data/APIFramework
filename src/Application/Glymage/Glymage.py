@@ -22,11 +22,9 @@ from APIFramework import APIFramework, queue
 
 import pygly.GlycanImage
 import pygly.GlycanResource
-import pygly.GlycanFormatter
-import pygly.CompositionFormatter
-import pygly.GlycanFormatterExceptions
-import pygly.GlycanBuilderSVGParser
 import pygly.alignment
+
+from pygly.GlycanMultiParser import GlycanMultiParser, GlycanParseError
 
 class Glymage(APIFramework):
 
@@ -112,6 +110,9 @@ class Glymage(APIFramework):
             image_format = p["image_format"].lower()
             if image_format not in ["png", "jpg", "jpeg", "svg"]:
                 raise RuntimeError
+
+        if image_format in ("jpg", "jpeg", "svg"):
+            opaque = True
 
         res["scale"] = scale
         res["notation"] = notation
@@ -221,34 +222,23 @@ class Glymage(APIFramework):
                         cannonseq[acc] = wurcs
 
             elif seq:
+                try:
+                    seq = self.gmp.normalizedSequence(seq)
+                except GlycanParseError:
+                    pass
                 if task_detail["stdopts"]:
                     seq_hashes.append(("stdopts",self.str2hash(seq)))
-                if not (seq.startswith('RES') or seq.startswith('WURCS')):
-                    newseq = None
-                    if not newseq:
-                        try:
-                            newseq = self.cp.toSequence(seq)
-                            ge.reducing_end(True)
-                        except pygly.GlycanFormatter.GlycanParseError:
-                            pass
-                    if not newseq:
-                        try:
-                            gly = self.ip.toGlycan(seq)
-                            newseq = gly.glycoct()
-                        except pygly.GlycanFormatter.GlycanParseError:
-                            pass
-                    if not newseq:
-                        try:
-                            gly = self.ip1.toGlycan(seq)
-                            newseq = gly.glycoct()
-                        except pygly.GlycanFormatter.GlycanParseError:
-                            pass
-                    if newseq:
-                        seq = newseq
             else:
                 error.append("No accession or sequence provided.")
 
             seq_hashes.append(("anyopts",task_detail['optionhash']))
+
+            try:
+                gly = self.gmp.toGlycan(seq)
+                if gly and not gly.has_root():
+                    ge.reducing_end(True)                    
+            except GlycanParseError:
+                pass
                 
             str_image = ""
             image_md5_hash = ""
@@ -444,6 +434,26 @@ class Glymage(APIFramework):
         task_id = ""
         if query_type == "task":
             task_id = query
+
+            task_details = self.result_cache.get(task_id[:32],{})
+           
+            result_path = task_details.get('result')
+            if result_path and os.path.exists(result_path):
+                return flask.send_file(result_path, mimetype=self.mimetype(image_format))
+
+            if task_details.get('submission_detail',{}).get('stdopts',False):
+                subdets = task_details.get('submission_detail',{})
+                locater = None
+                if subdets.get('seq'):
+                    locater = self.str2hash(subdets['seq'])
+                elif subdets.get('acc'):
+                    locater = subdets['acc']
+                image_format = subdets.get('image_format')
+                if locater and image_format:
+                    result_path = os.path.join(self.data_folder, notation, display, locater + "." + image_format)
+                    if os.path.exists(result_path):
+                         return flask.send_file(result_path, mimetype=self.mimetype(image_format))
+
         else:
             # See if the image already exists
             locater = ""
@@ -459,9 +469,10 @@ class Glymage(APIFramework):
             # Nope, submit the task
             task_id = self.image_generation_submit(option)
 
-        time.sleep(1)
+        delay = 0.1
+        time.sleep(delay)
         errors = ["Time out..."]
-        for i in range(10):
+        for i in range(16):
             retrieveurl = imagegenerationwebservicebaseurl + "retrieve?task_id="
             retrieveurl += task_id
 
@@ -480,15 +491,15 @@ class Glymage(APIFramework):
                 result_path = result_path.rsplit('.',1)[0] + "." + image_format
                 break
 
-            time.sleep(2)
+            delay = min(delay*2,2)
+            time.sleep(delay)
 
         if len(errors) == 0 and os.path.exists(result_path):
             return flask.send_file(result_path, mimetype=self.mimetype(image_format))
         return self.error_image(force_error=True)
 
-    ip = pygly.GlycanFormatter.IUPACLinearFormat()
-    ip1 = pygly.GlycanFormatter.IUPACParserExtended1()
-    cp = pygly.CompositionFormatter.CompositionFormat()
+    gmp = GlycanMultiParser()
+
     def load_additional_route(self, app):
         # TODO
         self.data_folder = self._static_folder
@@ -534,29 +545,11 @@ class Glymage(APIFramework):
             query_type = ""
             if "seq" in p:
                 query = p["seq"].strip()
+                try:
+                    query = self.gmp.normalizedSequence(query)
+                except GlycanParseError:
+                    pass
                 query_type = "sequence"
-                if not (query.startswith('RES') or query.startswith('WURCS')):
-                    newquery = None
-                    if not newquery:
-                        try:
-                            newquery = self.cp.toSequence(query)
-                        except pygly.GlycanFormatter.GlycanParseError:
-                            pass
-                    if not newquery:
-                        try:
-                            gly = self.ip.toGlycan(query)
-                            newquery = gly.glycoct()
-                        except pygly.GlycanFormatter.GlycanParseError:
-                            pass
-                    if not newquery:
-                        try:
-                            gly = self.ip1.toGlycan(query)
-                            newquery = gly.glycoct()
-                        except pygly.GlycanFormatter.GlycanParseError:
-                            pass
-                    if not newquery:
-                        return self.error_image(force_error=True)
-                    query = newquery
 
             if "acc" in p:
                 query = p["acc"].strip()
