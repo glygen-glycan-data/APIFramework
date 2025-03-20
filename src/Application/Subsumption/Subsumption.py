@@ -11,8 +11,8 @@ from APIFramework import APIFrameworkWithFrontEnd
 import pygly.alignment
 import pygly.GNOme
 import pygly.GlycanResource.GlyTouCan
-from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat, IUPACLinearFormat, IUPACParserExtended1, GlycanParseError
-from pygly.CompositionFormatter import CompositionFormat
+from pygly.GlycanMultiParser import GlycanMultiParser, GlycanParseError
+from pygly.Glycan import RepeatGlycanError
 
 def round2str(n):
     return "%.2f"%(n,)
@@ -47,11 +47,7 @@ class Subsumption(APIFrameworkWithFrontEnd):
 
         glycan_file_path = self.autopath(params["glycan_file_path"])
 
-        gp = GlycoCTFormat()
-        wp = WURCS20Format()
-        ip = IUPACLinearFormat()
-        ip1 = IUPACParserExtended1()
-        cp = CompositionFormat()
+        gmp = GlycanMultiParser()
 
         gie = pygly.alignment.GlycanEqual()
         gsc = pygly.alignment.GlycanSubsumption()
@@ -98,32 +94,9 @@ class Subsumption(APIFrameworkWithFrontEnd):
             # Parsing sequences
             for name, seq in seqs.items():
                 try:
-                    if "RES" in seq:
-                        query_glycan = gp.toGlycan(seq)
-                    elif "WURCS" in seq:
-                        query_glycan = wp.toGlycan(seq)
-                    else:
-                        query_glycan = None
-                        # seq = seq.encode('utf8')
-                        if not query_glycan:
-                            try:
-                                query_glycan = cp.toGlycan(seq)
-                            except GlycanParseError:
-                                pass
-                        if not query_glycan:
-                            try:
-                                query_glycan = ip.toGlycan(seq)
-                            except GlycanParseError:
-                                pass
-                        if not query_glycan:
-                            try:
-                                query_glycan = ip1.toGlycan(seq)
-                            except GlycanParseError:
-                                pass
-                        if not query_glycan:
-                            raise GlycanParseError
+                    query_glycan = gmp.toGlycan(seq)
                     query_glycans[name] = query_glycan
-                except:
+                except GlycanParseError:
                     traceback.print_exc()
                     error.append("Unable to parse %s: %s" % (name, seq))
 
@@ -132,7 +105,7 @@ class Subsumption(APIFrameworkWithFrontEnd):
                 try:
                     query_glycan_mass = round2str(qg.underivitized_molecular_weight())
                     masses.add(query_glycan_mass)
-                except:
+                except (LookupError, RepeatGlycanError):
                     error.append("Error in calculating mass for " + name)
 
             query_glycan_mass = None
@@ -157,7 +130,7 @@ class Subsumption(APIFrameworkWithFrontEnd):
                 potential_accs = glycan_by_mass[query_glycan_mass]
                 glycans = {}
                 for acc in potential_accs:
-                    glycan = wp.toGlycan(wurcss[acc])
+                    glycan = gmp.toGlycan(wurcss[acc])
                     glycans[acc] = glycan
 
                     for name, qg in query_glycans.items():
@@ -308,12 +281,12 @@ class Subsumption(APIFrameworkWithFrontEnd):
 
         all_wurcs = {}
 
-        wp = WURCS20Format()
+        gmp = GlycanMultiParser()
         gtc = pygly.GlycanResource.GlyTouCanNoCache()
         for acc, f, s in gtc.allseq(format="wurcs"):
             try:
-                wp.toGlycan(s)
-            except:
+                gmp.toGlycan(s)
+            except GlycanParseError:
                 continue
 
             all_wurcs[acc] = s
