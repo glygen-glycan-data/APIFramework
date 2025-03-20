@@ -24,12 +24,12 @@ function renderResultMore(){
       result_container_additional.innerHTML += "<br><A href='" + gtcurl + "'><img id='inputseqimg'></A>";
       result_container_additional.innerHTML += "<br>Status: " + status;
       result_container_additional.innerHTML += "<br>Accession: <A href='" + gtcurl + "'>" + acc + "</A>";
-      glymage.setPrecomputedImageURL('inputseqimg',{"acc": acc, "image_format": "svg"});
+      glymage.setPrecomputedImageURL('#inputseqimg',{"acc": acc, "image_format": "svg"});
     } else {
       let seq = retrieve_result.result.submitted_sequence;
       result_container_additional.innerHTML += "<br><img id='inputseqimg'>";
       result_container_additional.innerHTML += "<br>"+"Status: "+ status;
-      glymage.setOnDemandImageURL('inputseqimg',{"seq": seq, "image_format": "svg"});
+      glymage.setOnDemandImageURL('#inputseqimg',{"seq": seq, "image_format": "svg"});
     }
     result_container_additional.innerHTML += "<p></p>";
 

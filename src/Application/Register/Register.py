@@ -10,8 +10,7 @@ from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 
 import pygly.alignment
 from pygly.GlycanResource.GlyTouCan import GlyTouCanNoCache, GlyTouCan
-from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat, IUPACLinearFormat, IUPACParserExtended1, GlycanParseError
-from pygly.CompositionFormatter import CompositionFormat
+from pygly.GlycanMultiParser import GlycanMultiParser, GlycanParseError
 
 
 class Register(APIFrameworkWithFrontEnd):
@@ -37,10 +36,7 @@ class Register(APIFrameworkWithFrontEnd):
         glytoucan_apikey = params["apikey"].strip()
 
         gtc = GlyTouCan(verbose=True, prefetch=False, user=glytoucan_userid, apikey=glytoucan_apikey)
-        gp = GlycoCTFormat()
-        cp = CompositionFormat()
-        ip = IUPACLinearFormat()
-        ip1 = IUPACParserExtended1()
+        gmp = GlycanMultiParser()
 
         self.output(2, "Worker-%s is ready to take job" % (pid))
 
@@ -62,40 +58,10 @@ class Register(APIFrameworkWithFrontEnd):
             }
 
             inputerror = False
-            if seq.startswith('WURCS'):
-                pass
-            elif seq.startswith('RES'):
-                pass
-            else:
-                newseq = None
-                if not newseq:
-                    # see if it parses as a composition
-                    try:
-                        gly = cp.toGlycan(seq)
-                        newseq = cp.toSequence(seq)
-                        result["submitted_sequence"] = newseq
-                    except GlycanParseError:
-                        pass
-                if not newseq:
-                    # see if it parses as IUPAC
-                    try:
-                        gly = ip.toGlycan(seq)
-                        newseq = gp.toStr(gly)
-                        result["submitted_sequence"] = newseq
-                    except GlycanParseError:
-                        pass
-                if not newseq:
-                    # see if it parses as IUPAC
-                    try:
-                        gly = ip1.toGlycan(seq)
-                        newseq = gp.toStr(gly)
-                        result["submitted_sequence"] = newseq
-                    except GlycanParseError:
-                        pass
-                if newseq:
-                    seq = newseq.strip()
-                else:
-                    inputerror = True
+            try:
+                seq = gmp.normalizedSequence(seq)
+            except GlycanParseError:
+                inputerror = True
 
             if not inputerror:
 
@@ -129,7 +95,7 @@ class Register(APIFrameworkWithFrontEnd):
                     result["accession"] = acc
             else:
                 result["status"] = "Error"
-                error.append("Can't parse supplied composition or IUPAC sequence")
+                error.append("Can't parse supplied sequence")
 
             calculation_end_time = time.time()
             calculation_time_cost = calculation_end_time - calculation_start_time
