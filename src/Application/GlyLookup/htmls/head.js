@@ -3,6 +3,7 @@ var glymage;
 
 function glymage_init() {
     glymage = new Glymage();
+    glymage.setServiceURL("{{glymage_base_url}}");
     glymage.setUserEmail("GlyLookupFrontEnd@glyomics.org");
 };
 

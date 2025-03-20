@@ -11,8 +11,8 @@ from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 import pygly.alignment
 from pygly.GlycanResource.GlyTouCan import GlyTouCanNoCache, GlyTouCan
 from pygly.GlycanResource.GlyGen import GlyGen
-from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat, IUPACLinearFormat, IUPACParserExtended1, GlycanParseError
-from pygly.CompositionFormatter import CompositionFormat
+from pygly.GlycanMultiParser import GlycanMultiParser, GlycanParseError
+from pygly.Glycan import RepeatGlycanError
 
 def round2str(n):
     return str(round(n, 2))
@@ -39,12 +39,7 @@ class GlyLookup(APIFrameworkWithFrontEnd):
 
         glycan_file_path = self.autopath(params["glycan_file_path"])
 
-        gp = GlycoCTFormat()
-        wp = WURCS20Format()
-        cp = CompositionFormat()
-        ip = IUPACLinearFormat()
-        ip1 = IUPACParserExtended1()
-
+        gmp = GlycanMultiParser()
         gie = pygly.alignment.GlycanEqual()
 
         wurcss = {}
@@ -113,48 +108,22 @@ class GlyLookup(APIFrameworkWithFrontEnd):
                     result.append(acc)
 
             if len(result) == 0 and seq != None:
-                query_glycan = None
                 try:
-                    if seq.startswith("RES"):
-                        query_glycan = gp.toGlycan(seq)
-                    elif seq.startswith("WURCS"):
-                        query_glycan = wp.toGlycan(seq)
-                    else:
-                        if not query_glycan:
-                            try:
-                                query_glycan = cp.toGlycan(seq)
-                            except GlycanParseError:
-                                pass
-                        if not query_glycan:
-                            try:
-                                query_glycan = ip.toGlycan(seq)
-                            except GlycanParseError:
-                                pass
-                        if not query_glycan:
-                            try:
-                                query_glycan = ip1.toGlycan(seq)
-                            except GlycanParseError:
-                                pass
-                        if not query_glycan:
-                            raise GlycanParseError
+                    query_glycan = gmp.toGlycan(seq)
                 except GlycanParseError:
                     error.append("Unable to parse")
-
-                if len(error) != 0:
-                    for e in error:
-                        pass
 
                 if len(error) == 0:
                     try:
                         query_glycan_mass = round2str(query_glycan.underivitized_molecular_weight())
-                    except:
+                    except (LookupError,RepeatGlycanError):
                         error.append("Error in calculating mass")
 
                 if len(error) == 0:
                     potential_accs = glycan_by_mass.get(query_glycan_mass,[])
 
                     for acc in sorted(potential_accs):
-                        glycan = wp.toGlycan(wurcss[acc])
+                        glycan = gmp.toGlycan(wurcss[acc])
                         if gie.eq(query_glycan, glycan):
                             result.append(acc)
                             hash2acc[seqh].add(acc)
@@ -168,6 +137,7 @@ class GlyLookup(APIFrameworkWithFrontEnd):
                     r['sequences'].append(dict(seq=seq,hash=seqh,format='GlycoCT',source='UserInput'))
                 elif not wurcsfromgtcacc and seq.startswith('WURCS'):
                     r['sequences'].append(dict(seq=seq,hash=seqh,format='WURCS',source='UserInput'))
+ 
                 result1.append(r)
 
             calculation_end_time = time.time()
@@ -193,7 +163,7 @@ class GlyLookup(APIFrameworkWithFrontEnd):
 
         ggacc = set(GlyGen().allglycans())
         gtc = GlyTouCanNoCache()
-        wp = WURCS20Format()
+        gmp = GlycanMultiParser()
 
         file_path = self.autopath(para["glycan_file_path"])
 
@@ -226,10 +196,10 @@ class GlyLookup(APIFrameworkWithFrontEnd):
                 data[acc][1] = s
 
                 try:
-                    g = wp.toGlycan(s)
+                    g = gmp.toGlycan(s)
                     mass = round2str(g.underivitized_molecular_weight())
                     data[acc][0] = mass
-                except:
+                except (GlycanParseError,LookupError,RepeatGlycanError):
                     continue
 
         f1 = open(self.autopath("tmp.txt", newfile=True), "w")

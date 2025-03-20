@@ -28,10 +28,10 @@ function renderResultMore(){
         let glytoucanurl = "https://glytoucan.org/Structures/Glycans/"+result[0].accession
         result_container_additional.innerHTML += "<br><a href='"+glytoucanurl+"'><img id='inputseqimg'></a>"
         result_container_additional.innerHTML += "<br><a href='"+glytoucanurl+"'>"+result[0].accession+"</a>";
-        glymage.setPrecomputedImageURL('inputseqimg',{'acc': result[0].accession, 'image_format': 'svg'})
+        glymage.setPrecomputedImageURL('#inputseqimg',{'acc': result[0].accession, 'image_format': 'svg'})
     } else {
         result_container_additional.innerHTML += "<br><img id='inputseqimg'>";
-        glymage.setOnDemandImageURL('inputseqimg',{'seq': retrieve_result.task.seq, 'image_format': 'svg'})
+        glymage.setOnDemandImageURL('#inputseqimg',{'seq': retrieve_result.task.seq, 'image_format': 'svg'})
     }
 
 }
