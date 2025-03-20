@@ -8,10 +8,9 @@ from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 
 import pygly.alignment
 from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat
+from pygly.GlycanMultiParser import GlycanMultiParser, GlycanParseError
 
 import pygly.GlycanResource.GlycoMotif
-
-
 
 class MotifMatch(APIFrameworkWithFrontEnd):
 
@@ -39,9 +38,7 @@ class MotifMatch(APIFrameworkWithFrontEnd):
 
         motif_file_path = self.autopath(params["motif_set"])
 
-
-        gp = GlycoCTFormat()
-        wp = WURCS20Format()
+        gmp = GlycanMultiParser()
 
         motif_match_connected_nodes_cache = pygly.alignment.ConnectedNodesCache()
 
@@ -57,7 +54,7 @@ class MotifMatch(APIFrameworkWithFrontEnd):
             # acc, name, s =
             collection, pageacc, acc, name, s = line.strip().split("\t")
 
-            motifs[acc] = wp.toGlycan(s)
+            motifs[acc] = gmp.toGlycan(s)
             GlycoMotifPages.append([collection, pageacc, acc, name])
 
         self.output(2, "Worker-%s is ready to take job" % (pid))
@@ -76,17 +73,10 @@ class MotifMatch(APIFrameworkWithFrontEnd):
             seq = task_detail["seq"]
             selected_collection = task_detail["collection"]
 
-
             try:
-                if "RES" in seq:
-                    glycan = gp.toGlycan(seq)
-                elif "WURCS" in seq:
-                    glycan = wp.toGlycan(seq)
-                else:
-                    raise RuntimeError
-            except:
+                glycan = gmp.toGlycan(seq)
+            except GlycanParseError:
                 error.append("Unable to parse")
-
 
             selected_pages = []
             for page in GlycoMotifPages:
@@ -171,7 +161,7 @@ class MotifMatch(APIFrameworkWithFrontEnd):
         gm = pygly.GlycanResource.GlycoMotif(usecache=False)
         gm.endpt = "https://glycomotif.glyomics.org/glycomotif"+site+"/sparql/query"
 
-        wp = WURCS20Format()
+        gmp = GlycanMultiParser()
 
         q2 = """
         PREFIX glycomotif: <http://glyomics.org/glycomotif#>
@@ -202,6 +192,8 @@ class MotifMatch(APIFrameworkWithFrontEnd):
             res[1] = str(res[1])
             res[2] = str(res[2])
 
+            # print(i)
+
             if res[3] != None:
                 try:
                     res[3] = str(res[3])
@@ -221,12 +213,11 @@ class MotifMatch(APIFrameworkWithFrontEnd):
             l = "\t".join(res)
 
             try:
-                wp.toGlycan(res[4])
+                gmp.toGlycan(res[4])
             except:
                 continue
 
             data_file_handle.write(l+"\n")
-
 
         if os.path.exists(data_file_path):
             os.remove(data_file_path)

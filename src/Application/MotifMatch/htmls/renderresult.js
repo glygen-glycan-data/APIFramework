@@ -13,10 +13,10 @@ function renderResultMore(){
 
 
     if (result.length > 0){
-        result_container_status.innerHTML += "<p style='font-size: 25px;'>Found "+result.length+" structure(s)</p>";
+        result_container_status.innerHTML += "<p style='font-size: 25px;'>Found "+result.length+" motif(s)</p>";
     }
     else {
-        result_container_status.innerHTML += "<p style='font-size: 25px;'>No structure found</p>";
+        result_container_status.innerHTML += "<p style='font-size: 25px;'>No motifs matched</p>";
     }
 
 
@@ -25,8 +25,8 @@ function renderResultMore(){
         result_container_status.innerHTML += "<p style='font-size: 25px; color: red; '>Error: "+tmp+"</p>";
     }
 
-    result_container_additional.innerHTML += "<br><img id='inputseqimg'><p>Query glycan (motif)</p>";
-    glymage.setOnDemandImageURL('inputseqimg',{'seq': retrieve_result.task.seq, 'image_format': 'svg'});
+    result_container_additional.innerHTML += "<br><img id='inputseqimg'><p>Query structure</p>";
+    glymage.setOnDemandImageURL('#inputseqimg',{'seq': retrieve_result.task.seq, 'image_format': 'svg'});
 
     if (result.length == 0){
         return
@@ -51,7 +51,7 @@ function renderResultMore(){
         let pagename = r[0] + "." + r[1]
 
         let at = r[4];
-        if (r[1]){
+        if (r[5]){
             at += " (strict)"
         }
 
@@ -61,7 +61,7 @@ function renderResultMore(){
             "<tr style='background-color: "+lightstr+"grey'>" +
             "<td><a href='https://glytoucan.org/Structures/Glycans/"+r[2]+"'>"+ r[2] +"</a></td>" +
             "<td><a href='https://glycomotif.glyomics.org/glycomotif/"+pagename+"'>"+pagename+"</a></td>" +
-            "<td><img src='https://glymage.glyomics.org/image/snfg/extended/"+r[2]+".png' style='max-width: 100%; max-height: 150px;'></td>" +
+            "<td><img src='{{glymage_base_url}}/image/snfg/extended/"+r[2]+".svg' style='max-width: 100%; max-height: 150px;'></td>" +
             "<td>"+at+"</td>" +
             "</tr>";
         // <a href='https://glytoucan.org/Structures/Glycans/"+r[2]+"'>"+ r[2] +"</a>
@@ -70,6 +70,5 @@ function renderResultMore(){
 
     sub_table += "</table>";
     result_container_additional.innerHTML += sub_table + "<br>";
-
 
 }
