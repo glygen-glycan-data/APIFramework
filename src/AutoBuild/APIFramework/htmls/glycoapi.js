@@ -48,7 +48,7 @@ function APIFrameworkJS(url) {
         if (this.UserEmail == ""){
             throw new Error("Please provide your email")
         }
-        let url = this.ServiceBaseURL + "submit";
+        let url = this.ServiceBaseURL + "/submit";
         let data = {
             "task": JSON.stringify(para),
             "developer_email": this.UserEmail
@@ -66,7 +66,7 @@ function APIFrameworkJS(url) {
 
     this.retrieve = function (tid, timeout) {
 
-        let url = this.ServiceBaseURL + "retrieve";
+        let url = this.ServiceBaseURL + "/retrieve";
 
         if (timeout == undefined) {
             timeout = 5;
@@ -119,7 +119,7 @@ function APIFrameworkJS(url) {
 
 
 function Glylookup (url) {
-    this.ServicePublicURL = "https://glylookup.glyomics.org/";
+    this.ServicePublicURL = "https://glylookup.glyomics.org";
     APIFrameworkJS.call(this, url);
 
     this.parameterCheck = function (para) {
@@ -132,7 +132,7 @@ function Glylookup (url) {
 }
 
 function MotifMatch (url) {
-    this.ServicePublicURL = "https://motifmatch.glyomics.org/";
+    this.ServicePublicURL = "https://motifmatch.glyomics.org";
     APIFrameworkJS.call(this, url);
 
     this.parameterCheck = function (para) {
@@ -145,7 +145,7 @@ function MotifMatch (url) {
 }
 
 function Substructure (url) {
-    this.ServicePublicURL = "https://substructure.glyomics.org/";
+    this.ServicePublicURL = "https://substructure.glyomics.org";
     APIFrameworkJS.call(this, url);
 
     this.parameterCheck = function (para) {
@@ -158,7 +158,7 @@ function Substructure (url) {
 }
 
 function Subsumption (url) {
-    this.ServicePublicURL = "https://subsumption.glyomics.org/";
+    this.ServicePublicURL = "https://subsumption.glyomics.org";
     APIFrameworkJS.call(this, url);
 
     this.parameterCheck = function (para) {
@@ -171,7 +171,7 @@ function Subsumption (url) {
 }
 
 function Converter (url) {
-    this.ServicePublicURL = "https://converter.glyomics.org/";
+    this.ServicePublicURL = "https://converter.glyomics.org";
     APIFrameworkJS.call(this, url);
 
     this.parameterCheck = function (para) {
@@ -188,7 +188,7 @@ function Converter (url) {
 }
 
 function Glymage (url) {
-    this.ServicePublicURL = "https://glymage.glyomics.org/";
+    this.ServicePublicURL = "https://glymage.glyomics.org";
     APIFrameworkJS.call(this, url);
 
     this.parameterCheck = function (para) {
@@ -201,20 +201,24 @@ function Glymage (url) {
 
     this.getImageURL = async function (para) {
         let tid = await this.submit(para);
-        return this.ServiceBaseURL + "getimage?task_id=" + tid;
+        return this.ServiceBaseURL + "/getimage?task_id=" + tid;
     };
 
-    this.setPrecomputedImageURL = async function(imgid,params) {
+    this.setPrecomputedImageURL = async function(selector,params) {
         let imgdis = params.display || "extended";
         let imgfmt = params.image_format || "png";
-        let imgelt = document.getElementById(imgid);
-        imgelt.src = this.ServiceBaseURL + 'image/snfg/' + imgdis + '/' + params.acc + "." + imgfmt;
+        let imgelts = document.querySelectorAll(selector);
+        for (let imgelt of imgelts) {
+            imgelt.src = this.ServiceBaseURL + '/image/snfg/' + imgdis + '/' + params.acc + "." + imgfmt;
+        }
     };
 
-    this.setOnDemandImageURL = async function(imgid,params) {
+    this.setOnDemandImageURL = async function(selector,params) {
         this.getImageURL(params).then((url) => {
-           let imgelt = document.getElementById(imgid);
-           imgelt.src = url;
+           let imgelts = document.querySelectorAll(selector);
+           for (let imgelt of imgelts) {
+               imgelt.src = url;
+           }
         });
     };
 }

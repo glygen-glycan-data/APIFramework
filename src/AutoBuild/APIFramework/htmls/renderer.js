@@ -16,9 +16,6 @@ function CodeViewer (){
         let thisLib = this;
 
         let container = document.getElementById(DIVID);
-        console.log(paragraph)
-        console.log(DIVID)
-        console.log(container)
         container.innerHTML = "";
         container.style.overflowX = "scroll";
         container.style.position = "relative";

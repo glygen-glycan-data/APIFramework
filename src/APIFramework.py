@@ -146,7 +146,7 @@ class APIFramework(object):
 
         self._google_analytics_tag_id = ""
 
-
+        self._glymage_base_url = "https://glymage.glyomics.org"
 
     # Proper APIs for changing config
     def host(self):
@@ -190,9 +190,18 @@ class APIFramework(object):
     def google_analytics_tag_id(self):
         return self._google_analytics_tag_id
 
+    def glymage_base_url(self):
+        return self._glymage_base_url
+
     def set_google_analytics_tag_id(self, tag):
         assert type(tag) == str
         self._google_analytics_tag_id = tag
+
+    def set_glymage_base_url(self, url):
+        assert type(url) == str
+        if url.endswith('/'):
+            url = url.strip('/')
+        self._glymage_base_url = url
 
     def input_file_folder(self):
         return self._input_file_folder
@@ -366,6 +375,9 @@ class APIFramework(object):
             if "google_analytics_tag_id" in res["basic"]:
                 self.set_google_analytics_tag_id(res["basic"]["google_analytics_tag_id"])
 
+            if "glymage_base_url" in res["basic"]:
+                self.set_glymage_base_url(res["basic"]["glymage_base_url"])
+
             if "app_name" in res["basic"]:
                 self.set_app_name(res["basic"]["app_name"])
 
@@ -396,6 +408,9 @@ class APIFramework(object):
 
         if "WEBSERVICE_BASIC_GOOGLE_ANALYTICS_TAG_ID" in os.environ:
             self.set_google_analytics_tag_id(os.environ["WEBSERVICE_BASIC_GOOGLE_ANALYTICS_TAG_ID"])
+
+        if "WEBSERVICE_BASIC_GLYMAGE_BASE_URL" in os.environ:
+            self.set_glymage_base_url(os.environ["WEBSERVICE_BASIC_GLYMAGE_BASE_URL"])
 
         for k, v in os.environ.items():
             if k.startswith("WEBSERVICE_APP_"):
@@ -1082,7 +1097,8 @@ class APIFrameworkWithFrontEnd(APIFramework):
         kwarg = {
             "app_name": self._app_name,
             "app_name_lower": self._app_name.lower(),
-            "google_analytics_html": google_tracking_js
+            "google_analytics_html": google_tracking_js,
+            "glymage_base_url": self.glymage_base_url()
         }
 
         # TODO better routing management
@@ -1107,18 +1123,33 @@ class APIFrameworkWithFrontEnd(APIFramework):
         def about():
             return flask.render_template("./about.html", **kwarg)
 
-
         @app.route('/glycoapi.js', methods=["GET", "POST"])
         def glycoapi():
-            return open("./htmls/glycoapi.js").read()
+            content = flask.render_template("./glycoapi.js", **kwarg)
+            response = flask.make_response(content)
+            response.mimetype = 'application/javascript'
+            return response
 
         @app.route('/renderresult.js', methods=["GET", "POST"])
         def renderresult():
-            return open("./htmls/renderresult.js").read()
+            content = flask.render_template("./renderresult.js", **kwarg) 
+            response = flask.make_response(content)
+            response.mimetype = 'application/javascript'
+            return response
 
         @app.route('/renderer.js', methods=["GET", "POST"])
         def renderer():
-            return open("./htmls/renderer.js").read()
+            content = flask.render_template("./renderer.js", **kwarg)
+            response = flask.make_response(content)
+            response.mimetype = 'application/javascript'
+            return response
+
+        @app.route('/head.js', methods=["GET", "POST"])
+        def head():
+            content = flask.render_template("./head.js", **kwarg)
+            response = flask.make_response(content)
+            response.mimetype = 'application/javascript'
+            return response
 
     def google_analytics_script(self):
         tag = self.google_analytics_tag_id()
