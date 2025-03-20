@@ -7,8 +7,9 @@ from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 
 import pygly.alignment
 from pygly.GlycanResource.GlyTouCan import GlyTouCanNoCache, GlyTouCan
-from pygly.GlycanFormatter import WURCS20Format, GlycoCTFormat, IUPACGlycamFormat, IUPACLinearFormat, IUPACParserExtended1, GlycanParseError
-from pygly.CompositionFormatter import CompositionFormat
+
+from pygly.GlycanFormatter import IUPACGlycamFormat, GlycoCTFormat
+from pygly.GlycanMultiParser import GlycanMultiParser, GlycanParseError
 
 def round2str(n):
     return str(round(n, 2))
@@ -37,10 +38,7 @@ class Converter(APIFrameworkWithFrontEnd):
 
 
         gp = GlycoCTFormat()
-        wp = WURCS20Format()
-        cp = CompositionFormat()
-        ip = IUPACLinearFormat()
-        ip1 = IUPACParserExtended1()
+        gmp = GlycanMultiParser()
         glycam_parser = IUPACGlycamFormat()
 
         self.output(2, "Worker-%s is ready to take job" % (pid))
@@ -58,31 +56,9 @@ class Converter(APIFrameworkWithFrontEnd):
             request_format = str(task_detail["format"]).lower()
             result = ""
 
-            query_glycan = None
             try:
-                if "RES" in seq:
-                    query_glycan = gp.toGlycan(seq)
-                elif "WURCS" in seq:
-                    query_glycan = wp.toGlycan(seq)
-                else:
-                    if not query_glycan:
-                        try:
-                            query_glycan = cp.toGlycan(seq)
-                        except GlycanParseError:
-                            pass
-                    if not query_glycan:
-                        try:
-                           query_glycan = ip.toGlycan(seq)
-                        except GlycanParseError:
-                           pass
-                    if not query_glycan:
-                        try:
-                            query_glycan = ip1.toGlycan(seq)
-                        except GlycanParseError:
-                            pass
-                    if not query_glycan:
-                        raise GlycanParseError
-            except:
+                query_glycan = gmp.toGlycan(seq)
+            except GlycanParseError:
                 error.append("Unable to parse your sequence")
 
             if len(error) == 0:

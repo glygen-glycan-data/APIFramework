@@ -26,7 +26,7 @@ function renderResultMore(){
     }
 
     result_container_additional.innerHTML += "<br><img id='inputseqimg'>";
-    glymage.setOnDemandImageURL('inputseqimg',{'seq': retrieve_result.task.seq, 'image_format': 'svg'});
+    glymage.setOnDemandImageURL('#inputseqimg',{'seq': retrieve_result.task.seq, 'image_format': 'svg'});
 
     result_container_additional.innerHTML += "<br><div style='text-align: center;'><div style='display: inline-block; text-align: left;'>"+retrieve_result.result.replaceAll("\n", "<br>")+"</div></div>"
 
