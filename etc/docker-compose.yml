@@ -1,4 +1,4 @@
-name: glycomics_webservices
+name: glycomics
 services:
     substructure:
         image: glyomics/substructure
@@ -16,4 +16,4 @@ services:
            - 10984:10984
 networks:
   default:
-    name: glycomics_network
+    name: glycomics-network
