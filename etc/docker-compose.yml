@@ -1,0 +1,19 @@
+name: glycomics_webservices
+services:
+    substructure:
+        image: glyomics/substructure
+        environment:
+          - WEBSERVICE_BASIC_PORT=10985
+          - WEBSERVICE_BASIC_MAX_CPU_CORE=3
+        ports:
+           - 10985:10985
+    glymage:
+        image: glyomics/glymage
+        environment:
+          - WEBSERVICE_BASIC_PORT=10984
+          - WEBSERVICE_BASIC_MAX_CPU_CORE=3
+        ports:
+           - 10984:10984
+networks:
+  default:
+    name: glycomics_network
