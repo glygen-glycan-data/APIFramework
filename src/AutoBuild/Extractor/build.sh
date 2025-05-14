@@ -24,6 +24,10 @@ mv ${ImageExtract_DIR}/BKGlycanExtractor ./
 mv ${ImageExtract_DIR}/WebApplication ./
 mv ${ImageExtract_DIR}/APIFramework.py ./
 mv ${ImageExtract_DIR}/requirements.txt ./
+mkdir -p ./static/files ./static/examples
+if [ -d ${ImageExtract_DIR}/static/examples ]; then
+  mv ${ImageExtract_DIR}/static/examples/* ./static/examples
+fi
 
 # Run the Python script to pull from Drive
 python3 ./BKGlycanExtractor/config/getfromgdrive.py ./BKGlycanExtractor/config/
@@ -35,7 +39,7 @@ docker build --no-cache \
   -t glyomics/extractor:$tag \
   -t glyomics/extractor:latest ./ 
 
-docker run -it -p 10981:10981 glyomics/extractor:latest
+# docker run -it -p 10981:10981 glyomics/extractor:latest
 
 if [ "$tag" != "TEST" ];
   then
@@ -47,6 +51,4 @@ fi
 # Delete the directory and zip file
 rm -rf ./GlycanImageExtract2-${COMMIT}
 rm ImgExtractor.zip
-
-
 
