@@ -108,6 +108,7 @@ class APIFramework(object):
 
         self._host = "localhost"
         self._port = 10980
+        self._debug = False
 
         self._max_worker_num = 1
         self._min_worker_num = 1
@@ -163,6 +164,12 @@ class APIFramework(object):
             self._port = p
         else:
             raise APIParameterError("Port number requires integer, %s is not acceptable")
+
+    def debug(self):
+        return self._debug
+
+    def set_debug(self, h):
+        self._debug = h
 
     def max_worker_num(self):
         return self._max_worker_num
@@ -326,6 +333,9 @@ class APIFramework(object):
             if "port" in res["basic"]:
                 self.set_port(int(res["basic"]["port"]))
 
+            if "debug" in res["basic"]:
+                self.set_debug(res["basic"]["debug"])
+
             if "max_cpu_core" in res["basic"]:
                 self.set_max_worker_num(int(res["basic"]["max_cpu_core"]))
 
@@ -396,6 +406,9 @@ class APIFramework(object):
         if "WEBSERVICE_BASIC_PORT" in os.environ:
             self.set_port(int(os.environ["WEBSERVICE_BASIC_PORT"]))
 
+        if "WEBSERVICE_BASIC_DEBUG" in os.environ:
+            self.set_debug(int(os.environ["WEBSERVICE_BASIC_DEBUG"]))
+
         if "WEBSERVICE_BASIC_CPU_CORE" in os.environ:
             self.output(0, "Environment variable (WEBSERVICE_BASIC_CPU_CORE) is deprecated!")
             self.set_max_worker_num(int(os.environ["WEBSERVICE_BASIC_CPU_CORE"]))
@@ -448,7 +461,7 @@ class APIFramework(object):
 
         self.load_route(flask_app)
 
-        flask_app.run(self.host(), self.port(), False)
+        flask_app.run(self.host(), self.port(),  self.debug())
 
 
     # FLASK related functions starts here
@@ -1115,6 +1128,10 @@ class APIFrameworkWithFrontEnd(APIFramework):
         def footer():
             return flask.render_template("./footer.html", **kwarg)
 
+        @app.route('/help', methods=["GET", "POST"])
+        def help():
+            return flask.render_template("./help.html", **kwarg)
+
         @app.route('/submitoption', methods=["GET", "POST"])
         def submitoption():
             return flask.render_template("./submitoption.html", **kwarg)
@@ -1149,6 +1166,12 @@ class APIFrameworkWithFrontEnd(APIFramework):
             content = flask.render_template("./head.js", **kwarg)
             response = flask.make_response(content)
             response.mimetype = 'application/javascript'
+            return response
+
+        @app.route('/robots.txt', methods=["GET", "POST"])
+        def robots():
+            response = flask.make_response(open("./htmls/robots.txt").read())
+            response.mimetype = 'text/plain'
             return response
 
     def google_analytics_script(self):
