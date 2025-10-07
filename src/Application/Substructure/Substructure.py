@@ -94,7 +94,7 @@ class Substructure(APIFrameworkWithFrontEnd):
 
             if len(error) == 0:
                 if not motif.has_root():
-                    error.append("Motif is not a structure")
+                    error.append("Input glycan is a composition")
 
             if len(error) == 0:
                 motif_node_num = len(list(motif.all_nodes()))
