@@ -179,10 +179,24 @@ src/Application/Substructure/htmls/head.js
 src/Application/Substructure/htmls/header.html
 src/Application/Substructure/htmls/index.html
 src/Application/Substructure/htmls/renderer.js
-src/Application/ReSubstructureister/htmls/robots.txt
+src/Application/Substructure/htmls/robots.txt
 
 src/Application/Substructure/APIFramework.py
 src/Application/Substructure/pygly
+
+src/Application/Subsumption/htmls/about.html
+src/Application/Subsumption/htmls/example.html
+src/Application/Subsumption/htmls/footer.html
+src/Application/Subsumption/htmls/glycoapi.js
+src/Application/Subsumption/htmls/head.js
+src/Application/Subsumption/htmls/help.html
+src/Application/Subsumption/htmls/header.html
+src/Application/Subsumption/htmls/index.html
+src/Application/Subsumption/htmls/renderer.js
+src/Application/Subsumption/htmls/robots.txt
+
+src/Application/Subsumption/APIFramework.py
+src/Application/Subsumption/pygly
 
 src/Application/GlyLookup/htmls/about.html
 src/Application/GlyLookup/htmls/example.html
@@ -199,9 +213,12 @@ src/Application/GlyLookup/htmls/submitoption.html
 src/Application/GlyLookup/APIFramework.py
 src/Application/GlyLookup/pygly
 src/Application/GlyLookup/testing
+src/Application/GlyLookup/status.json
 
 src/Application/Glymage/image/
 src/Application/Glymage/work/
+
+src/Test/
 
 
 
