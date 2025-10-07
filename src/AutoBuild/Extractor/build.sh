@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 tag=$1
 if [ -z "$1" ]
   then
@@ -27,7 +29,8 @@ fi
 # COMMIT="68c875e7b81e6013b0a39b2d5f04f44e4689dd9c"
 # COMMIT="31b7fde088953ea73d99cb8c861900aa8077e357"
 # COMMIT="ba5725c076493f444594fe2c3751c16a36266249"
-COMMIT="e37b45c187947e60e3738b33dc61a786a03ac9e3"
+# COMMIT="e37b45c187947e60e3738b33dc61a786a03ac9e3"
+COMMIT="a23078d0e8442bee0828832a65c1a802a5f2bd4a"
 
 wget https://github.com/glygen-glycan-data/GlycanImageExtract2/archive/${COMMIT}.zip -O ImgExtractor.zip
 unzip -o ImgExtractor.zip
@@ -35,16 +38,16 @@ unzip -o ImgExtractor.zip
 ImageExtract_DIR="./GlycanImageExtract2-${COMMIT}"
 
 # Move only specific folders and files to current directory
-mv ${ImageExtract_DIR}/BKGlycanExtractor ./
-mv ${ImageExtract_DIR}/WebApplication ./
-mv ${ImageExtract_DIR}/requirements.txt ./
+mv -f ${ImageExtract_DIR}/BKGlycanExtractor .
+mv -f ${ImageExtract_DIR}/WebApplication .
+mv -f ${ImageExtract_DIR}/requirements.txt .
 mkdir -p ./static/files ./static/examples
 if [ -d ${ImageExtract_DIR}/static/examples ]; then
-  mv ${ImageExtract_DIR}/static/examples/* ./static/examples
+  mv -f ${ImageExtract_DIR}/static/examples/* ./static/examples
 fi
 
 # Run the Python script to pull from Drive
-python3 ./BKGlycanExtractor/config/getfromgdrive.py ./BKGlycanExtractor/config/
+( cd ./BKGlycanExtractor/config; python3.12 ./getfromgdrive.py )
 
 # docker build -t glyomics/extractor:$tag -t glyomics/extractor:latest ./
 # $(date +%s) is the Unix timestamp
