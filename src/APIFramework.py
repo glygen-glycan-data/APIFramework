@@ -115,7 +115,7 @@ class APIFramework(object):
         self._clean_start = True
         self._file_based_job = False
 
-        self._app_name = "testing"
+        self._app_name = "APIFramework"
         # self._flask_app = flask.Flask(self._app_name)
 
         self._input_file_folder  = self.autopath("input")
@@ -199,6 +199,9 @@ class APIFramework(object):
 
     def glymage_base_url(self):
         return self._glymage_base_url
+    
+    def glymage_dev_email(self):
+        return self._app_name+"FrontEnd@glyomics.org"
 
     def set_google_analytics_tag_id(self, tag):
         assert type(tag) == str
@@ -393,7 +396,6 @@ class APIFramework(object):
 
                 if res["basic"]["app_name"] in res:
                     self._worker_para = res[res["basic"]["app_name"]]
-
 
             #if "" in res["docker"]:
             #    self._xxxxx = res["docker"][""]
@@ -1111,7 +1113,8 @@ class APIFrameworkWithFrontEnd(APIFramework):
             "app_name": self._app_name,
             "app_name_lower": self._app_name.lower(),
             "google_analytics_html": google_tracking_js,
-            "glymage_base_url": self.glymage_base_url()
+            "glymage_base_url": self.glymage_base_url(),
+            "glymage_dev_email": self.glymage_dev_email()
         }
 
         # TODO better routing management
@@ -1131,6 +1134,10 @@ class APIFrameworkWithFrontEnd(APIFramework):
         @app.route('/help', methods=["GET", "POST"])
         def help():
             return flask.render_template("./help.html", **kwarg)
+
+        @app.route('/example', methods=["GET", "POST"])
+        def example():
+            return flask.render_template("./example.html", **kwarg)
 
         @app.route('/submitoption', methods=["GET", "POST"])
         def submitoption():
