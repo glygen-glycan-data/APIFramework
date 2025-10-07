@@ -184,6 +184,20 @@ src/Application/ReSubstructureister/htmls/robots.txt
 src/Application/Substructure/APIFramework.py
 src/Application/Substructure/pygly
 
+src/Application/GlyLookup/htmls/about.html
+src/Application/GlyLookup/htmls/example.html
+src/Application/GlyLookup/htmls/footer.html
+src/Application/GlyLookup/htmls/glycoapi.js
+src/Application/GlyLookup/htmls/head.js
+src/Application/GlyLookup/htmls/help.html
+src/Application/GlyLookup/htmls/header.html
+src/Application/GlyLookup/htmls/index.html
+src/Application/GlyLookup/htmls/renderer.js
+src/Application/GlyLookup/htmls/robots.txt
+
+src/Application/GlyLookup/APIFramework.py
+src/Application/GlyLookup/pygly
+
 src/Application/Glymage/image/
 src/Application/Glymage/work/
 
