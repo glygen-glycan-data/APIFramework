@@ -127,3 +127,16 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Symbolic links
+src/Application/Converter/htmls/about.html
+src/Application/Converter/htmls/example.html
+src/Application/Converter/htmls/footer.html
+src/Application/Converter/htmls/glycoapi.js
+src/Application/Converter/htmls/head.js
+src/Application/Converter/htmls/header.html
+src/Application/Converter/htmls/help.html
+src/Application/Converter/htmls/index.html
+src/Application/Converter/htmls/renderer.js
+
+src/Application/Converter/APIFramework.py
