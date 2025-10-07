@@ -140,3 +140,7 @@ src/Application/Converter/htmls/index.html
 src/Application/Converter/htmls/renderer.js
 
 src/Application/Converter/APIFramework.py
+src/Application/Converter/pygly
+
+src/Application/Glymage/image/
+
