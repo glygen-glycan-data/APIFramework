@@ -271,7 +271,7 @@ class Subsumption(APIFrameworkWithFrontEnd):
         header = True
         for line in urllib.request.urlopen(
                 "https://raw.githubusercontent.com/glygen-glycan-data/GNOme/master/data/mass_lookup_2decimal"):
-            l = line.strip()
+            l = line.decode().strip()
             if header:
                 header = False
                 continue
@@ -279,9 +279,12 @@ class Subsumption(APIFrameworkWithFrontEnd):
             mid, mass = l.split()
             mass_lut[mid] = mass
 
+        # print(mass_lut)
+
         all_wurcs = {}
 
         gmp = GlycanMultiParser()
+        # print("GlyTouCan")
         gtc = pygly.GlycanResource.GlyTouCanNoCache()
         for acc, f, s in gtc.allseq(format="wurcs"):
             try:
@@ -293,30 +296,26 @@ class Subsumption(APIFrameworkWithFrontEnd):
 
         lines = []
 
+        # print("GNOme")
         gnome = pygly.GNOme.GNOme()
         accs = set()
         for acc in gnome.nodes():
-            if acc == "00000001":
-                continue
-
             if gtc_acc_pattern.findall(acc):
                 accs.add(acc)
-            else:
-                assert acc in mass_lut
-
+            elif acc in mass_lut:
                 for gacc in gnome.descendants(acc):
                     if gacc not in all_wurcs:
-                        print(gacc, "wurcs issue!")
+                        # print(gacc, "wurcs issue!")
                         continue
 
                     lvl = gnome.level(gacc)
-                    # print gacc, lvl
+                    # print(gacc, lvl)
                     assert lvl
 
                     lines.append("%s\t%s\t%s\t%s\n" % (gacc, mass_lut[acc], lvl, all_wurcs[gacc]))
+                    # print(lines[-1])
 
-
-        output_file = open(self.autopath("tmp.txt", newfile=True), "w")
+        output_file = open(self.autopath("tmp.txt", newfile=True), "wt")
         for l in sorted(lines):
             output_file.write(l)
         output_file.close()
