@@ -15,7 +15,7 @@ function renderResultMore(){
     if (error.length > 0){
         let tmp = error.join(", ");
         result_container_status.innerHTML += "<p style='font-size: 25px; color: red; '>Error: "+tmp+"</p>";
-    }
+    } else {
 
     let status = retrieve_result.result.status;
     if (status == "Registered") {
@@ -32,5 +32,6 @@ function renderResultMore(){
       glymage.setOnDemandImageURL('#inputseqimg',{"seq": seq, "image_format": "svg"});
     }
     result_container_additional.innerHTML += "<p></p>";
+    }
 
 }
