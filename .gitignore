@@ -138,9 +138,25 @@ src/Application/Converter/htmls/header.html
 src/Application/Converter/htmls/help.html
 src/Application/Converter/htmls/index.html
 src/Application/Converter/htmls/renderer.js
+src/Application/Converter/htmls/robots.txt
 
 src/Application/Converter/APIFramework.py
 src/Application/Converter/pygly
 
+src/Application/MotifMatch/htmls/about.html
+src/Application/MotifMatch/htmls/example.html
+src/Application/MotifMatch/htmls/footer.html
+src/Application/MotifMatch/htmls/glycoapi.js
+src/Application/MotifMatch/htmls/head.js
+src/Application/MotifMatch/htmls/header.html
+src/Application/MotifMatch/htmls/help.html
+src/Application/MotifMatch/htmls/index.html
+src/Application/MotifMatch/htmls/renderer.js
+src/Application/MotifMatch/htmls/robots.txt
+
+src/Application/MotifMatch/APIFramework.py
+src/Application/MotifMatch/pygly
+
 src/Application/Glymage/image/
 src/Application/Glymage/work/
+
