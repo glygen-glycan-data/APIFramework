@@ -1,14 +1,18 @@
+#!/bin/env python3.12
 
 import os
 import sys
 import time
 import multiprocessing
+import traceback
+
 from APIFramework import APIFramework, APIFrameworkWithFrontEnd, queue
 
 import pygly.alignment
 from pygly.GlycanResource.GlyTouCan import GlyTouCanNoCache, GlyTouCan
 
-from pygly.GlycanFormatter import IUPACGlycamFormat, GlycoCTFormat
+from pygly.GlycanFormatter import IUPACGlycamFormat, GlycoCTFormat, IUPACLinearFormat
+from pygly.CompositionFormatter import CompositionFormat
 from pygly.GlycanMultiParser import GlycanMultiParser, GlycanParseError
 
 def round2str(n):
@@ -37,8 +41,10 @@ class Converter(APIFrameworkWithFrontEnd):
         self.output(2, "Worker-%s is starting up" % (pid))
 
 
-        gp = GlycoCTFormat()
         gmp = GlycanMultiParser()
+        gp = GlycoCTFormat()
+        cp = CompositionFormat()
+        iupac_parser = IUPACLinearFormat()
         glycam_parser = IUPACGlycamFormat()
 
         self.output(2, "Worker-%s is ready to take job" % (pid))
@@ -63,14 +69,31 @@ class Converter(APIFrameworkWithFrontEnd):
 
             if len(error) == 0:
                 try:
-                    if request_format == "iupac":
-                        result = glycam_parser.toStr(query_glycan)
+                    if request_format == "glycam":
+                        if not query_glycan.has_root():
+                            error.append("Cannot make Glycam sequence from composition")
+                        else:
+                            result = glycam_parser.toStr(query_glycan)
+                    elif request_format == "iupac":
+                        if not query_glycan.has_root():
+                            error.append("Cannot make IUPAC sequence from composition")
+                        else:
+                            result = iupac_parser.toStr(query_glycan)
+                    elif request_format == "composition":
+                        comp = query_glycan.iupac_composition(floating_substituents=True, 
+                                                              aggregate_basecomposition=False)
+                        compstr = ""
+                        for k,v in sorted(comp.items()):
+                            if v > 0 and k != "Count":
+                                compstr += "%s(%d)"%(k,v)
+                        result = compstr
                     elif request_format == "glycoct":
                         result = gp.toStr(query_glycan)
                     else:
                         error.append("Format %s is not supported" % request_format)
                 except:
-                    error.append("Critical error during conversion")
+                    traceback.print_exc()
+                    error.append("Unexpected error during conversion")
 
             result = result.strip()
 
