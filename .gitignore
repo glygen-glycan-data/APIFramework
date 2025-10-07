@@ -222,11 +222,15 @@ src/Application/GlyLookup/pygly
 src/Application/GlyLookup/testing
 src/Application/GlyLookup/status.json
 
-src/Application/Glymage/image/
-src/Application/Glymage/work/
+src/Application/Glymage/image
+src/Application/Glymage/work
+src/Application/Glymage/pygly
+src/Application/Glymage/pygly-scripts
+src/Application/Glymage/status.json
+src/Application/Glymage/APIFramework.py
+src/Application/Glymage/js/glycoapi.js
+src/Application/Glymage/htmls/submit.html
+
+src/Application/Glymage/glymage_images.*.done
 
 src/Test/
-
-
-
-
