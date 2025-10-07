@@ -163,7 +163,6 @@ src/Application/Register/htmls/footer.html
 src/Application/Register/htmls/glycoapi.js
 src/Application/Register/htmls/head.js
 src/Application/Register/htmls/header.html
-src/Application/Register/htmls/help.html
 src/Application/Register/htmls/index.html
 src/Application/Register/htmls/renderer.js
 src/Application/Register/htmls/robots.txt
@@ -177,7 +176,6 @@ src/Application/Substructure/htmls/about.html
 src/Application/Substructure/htmls/example.html
 src/Application/Substructure/htmls/footer.html
 src/Application/Substructure/htmls/glycoapi.js
-src/Application/Substructure/htmls/head.js
 src/Application/Substructure/htmls/header.html
 src/Application/Substructure/htmls/index.html
 src/Application/Substructure/htmls/renderer.js
