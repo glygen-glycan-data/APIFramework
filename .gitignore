@@ -148,6 +148,7 @@ src/Application/MotifMatch/htmls/example.html
 src/Application/MotifMatch/htmls/footer.html
 src/Application/MotifMatch/htmls/glycoapi.js
 src/Application/MotifMatch/htmls/head.js
+src/Application/MotifMatch/htmls/help.html
 src/Application/MotifMatch/htmls/header.html
 src/Application/MotifMatch/htmls/index.html
 src/Application/MotifMatch/htmls/renderer.js
@@ -167,9 +168,11 @@ src/Application/Register/htmls/help.html
 src/Application/Register/htmls/index.html
 src/Application/Register/htmls/renderer.js
 src/Application/Register/htmls/robots.txt
+src/Application/Register/htmls/submitoption.html
 
 src/Application/Register/APIFramework.py
 src/Application/Register/pygly
+src/Application/Register/status.json
 
 src/Application/Substructure/htmls/about.html
 src/Application/Substructure/htmls/example.html
@@ -183,6 +186,8 @@ src/Application/Substructure/htmls/robots.txt
 
 src/Application/Substructure/APIFramework.py
 src/Application/Substructure/pygly
+src/Application/Substructure/status.json
+src/Application/Substructure/tmp*
 
 src/Application/Subsumption/htmls/about.html
 src/Application/Subsumption/htmls/example.html
@@ -194,9 +199,12 @@ src/Application/Subsumption/htmls/header.html
 src/Application/Subsumption/htmls/index.html
 src/Application/Subsumption/htmls/renderer.js
 src/Application/Subsumption/htmls/robots.txt
+src/Application/Subsumption/htmls/submitoption.html
 
 src/Application/Subsumption/APIFramework.py
 src/Application/Subsumption/pygly
+src/Application/Subsumption/pygly-scripts
+src/Applicatoin/Subsumption/status.json
 
 src/Application/GlyLookup/htmls/about.html
 src/Application/GlyLookup/htmls/example.html
@@ -219,6 +227,7 @@ src/Application/Glymage/image/
 src/Application/Glymage/work/
 
 src/Test/
+
 
 
 
