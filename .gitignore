@@ -194,10 +194,14 @@ src/Application/GlyLookup/htmls/header.html
 src/Application/GlyLookup/htmls/index.html
 src/Application/GlyLookup/htmls/renderer.js
 src/Application/GlyLookup/htmls/robots.txt
+src/Application/GlyLookup/htmls/submitoption.html
 
 src/Application/GlyLookup/APIFramework.py
 src/Application/GlyLookup/pygly
+src/Application/GlyLookup/testing
 
 src/Application/Glymage/image/
 src/Application/Glymage/work/
+
+
 
