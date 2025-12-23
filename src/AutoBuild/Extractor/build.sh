@@ -9,7 +9,6 @@ if [ -z "$1" ]
     tag="TEST"
 fi
 
-
 # switch to the latest commit
 # COMMIT="b2342b83ab84ac3d0607c6cbe9c8962995eaf62e"
 # COMMIT="94a9f575a5fa3b6320e4e1759537d87f05a2bc89"
@@ -31,7 +30,10 @@ fi
 # COMMIT="ba5725c076493f444594fe2c3751c16a36266249"
 # COMMIT="e37b45c187947e60e3738b33dc61a786a03ac9e3"
 # COMMIT="a23078d0e8442bee0828832a65c1a802a5f2bd4a"
-COMMIT="a1623fe8d750d15a6490fdcb1a3373bc1bdccb5c"
+# COMMIT="a1623fe8d750d15a6490fdcb1a3373bc1bdccb5c"
+# COMMIT="08e5195e89136bd72910968536cbf7f8c8b32173"
+# COMMIT="9262c2034d3c5e2ee62f9ba0c49ef40c01044590"
+COMMIT="f88e8cbd65f729ea29cbcaa636432998b5b05dd6"
 
 wget https://github.com/glygen-glycan-data/GlycanImageExtract2/archive/${COMMIT}.zip -O ImgExtractor.zip
 unzip -o ImgExtractor.zip
@@ -46,6 +48,13 @@ mkdir -p ./static/files ./static/examples
 if [ -d ${ImageExtract_DIR}/static/examples ]; then
   mv -f ${ImageExtract_DIR}/static/examples/* ./static/examples
 fi
+rm -rf ./GlycanImageExtract2-${COMMIT}
+rm -rf ImgExtractor.zip
+
+wget 'https://codeload.github.com/glygen-glycan-data/PDFigCapX/zip/refs/heads/main' -O PDFigCapX.zip
+unzip -o PDFigCapX.zip
+mv PDFigCapX-main PDFigCapX
+rm -rf PDFigCapX.zip
 
 # Run the Python script to pull from Drive
 ( cd ./BKGlycanExtractor/config; python3.12 ./getfromgdrive.py )
@@ -67,7 +76,6 @@ fi
 
 
 # Delete the directory and zip file
-rm -rf ./GlycanImageExtract2-${COMMIT}
-rm -rf ImgExtractor.zip
+rm -rf PDFigCapX
 rm -rf WebApplication BKGlycanExtractor static requirements.txt 
 
