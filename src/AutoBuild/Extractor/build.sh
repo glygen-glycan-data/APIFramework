@@ -34,7 +34,12 @@ fi
 # COMMIT="08e5195e89136bd72910968536cbf7f8c8b32173"
 # COMMIT="9262c2034d3c5e2ee62f9ba0c49ef40c01044590"
 # COMMIT="f88e8cbd65f729ea29cbcaa636432998b5b05dd6"
-COMMIT="91321401982018cf5a874c3411e0e8018d2057f2"
+# COMMIT="91321401982018cf5a874c3411e0e8018d2057f2"
+# COMMIT="ee8b9f95df35163e5725d2c31903e9b56d4bb6fb"
+# COMMIT="eccbcee88df2f1426e9cd02d9aa2c66d253f3d6d"
+COMMIT="032ce0fc6c4ccb54d8d0ebc4678bad3b23910b42"
+
+
 
 wget https://github.com/glygen-glycan-data/GlycanImageExtract2/archive/${COMMIT}.zip -O ImgExtractor.zip
 unzip -o ImgExtractor.zip
@@ -45,6 +50,11 @@ ImageExtract_DIR="./GlycanImageExtract2-${COMMIT}"
 mv -f ${ImageExtract_DIR}/BKGlycanExtractor .
 mv -f ${ImageExtract_DIR}/WebApplication .
 mv -f ${ImageExtract_DIR}/requirements.txt .
+
+# remove torch from the requirements for now...
+fgrep -v torch requirements.txt > requirements.txt.tmp
+mv -f requirements.txt.tmp requirements.txt
+
 mkdir -p ./static/files ./static/examples
 if [ -d ${ImageExtract_DIR}/static/examples ]; then
   mv -f ${ImageExtract_DIR}/static/examples/* ./static/examples
@@ -57,8 +67,8 @@ unzip -o PDFigCapX.zip
 mv PDFigCapX-main PDFigCapX
 rm -rf PDFigCapX.zip
 
-# Run the Python script to pull from Drive
-( cd ./BKGlycanExtractor/config; python3.12 ./getfromgdrive.py )
+# Run the Python script to pull from Drive - but only the models needed for the webapplication
+( cd ./BKGlycanExtractor/config; python3.12 ./getfromgdrive.py --pipelines 'MultipleGlycanImage-YOLOFinders;SingleGlycanImage-YOLOFinders')
 
 # docker build -t glyomics/extractor:$tag -t glyomics/extractor:latest ./
 # $(date +%s) is the Unix timestamp

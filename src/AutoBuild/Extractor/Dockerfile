@@ -1,6 +1,6 @@
 FROM glyomics/apiframework:latest
 
-RUN apt-get update && apt-get install -y libgl1
+RUN apt-get update && apt-get install -y --no-install-recommends libgl1 && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # This ensures cache busting whenever you create a new docker build
 ARG CACHEBUST=1
