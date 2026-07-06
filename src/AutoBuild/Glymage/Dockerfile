@@ -1,5 +1,6 @@
 FROM glyomics/apiframework:latest
-
+ARG CACHEBUSTER=1
+ENV XDG_CACHE_HOME=/tmp/.cache
 RUN mkdir -p /code /code/image
 RUN python -m pip install requests
 ADD image/image.tgz /code/image/

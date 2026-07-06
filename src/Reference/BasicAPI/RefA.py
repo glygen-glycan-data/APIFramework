@@ -6,52 +6,30 @@ import multiprocessing
 from APIFramework import APIFramework
 
 class ReferenceAPIBasic(APIFramework):
-
-    def form_task(self, p):
-        res = {}
-        task_str = p["num"].encode("utf-8")
-        list_id = hashlib.sha256(task_str).hexdigest()
-
-        res["id"] = list_id
-        res["num"] = p["num"]
-
-        return res
+    task_params = dict(num=None)
 
     @staticmethod
-    def worker(pid, task_queue, result_queue, params):
-        print(pid, "Start")
+    def worker(pid):
+        self.start_worker(pid)
+        # any setup tasks
 
+        self.worker_ready()
         while True:
-            task_detail = task_queue.get(block=True)
+            task_detail = self.get_task()
 
-            error = []
-            calculation_start_time = time.time()
-
-
-            list_id = task_detail["id"]
             result = []
 
-            n = int(task_detail["num"])
+            try:
+                n = int(task_detail["num"])
+            except (ValueError,TypeError):
+                # indicate error and loop for next task
+                self.put_error("Bad number")
+                continue
+
+            # create result in whatever format makes sense...
             result.append(n*n)
-            time.sleep(2.3)
-
-
-
-            calculation_end_time = time.time()
-            calculation_time_cost = calculation_end_time - calculation_start_time
-
-            res = {
-                "id": list_id,
-                "start time": calculation_start_time,
-                "end time": calculation_end_time,
-                "runtime": calculation_time_cost,
-                "error": error,
-                "result": result
-            }
-            result_queue.put(res)
-
-
-
+            # send result back
+            self.put_result(result)
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()

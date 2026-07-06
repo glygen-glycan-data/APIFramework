@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>{{app_name}}</title>
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <link rel="icon" href="data:,">
     <script src="head.js"></script>
     <script src="renderer.js"></script>
     <style>
@@ -93,48 +93,51 @@
 <script>
     "use strict";
 
-    jQuery.get("./header", function (d){
-        document.getElementById("header").innerHTML = d;
-    })
+    let resources = {header: "header",
+                     submitoption: "submitoption",
+                     example: "input_seq",
+                     footer: "footer"}
 
-    jQuery.get("./submitoption", function (d){
-        document.getElementById("submitoption").innerHTML = d;
-    })
-
-    jQuery.get("./example", function (d){
-        document.getElementById("input_seq").innerHTML = d;
-    })
-
-    jQuery.get("./footer", function (d){
-        document.getElementById("footer").innerHTML = d;
-    })
-
-
-    jQuery.get("./help", function (d){
-        document.getElementById("help-content").innerHTML += d;
-
-        // get common elements
-        var helpButton = document.getElementById('help_button');
-        var helpModal = document.getElementById('help_modal');
-        var closeModal = document.getElementById('close_modal');
-
-        // Help Modal Listeners
-        helpButton.addEventListener('click', () => {
-            helpModal.classList.remove('hidden');
+    Object.entries(resources).forEach(([resource, elementid])  => {
+        fetch("./"+resource)
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById(elementid).innerHTML = data;
+            })
+            .catch(error => {
+                console.error("Error fetching "+resource+":", error);
+            });
         });
 
-        closeModal.addEventListener('click', () => {
-            helpModal.classList.add('hidden');
-        });
+    fetch("./help")
+        .then(response => response.text())
+        .then(data => {
+            document.getElementById("help-content").innerHTML += data;
 
-        // Close modal if user clicks off the overlay
-        helpModal.addEventListener('click', (event) => {
-            if (event.target === helpModal) {
+            // get common elements
+            var helpButton = document.getElementById('help_button');
+            var helpModal = document.getElementById('help_modal');
+            var closeModal = document.getElementById('close_modal');
+
+            // Help Modal Listeners
+            helpButton.addEventListener('click', () => {
+                helpModal.classList.remove('hidden');
+            });
+
+            closeModal.addEventListener('click', () => {
                 helpModal.classList.add('hidden');
-            }
+            });
+
+            // Close modal if user clicks off the overlay
+            helpModal.addEventListener('click', (event) => {
+                if (event.target === helpModal) {
+                    helpModal.classList.add('hidden');
+                }
+            });
+        }).catch(error => {
+                console.error("Error fetching help:", error);
         });
 
-    });
 </script>
 
 <script>
@@ -143,9 +146,6 @@
     let task_id;
     let nocache;
     let retrieve_result;
-
-    let submitURL, retrieveURL;
-
     let retrieve_counter = 0;
     let retrieve_interval = 1000;
 
@@ -175,8 +175,7 @@
         // console.log(seq);
         para["seq"] = seq.replace(/\\n/g,'\n');
         // console.log(para["seq"]);
-
-
+        
         let submitoptions = document.getElementById("submitoption");
         for (let formEle of submitoptions.getElementsByTagName("form")){
             let parakey = formEle.name;
@@ -189,17 +188,26 @@
                 }
             }
         }
+        if (nocache) {
+            thisws.set_nocache();
+        }
+        thisws.submit(para,true)
+            .then(obj => {
+                task_id = obj.id;
+                if (!!obj.incache) {
+                    setTimeout(retrieve, 0)
+                } else {
+                    if (glymage) {
+                        glymage.submit({seq: para.seq, image_format: 'svg'})
+                    }
+                    show("loading_container");
+                    document.getElementById("submit_status").innerHTML = "<br><br><br>Submitted successfully!";
+                    setTimeout(retrieve, retrieve_interval);
+                }
+            }, err => {
+                console.log(err);
+            });
 
-
-        retrieve_counter = 0;
-
-        jQuery.post("./submit", {"task": JSON.stringify(para), "nocache": nocache, "developer_email": app_name+"FrontEnd@glyomics.org"}).then(function (d){
-            task_id = d[0].id;
-            show("loading_container");
-            document.getElementById("submit_status").innerHTML = "<br><br><br>Submitted successfully!";
-
-            setTimeout(retrieve, retrieve_interval)
-        })
     }
 
     function retrieve(){
@@ -210,43 +218,26 @@
         url.search = search_params.toString();
         window.history.pushState('', '', url.toString());
 
+        thisws.request(null, {
+            task_id: task_id,
+            retrieve_callback: function(elapsed_time, attempts) {
+                let current_interval = 1;
+                if (attempts > 5) current_interval = 3;
+                if (attempts > 10) current_interval = 5;
 
-        retrieve_counter += 1;
-        jQuery.post("./retrieve", {"task_id": task_id}).then(function (d){
+                let dotnum = attempts % 3 + 1;
+                let dotstr = ".".repeat(dotnum);
+                
+                document.getElementById("submit_status").innerHTML = "<br><br><br>Searching your glycan sequence" + dotstr;
+                document.getElementById("loading").innerHTML = "The page refreshes every " + current_interval + "s.<br>Please wait.";
 
-            if (retrieve_counter > 5){
-                retrieve_interval = 3000;
+                return current_interval;
             }
-            if (retrieve_counter > 10) {
-                retrieve_interval = 5000;
-            }
-
-            let dotnum = retrieve_counter % 3 + 1;
-            let dotstr = ".".repeat(dotnum);
-            document.getElementById("submit_status").innerHTML = "<br><br><br>Searching your glycan sequence" + dotstr;
-            document.getElementById("loading").innerHTML = "The page refreshes every " + parseInt(retrieve_interval/1000) + "s.<br>" +
-                            "Please wait.";
-
-            if (!(d[0].error === undefined)){
-                if (d[0].error.includes("not found")){
-                    retrieve_result = d[0];
-                    retrieve_result.error = [d[0].error];
-                    retrieve_result.stat = {"runtime": 0.01, "cached": false}
-                    renderResult();
-                    return;
-                }
-            }
-
-            if (!d[0].finished){
-                setTimeout(retrieve, retrieve_interval);
-                return;
-            }
-
-            retrieve_result = d[0];
-            renderResult();
-
         })
-
+        .then(result => {
+            retrieve_result = result;
+            renderResult();
+        });       
     }
 
     function renderResult(){
@@ -287,29 +278,28 @@
         document.getElementById('result_container_json').scrollIntoView();
     }
 
+    function StartApplication() {
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const tmp_nocache = urlParams.get('nocache');
+        
+        if (tmp_nocache !== undefined) {
+            nocache = tmp_nocache;        
+        }
 
-    const queryString = window.location.search;
-    const urlParams = new URLSearchParams(queryString);
-    const tmp_nocache = urlParams.get('nocache');
+        const tmp_task_id = urlParams.get('task_id');
 
-    if (tmp_nocache !== null) {
-        nocache = tmp_nocache;        
+        if (tmp_task_id !== null && tmp_task_id !== task_id) {
+            show("loading_container");
+            task_id = tmp_task_id;
+            retrieve();
+        } else {
+            //;
+        }
     }
-
-    const tmp_task_id = urlParams.get('task_id');
-
-    if (tmp_task_id !== null && tmp_task_id !== task_id) {
-        show("loading_container");
-        task_id = tmp_task_id;
-        retrieve();
-    } else {
-        show("input_container");
-    }
-
+    show("input_container");
 </script>
-<script src="renderresult.js">
-
-</script>
+<script src="renderresult.js"></script>
 </body>
 </html>
 

@@ -60,8 +60,8 @@ class ReferenceAPIFileBased(APIFramework):
 
             res = {
                 "id": list_id,
-                "start time": calculation_start_time,
-                "end time": calculation_end_time,
+                "starttime": calculation_start_time,
+                "endtime": calculation_end_time,
                 "runtime": calculation_time_cost,
                 "error": error,
 

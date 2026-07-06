@@ -19,10 +19,10 @@ function renderResultMore(){
     } else {
         if (task.format == "composition") {
             result_container_additional.innerHTML += "<br><img id='inputseqimg'>";
-            glymage.setOnDemandImageURL('#inputseqimg',{'seq': result, 'image_format': 'svg'});
+            glymage.set_on_demand_image_url('#inputseqimg',{'seq': result, 'image_format': 'svg'});
         } else {
             result_container_additional.innerHTML += "<br><img id='inputseqimg'>";
-            glymage.setOnDemandImageURL('#inputseqimg',{'seq': task.seq, 'image_format': 'svg'});
+            glymage.set_on_demand_image_url('#inputseqimg',{'seq': task.seq, 'image_format': 'svg'});
         }
         result_container_additional.innerHTML += "<br><div style='text-align: center;'><div style='display: inline-block; text-align: left;'><tt>"+retrieve_result.result.replaceAll("\n", "<br>")+"</tt></div></div>"
 

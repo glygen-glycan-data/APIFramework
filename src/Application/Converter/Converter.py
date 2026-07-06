@@ -21,25 +21,11 @@ def round2str(n):
 
 class Converter(APIFrameworkWithFrontEnd):
 
-    def form_task(self, p):
-        res = {}
+    task_params = dict(seq=None,format=None)
 
-        p["seq"] = p["seq"].strip()
-        p["format"] = p["format"].strip()
-        task_str = p["seq"] +"_"+ p["format"]
-        list_id = self.str2hash(task_str)
+    def worker(self, pid):
 
-        res["id"] = list_id
-        res["seq"] = p["seq"]
-        res["format"] = p["format"]
-
-        return res
-
-
-    def worker(self, pid, task_queue, result_queue, suicide_queue_pair, params):
-
-        self.output(2, "Worker-%s is starting up" % (pid))
-
+        self.start_worker(pid)
 
         gmp = GlycanMultiParser()
         gp = GlycoCTFormat()
@@ -47,75 +33,59 @@ class Converter(APIFrameworkWithFrontEnd):
         iupac_parser = IUPACLinearFormat()
         glycam_parser = IUPACGlycamFormat()
 
-        self.output(2, "Worker-%s is ready to take job" % (pid))
+        self.worker_ready()
 
         while True:
-            task_detail = self.task_queue_get(task_queue, pid, suicide_queue_pair)
+            task_detail = self.get_task()
 
-            self.output(2, "Worker-%s is computing task: %s" % (pid, task_detail))
-
-            error = []
-            calculation_start_time = time.time()
-
-            list_id = task_detail["id"]
-            seq = str(task_detail["seq"])
-            request_format = str(task_detail["format"]).lower()
+            try:
+                seq = str(task_detail["seq"])
+                request_format = str(task_detail["format"]).lower()
+            except (TypeError,ValueError,AttributeError,KeyError):
+                self.put_error("Required parameters are missing")
+                continue
+                
             result = ""
 
             try:
                 query_glycan = gmp.toGlycan(seq)
-            except GlycanParseError:
-                error.append("Unable to parse your sequence")
+            except (GlycanParseError,RuntimeError,TypeError):
+                self.put_error("Unable to parse")
+                continue
 
-            if len(error) == 0:
-                try:
-                    if request_format == "glycam":
-                        if not query_glycan.has_root():
-                            error.append("Cannot make Glycam sequence from composition")
-                        else:
-                            result = glycam_parser.toStr(query_glycan)
-                    elif request_format == "iupac":
-                        if not query_glycan.has_root():
-                            error.append("Cannot make IUPAC sequence from composition")
-                        else:
-                            result = iupac_parser.toStr(query_glycan)
-                    elif request_format == "composition":
-                        comp = query_glycan.iupac_composition(floating_substituents=True, 
-                                                              aggregate_basecomposition=False)
-                        compstr = ""
-                        for k,v in sorted(comp.items()):
-                            if v > 0 and k != "Count":
-                                compstr += "%s(%d)"%(k,v)
-                        result = compstr
-                    elif request_format == "glycoct":
-                        result = gp.toStr(query_glycan)
+            try:
+                if request_format == "glycam":
+                    if not query_glycan.has_root():
+                        self.put_error("Cannot make Glycam sequence from composition")
+                        continue
                     else:
-                        error.append("Format %s is not supported" % request_format)
-                except:
-                    traceback.print_exc()
-                    error.append("Unexpected error during conversion")
+                        result = glycam_parser.toStr(query_glycan)
+                elif request_format == "iupac":
+                    if not query_glycan.has_root():
+                        self.put_error("Cannot make IUPAC sequence from composition")
+                        continue
+                    else:
+                        result = iupac_parser.toStr(query_glycan)
+                elif request_format == "composition":
+                    comp = query_glycan.iupac_composition(floating_substituents=True, 
+                                                          aggregate_basecomposition=False)
+                    compstr = ""
+                    for k,v in sorted(comp.items()):
+                        if v > 0 and k != "Count":
+                            compstr += "%s(%d)"%(k,v)
+                    result = compstr
+                elif request_format == "glycoct":
+                    result = gp.toStr(query_glycan)
+                else:
+                    self.put_error("Format %s is not supported" % request_format)
+                    continue
+            except:
+                traceback.print_exc()
+                self.put_error("Unexpected error during conversion")
+                continue
 
             result = result.strip()
-
-            calculation_end_time = time.time()
-            calculation_time_cost = calculation_end_time - calculation_start_time
-
-            self.output(2, "Worker-%s finished computing job (%s)" % (pid, list_id))
-
-            res = {
-                "id": list_id,
-                "start time": calculation_start_time,
-                "end time": calculation_end_time,
-                "runtime": calculation_time_cost,
-                "error": error,
-                "result": result
-            }
-
-            self.output(2, "Job (%s): %s" % (list_id, res))
-
-            result_queue.put(res)
-
-
+            self.put_result(result)
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()

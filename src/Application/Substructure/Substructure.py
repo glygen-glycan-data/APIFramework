@@ -20,13 +20,12 @@ class Substructure(APIFrameworkWithFrontEnd):
     task_params = {'seq':   None, # No default
                    'align': 'substructure'}
 
-    def worker(self, pid, task_queue, result_queue, suicide_queue_pair, params):
+    def worker(self, pid):
+        self.start_worker(pid)
 
-        self.output(2, "Worker-%s is starting up" % (pid))
-
-        glycan_list = params["glycan_set"] + "_glycan_list"
-        structure_list_file_path = self.autopath(params[glycan_list])
-        max_motif_size = int(params["max_motif_size"])
+        glycan_list = self.get_param("glycan_set","glytoucan") + "_glycan_list"
+        structure_list_file_path = self.get_filename_param(glycan_list)
+        max_motif_size = int(self.get_param("max_motif_size"))
 
         gp = GlycanMultiParser()
 
@@ -43,27 +42,28 @@ class Substructure(APIFrameworkWithFrontEnd):
         glycans = {}
         glycanmw = defaultdict(dict)
         for line in open(structure_list_file_path):
-            acc, s = line.strip().split()
-            g = gp.toGlycan(s)
-            if not g.has_root():
-                continue
-            glycans[acc] = g
             try:
-                mw = str(round(g.underivitized_molecular_weight(),2))
+                acc, s, mw = line.split()
+            except ValueError:
+                acc, s = line.split()
+                mw = "-"
+            g = gp.toGlycan(s)
+            glycans[acc] = g
+            if mw != "-":
                 glycanmw[mw][acc] = g
-            except (KeyError,ValueError,TypeError):
-                pass
 
-        self.output(2, "Worker-%s is ready to take job" % (pid))
+        self.worker_output("Total structures: %d"%(len(glycans),))
+        self.worker_ready()
 
         while True:
-            task_detail = self.task_queue_get(task_queue, pid, suicide_queue_pair)
+            task_detail = self.get_task()
 
-            self.output(2, "Worker-%s is computing task: %s" % (pid, task_detail))
-
-            list_id = task_detail["id"]
-            seq = task_detail["seq"]
-            align = task_detail["align"]
+            try:
+                seq = str(task_detail["seq"])
+                align = str(task_detail["align"])
+            except (TypeError,ValueError,AttributeError,KeyError):
+                self.put_error("Required parameters are missing")
+                continue
 
             result = {}
             if align in ('all','substructure'):
@@ -75,13 +75,11 @@ class Substructure(APIFrameworkWithFrontEnd):
             if align in ('all','wholeglycan'):
                 result['wholeglycan'] = []
 
-            error = []
-            calculation_start_time = time.time()
-
             try:
                 motif = gp.toGlycan(seq)
-            except GlycanParseError:
-                error.append("Unable to parse")
+            except (GlycanParseError,TypeError,RuntimeError):
+                self.put_error("Unable to parse")
+                continue
 
             glyiter = glycans.items()
             motifmw = None
@@ -94,23 +92,15 @@ class Substructure(APIFrameworkWithFrontEnd):
                 if motifmw is not None:
                     glyiter = glycanmw[motifmw].items()
 
-            if len(error) == 0:
-                if not motif.has_root():
-                    error.append("Input glycan is a composition")
+            if not motif.has_root():
+                self.put_error("Input glycan is a composition")
+                continue
 
-            if len(error) == 0:
-                motif_node_num = len(list(motif.all_nodes()))
-                if motif_node_num > max_motif_size and motifmw is None:
-                    error.append("Motif is too big")
+            motif_node_num = len(list(motif.all_nodes()))
+            if motif_node_num > max_motif_size and motifmw is None:
+                self.put_error("Motif is too big")
 
             for acc, glycan in glyiter:
-
-                if len(error) != 0:
-                    for e in error:
-                        print("Processor-%s: Issues (%s) is found with task %s" % (pid, e, task_detail["id"]))
-                    break
-                
-                # print(acc)
 
                 # Loose match first
                 idmaps_loose_core = []
@@ -221,23 +211,7 @@ class Substructure(APIFrameworkWithFrontEnd):
                         row.extend([ sorted(l) for l in ids_loose_whole ])
                     result['wholeglycan'].append(row)
 
-            calculation_end_time = time.time()
-            calculation_time_cost = calculation_end_time - calculation_start_time
-
-            self.output(2, "Worker-%s finished computing job (%s)" % (pid, list_id))
-
-            res = {
-                "id": list_id,
-                "start time": calculation_start_time,
-                "end time": calculation_end_time,
-                "runtime": calculation_time_cost,
-                "error": error,
-                "result": result,
-            }
-
-            self.output(2, "Job (%s): %s" % (list_id, res))
-
-            result_queue.put(res)
+            self.put_result(result)
 
 
     def pre_start(self, worker_para):
@@ -263,9 +237,19 @@ class Substructure(APIFrameworkWithFrontEnd):
             except:
                 continue
 
+            g = gp.toGlycan(s)
+            if not g.has_root():
+                continue
+
+            mw = "-"
+            try:
+                mw = str(round(g.underivitized_molecular_weight(),2))
+            except (KeyError,ValueError,TypeError):
+                pass
+
             if acc in glygen_set:
-                f1.write("%s\t%s\n" % (acc, s))
-            f2.write("%s\t%s\n" % (acc, s))
+                f1.write("%s\t%s\t%s\n" % (acc, s, mw))
+            f2.write("%s\t%s\t%s\n" % (acc, s, mw))
 
         f1.close()
         f2.close()

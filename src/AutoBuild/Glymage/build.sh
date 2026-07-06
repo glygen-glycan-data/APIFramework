@@ -16,7 +16,7 @@ cp ../../Application/Glymage/css/*.css ./css
 cp ../../Application/Glymage/demo/*.html ./demo
 cp ../../Application/Glymage/image/image.tgz ./image
 
-docker build -t glyomics/glymage:$tag -t glyomics/glymage:latest ./
+docker build --build-arg CACHEBUSTER=`date +%s` -t glyomics/glymage:$tag -t glyomics/glymage:latest ./
 # docker run -p 10986:10986 glyomics/glymage:latest
 
 if [ "$tag" != "TEST" ];

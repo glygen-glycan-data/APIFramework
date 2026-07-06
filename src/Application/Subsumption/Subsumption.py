@@ -1,3 +1,4 @@
+#!/bin/env python3.12
 
 import os
 import re
@@ -27,25 +28,23 @@ gnome = GNOmeLevelComputing()
 
 class Subsumption(APIFrameworkWithFrontEnd):
 
-
     def form_task(self, p):
+        if not isinstance(p,dict):
+            raise ValueError("No parameter dictionary provided")
+          
         res = {}
-        if "seq" in p and "seqs" not in p:
-            seqs = {'Query': p["seq"]}
-            task_str = json.dumps(seqs)
-            res["seqs"] = seqs
-        else:
-            task_str = json.dumps(p["seqs"], sort_keys=True)
+        if "seq" in p:
+            res["seqs"] = {'Query': p["seq"]}
+        elif "seqs" in p:
             res["seqs"] = p["seqs"]
-        list_id = self.str2hash(task_str)
-        res["id"] = list_id
+        self.set_task_id(res)
         return res
 
-    def worker(self, pid, task_queue, result_queue, suicide_queue_pair, params):
+    def worker(self, pid):
 
-        self.output(2, "Worker-%s is starting up" % (pid))
+        self.start_worker(pid)
 
-        glycan_file_path = self.autopath(params["glycan_file_path"])
+        glycan_file_path = self.get_filename_param("glycan_file_path")
 
         gmp = GlycanMultiParser()
 
@@ -71,34 +70,37 @@ class Subsumption(APIFrameworkWithFrontEnd):
 
         glycan_by_mass[None] = []
 
-        self.output(2, "Worker-%s is ready to take job" % (pid))
+        self.worker_ready()
 
         while True:
-            task_detail = self.task_queue_get(task_queue, pid, suicide_queue_pair)
+            task_detail = self.get_task()
 
-            self.output(2, "Worker-%s is computing task: %s" % (pid, task_detail))
+            try:
+                if "seq" in task_detail:
+                    seqs = {'Query': str(task_detail["seq"])}
+                else:
+                    seqs = dict( (k,str(s)) for k,s in task_detail["seqs"].items() )
+            except (TypeError,ValueError,AttributeError,KeyError):
+                self.put_error("Required parameters are missing")
+                continue
 
-            error = []
-            calculation_start_time = time.time()
-
-
-            list_id = task_detail["id"]
-            if "seq" in task_detail and "seqs" not in task_detail:
-                seqs = {'Query': task_detail["seq"]}
-            else:
-                seqs = task_detail["seqs"]
             query_glycans = {}
             masses = set()
 
+            abort = False
 
             # Parsing sequences
             for name, seq in seqs.items():
                 try:
                     query_glycan = gmp.toGlycan(seq)
                     query_glycans[name] = query_glycan
-                except GlycanParseError:
-                    traceback.print_exc()
-                    error.append("Unable to parse %s: %s" % (name, seq))
+                except (GlycanParseError,RuntimeError,TypeError):
+                    self.put_error("Unable to parse")
+                    abort = True
+                    break
+            
+            if abort:
+                continue
 
             # Calculating MW
             for name, qg in query_glycans.items():
@@ -106,18 +108,23 @@ class Subsumption(APIFrameworkWithFrontEnd):
                     query_glycan_mass = round2str(qg.underivitized_molecular_weight())
                     masses.add(query_glycan_mass)
                 except (LookupError, RepeatGlycanError):
-                    error.append("Error in calculating mass for " + name)
+                    self.put_error("Error in calculating mass for " + name)
+                    abort = True
+                    break
+            
+            if abort:
+                continue
 
             query_glycan_mass = None
             if len(masses) == 1:
                 query_glycan_mass = list(masses)[0]
             elif len(masses) > 1:
-                error.append("Query glycans are not in the same mass cluster...")
+                self.put_error("Query glycans are not in the same mass cluster...")
+                continue
 
-            if len(error) == 0:
-                if query_glycan_mass not in glycan_by_mass:
-                    error.append("The mass %s is not supported"%(query_glycan_mass,))
-
+            if query_glycan_mass not in glycan_by_mass:
+                self.put_error("The mass %s is not supported"%(query_glycan_mass,))
+                continue
 
             # Try to find GlyTouCan accession for submitted query sequences
             equivalents = {}
@@ -126,71 +133,67 @@ class Subsumption(APIFrameworkWithFrontEnd):
             ButtonConfigs = {}
             Score = {}
 
-            if len(error) == 0:
-                potential_accs = glycan_by_mass[query_glycan_mass]
-                glycans = {}
-                for acc in potential_accs:
-                    glycan = gmp.toGlycan(wurcss[acc])
-                    glycans[acc] = glycan
-
-                    for name, qg in query_glycans.items():
-                        if gie.eq(qg, glycan):
-                            equivalents[name] = acc
-
+            potential_accs = glycan_by_mass[query_glycan_mass]
+            glycans = {}
+            for acc in potential_accs:
+                glycan = gmp.toGlycan(wurcss[acc])
+                glycans[acc] = glycan
 
                 for name, qg in query_glycans.items():
-                    glycans[name] = qg
-                    try:
-                        del glycans[equivalents[name]]
-                    except:
+                    if gie.eq(qg, glycan):
+                        equivalents[name] = acc
+
+
+            for name, qg in query_glycans.items():
+                glycans[name] = qg
+                try:
+                    del glycans[equivalents[name]]
+                except:
+                    continue
+
+
+            potential_accs = glycans.keys()
+            for acc in potential_accs:
+                relationship[acc] = []
+
+                for acc2 in potential_accs:
+                    if acc == acc2:
                         continue
 
+                    # print(acc2,"<?=",acc)
+                    if gsc.leq(glycans[acc2], glycans[acc]):
+                        relationship[acc].append(acc2)
 
-                potential_accs = glycans.keys()
-                for acc in potential_accs:
-                    relationship[acc] = []
+            # Eliminate short-cuts
+            while True:
+                found = False
+                for acc, children in relationship.items():
 
-                    for acc2 in potential_accs:
-                        if acc == acc2:
+                    descendants = set()
+                    todo = children[:]
+                    seen = set()
+                    while len(todo) > 0:
+                        c = todo.pop()
+                        if c not in seen:
+                            seen.add(c)
+                        else:
                             continue
+                        grandchildren = relationship[c]
+                        for gc in grandchildren:
+                            todo.append(gc)
 
-                        # print(acc2,"<?=",acc)
-                        if gsc.leq(glycans[acc2], glycans[acc]):
-                            relationship[acc].append(acc2)
-
-                # Eliminate short-cuts
-                while True:
-                    found = False
-                    for acc, children in relationship.items():
-
-                        descendants = set()
-                        todo = children[:]
-                        seen = set()
-                        while len(todo) > 0:
-                            c = todo.pop()
-                            if c not in seen:
-                                seen.add(c)
-                            else:
-                                continue
-                            grandchildren = relationship[c]
-                            for gc in grandchildren:
-                                todo.append(gc)
-
-                                descendants.add(gc)
+                            descendants.add(gc)
 
 
-                        for c in children:
+                    for c in children:
+                        for d in descendants:
+                            if d in children:
+                                children.remove(d)
+                                found = True
+                                break
 
-                            for d in descendants:
-
-                                if d in children:
-                                    children.remove(d)
-                                    found = True
-                                    break
-
-                    if not found:
-                        break
-
+                if not found:
+                    break
 
             # Computing subsumption level
             for name, query_glycan in query_glycans.items():
@@ -219,8 +222,7 @@ class Subsumption(APIFrameworkWithFrontEnd):
                     subsumption_level_gnome = subsumption_levels[equivalents[name]]
 
                 if subsumption_level_gnome != None and subsumption_level_gnome != subsumption_level_calc:
-                    error.append("%s subsumption level calculation is not the same as GNOme" % (name))
-
+                    self.worker_output("%s subsumption level calculation is not the same as GNOme" % (name))
 
                 # print name, subsumption_level_calc, subsumption_level_gnome
                 subsumption_levels_calc[name] = subsumption_level_calc
@@ -234,10 +236,6 @@ class Subsumption(APIFrameworkWithFrontEnd):
             for name, query_glycan in query_glycans.items():
                 Score[name] = gis.score(query_glycan)
 
-
-            calculation_end_time = time.time()
-            calculation_time_cost = calculation_end_time - calculation_start_time
-
             combined_result = {
                 "relationship": relationship,
                 "equivalent": equivalents,
@@ -246,20 +244,7 @@ class Subsumption(APIFrameworkWithFrontEnd):
                 "score": Score
             }
 
-            self.output(2, "Worker-%s finished computing job (%s)" % (pid, list_id))
-
-            res = {
-                "id": list_id,
-                "start time": calculation_start_time,
-                "end time": calculation_end_time,
-                "runtime": calculation_time_cost,
-                "error": error,
-                "result": combined_result
-            }
-
-            self.output(2, "Job (%s): %s" % (list_id, res))
-
-            result_queue.put(res)
+            self.put_result(combined_result)
 
     def pre_start(self, worker_para):
 

@@ -1,3 +1,4 @@
+#!/bin/env python3.12
 
 import os
 import sys
@@ -13,30 +14,13 @@ from pygly.GlycanMultiParser import GlycanMultiParser, GlycanParseError
 import pygly.GlycanResource.GlycoMotif
 
 class MotifMatch(APIFrameworkWithFrontEnd):
+    task_params = dict(seq=None,
+                       collection="GM")
 
-    def form_task(self, p):
-        res = {}
-        seq = p["seq"].strip()
-        collection = "GM"
-        if "collection" in p:
-            collection = p["collection"]
+    def worker(self, pid):
+        self.start_worker(pid)
 
-        task_str = seq + "_" + collection
-        task_str.encode("utf-8")
-        list_id = self.str2hash(task_str)
-
-        res["id"] = list_id
-        res["seq"] = seq
-        res["collection"] = collection
-
-        return res
-
-
-    def worker(self, pid, task_queue, result_queue, suicide_queue_pair, params):
-
-        self.output(2, "Worker-%s is starting up" % (pid))
-
-        motif_file_path = self.autopath(params["motif_set"])
+        motif_file_path = self.get_filename_param("motif_set")
 
         gmp = GlycanMultiParser()
 
@@ -57,26 +41,25 @@ class MotifMatch(APIFrameworkWithFrontEnd):
             motifs[acc] = gmp.toGlycan(s)
             GlycoMotifPages.append([collection, pageacc, acc, name])
 
-        self.output(2, "Worker-%s is ready to take job" % (pid))
+        self.worker_ready()    
 
         while True:
-            task_detail = self.task_queue_get(task_queue, pid, suicide_queue_pair)
-
-            self.output(2, "Worker-%s is computing task: %s" % (pid, task_detail))
+            task_detail = self.get_task()
 
             result = []
-            error = []
-            calculation_start_time = time.time()
 
-
-            list_id = task_detail["id"]
-            seq = task_detail["seq"]
-            selected_collection = task_detail["collection"]
+            try:
+                seq = str(task_detail["seq"])
+                selected_collection = str(task_detail["collection"])
+            except (TypeError,ValueError,AttributeError,KeyError):
+                self.put_error("Required parameters are missing")
+                continue
 
             try:
                 glycan = gmp.toGlycan(seq)
             except GlycanParseError:
-                error.append("Unable to parse")
+                self.put_error("Unable to parse")
+                continue
 
             selected_pages = []
             for page in GlycoMotifPages:
@@ -92,12 +75,6 @@ class MotifMatch(APIFrameworkWithFrontEnd):
             for collection, pageacc, acc, name in selected_pages:
 
                 motif = motifs[acc]
-
-                if len(error) != 0:
-                    for e in error:
-                        print("Processor-%s: Issues (%s) is found with task %s" % (pid, e, task_detail["id"]))
-                    break
-
 
                 core_loose, core_strict, sub_loose, sub_strict, whole_loose, whole_strict, nred_loose, nred_strict = [False] * 8
                 core_loose =  loose_matcher.leq(motif, glycan, rootOnly=True, anywhereExceptRoot=False, underterminedLinkage=True)
@@ -128,26 +105,7 @@ class MotifMatch(APIFrameworkWithFrontEnd):
                     nred_strict = strict_nred_matcher.leq(motif, glycan, underterminedLinkage=False)
                     result.append([collection, pageacc, acc, name, "Non-Reducing", nred_strict])
 
-
-            calculation_end_time = time.time()
-            calculation_time_cost = calculation_end_time - calculation_start_time
-
-            self.output(2, "Worker-%s finished computing job (%s)" % (pid, list_id))
-
-            res = {
-                "id": list_id,
-                "start time": calculation_start_time,
-                "end time": calculation_end_time,
-                "runtime": calculation_time_cost,
-                "error": error,
-                "result": result
-            }
-
-            self.output(2, "Job (%s): %s" % (list_id, res))
-
-            result_queue.put(res)
-
-
+            self.put_result(result)
 
     def pre_start(self, worker_para):
 
@@ -158,8 +116,10 @@ class MotifMatch(APIFrameworkWithFrontEnd):
             site = worker_para["glycomotif_version"]
         assert site in ["", "dev", "test"]
 
-        gm = pygly.GlycanResource.GlycoMotif(usecache=False)
-        gm.endpt = "https://glycomotif.glyomics.org/glycomotif"+site+"/sparql/query"
+        if site == "dev":
+            gm = pygly.GlycanResource.GlycoMotifDev(usecache=False)
+        else:
+            gm = pygly.GlycanResource.GlycoMotif(usecache=False)
 
         gmp = GlycanMultiParser()
 

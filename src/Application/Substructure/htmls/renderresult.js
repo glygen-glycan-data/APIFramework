@@ -36,7 +36,7 @@ function renderResultMore(){
     }
 
     result_container_additional.innerHTML += "<br><img id='inputseqimg'><p>Query</p>";
-    glymage.setOnDemandImageURL("#inputseqimg",{'seq': task.seq, 'image_format': 'svg'});
+    glymage.set_on_demand_image_url("#inputseqimg",{'seq': task.seq, 'image_format': 'svg'});
 
     if (result[align].length == 0){
         return
@@ -63,7 +63,7 @@ function renderResultMore(){
         let canonids = r[2].join(",") + "," + r[3].join(",");
 
         sub_table += "" +
-            "<tr style='background-color: "+lightstr+"grey'><td><figure glymagesvg_accession='"+r[0]+"' glymagesvg_annotation='CanonicalResidueIDs." + canonids + "' ></figure><br><a href='https://glytoucan.org/Structures/Glycans/"+r[0]+"'>"+ r[0] +"</a> "+strictstr+"</td></tr>";
+            "<tr style='background-color: "+lightstr+"grey'><td><figure glymagesvg_accession='"+r[0]+"' glymagesvg_annotation='CanonicalResidueIDs." + canonids + "' ></figure><a href='https://glytoucan.org/Structures/Glycans/"+r[0]+"'>"+ r[0] +"</a> "+strictstr+"<p></td></tr>";
 
     }
 

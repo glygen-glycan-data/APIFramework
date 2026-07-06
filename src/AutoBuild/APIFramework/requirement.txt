@@ -2,7 +2,7 @@ MarkupSafe
 Werkzeug
 flask
 
-rdflib
+rdflib==7.0.0
 SPARQLWrapper
 
 requests

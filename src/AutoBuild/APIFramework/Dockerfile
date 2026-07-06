@@ -1,11 +1,9 @@
 FROM python:3.12
 
+ARG CACHEBUSTER=1
+
 ADD . /code
-
 WORKDIR /code
-
-ENV WEBSERVICE_BASIC_HOST=0.0.0.0
-
 RUN pip install -r requirement.txt
 RUN ./environment.sh
 

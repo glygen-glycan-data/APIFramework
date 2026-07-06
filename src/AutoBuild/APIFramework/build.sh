@@ -45,7 +45,9 @@ fi
 # COMMIT="909aa9515c84f882e10470ce0fdb890ff4fcf719"
 # COMMIT="f8b94b75fc88c7b10bb2d3310867578074842b88"
 # COMMIT="ddcffc10fe5878853b9bbb95b2f7643924780c74"
-COMMIT="5e0ef5f20dd0a22733c801950dd515e77d072889"
+# COMMIT="5e0ef5f20dd0a22733c801950dd515e77d072889"
+# COMMIT="7e414ecc938bf20b19758ff8c82d5706e7cf7a05"
+COMMIT="c768c87392a40fb89517b9456976e1e9d4055f39"
 
 wget https://github.com/glygen-glycan-data/PyGly/archive/${COMMIT}.zip -O PyGly.zip
 unzip PyGly.zip
@@ -56,12 +58,11 @@ rm PyGly.zip
 
 cp ../../APIFramework.py ./APIFramework.py
 
+docker build --build-arg CACHEBUSTER=`date +%s` -t glyomics/apiframework:$tag -t glyomics/apiframework:latest .
+docker images glyomics/apiframework | head
 if [ "$tag" != "TEST" ]; then
-    docker build -t glyomics/apiframework:$tag -t glyomics/apiframework:latest ./
     docker push glyomics/apiframework:$tag
     docker push glyomics/apiframework:latest
-else
-    docker build -t glyomics/apiframework:latest ./
 fi
 
 rm -rf pygly pygly-scripts

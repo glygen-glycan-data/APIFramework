@@ -1,3 +1,4 @@
+#!/bin/env python3.12
 
 import os
 import sys
@@ -17,27 +18,14 @@ from pygly.Glycan import RepeatGlycanError
 def round2str(n):
     return str(round(n, 2))
 
-
 class GlyLookup(APIFrameworkWithFrontEnd):
+    task_params = dict(seq=None)
 
-    def form_task(self, p):
-        res = {}
+    def worker(self, pid):
 
-        p["seq"] = p["seq"].strip()
-        task_str = p["seq"]
-        list_id = self.str2hash(task_str)
+        self.start_worker(pid)
 
-        res["id"] = list_id
-        res["seq"] = p["seq"]
-
-        return res
-
-
-    def worker(self, pid, task_queue, result_queue, suicide_queue_pair, params):
-
-        self.output(2, "Worker-%s is starting up" % (pid))
-
-        glycan_file_path = self.autopath(params["glycan_file_path"])
+        glycan_file_path = self.get_filename_param("glycan_file_path")
 
         gmp = GlycanMultiParser()
         gie = pygly.alignment.GlycanEqual()
@@ -78,27 +66,25 @@ class GlyLookup(APIFrameworkWithFrontEnd):
 
             glycan_by_mass[mass].append(acc)
 
-        self.output(2, "Worker-%s is ready to take job" % (pid))
-
+        self.worker_ready()
+        
         while True:
-            task_detail = self.task_queue_get(task_queue, pid, suicide_queue_pair)
+            task_detail = self.get_task()
 
-            self.output(2, "Worker-%s is computing task: %s" % (pid, task_detail))
-
-            error = []
-            calculation_start_time = time.time()
-
-
-            list_id = task_detail["id"]
-            seq = str(task_detail["seq"])
+            try:
+                seq = str(task_detail["seq"])
+            except (TypeError,ValueError,AttributeError,KeyError):
+                self.put_error("Required parameters are missing")
+                continue
+                
             wurcsfromgtcacc = False
             if re.search(r'^G[0-9]{5}[A-Z]{2}$',seq):
                 if seq in wurcss:
                     seq = wurcss[seq]
                     wurcsfromgtcacc = True
                 else:
-                    seq = None
-                    error.append("Unexpected GlyTouCan accession")
+                    self.put_error("Unexpected GlyTouCan accession")
+                    continue
                 
             result = []
 
@@ -110,23 +96,46 @@ class GlyLookup(APIFrameworkWithFrontEnd):
             if len(result) == 0 and seq != None:
                 try:
                     query_glycan = gmp.toGlycan(seq)
+                except (GlycanParseError, RuntimeError,TypeError):
+                    self.put_error("Unable to parse")
+                    continue
+
+                try:
+                    query_glycan_mass = round2str(query_glycan.underivitized_molecular_weight())
+                except (LookupError,RepeatGlycanError):
+                    self.put_error("Error in calculating mass")
+                    continue
+
+                potential_accs = glycan_by_mass.get(query_glycan_mass,[])
+
+                for acc in sorted(potential_accs):
+                    glycan = gmp.toGlycan(wurcss[acc])
+                    if gie.eq(query_glycan, glycan):
+                        result.append(acc)
+                        hash2acc[seqh].add(acc)
+
+            elif len(result) > 0 and seq != None:
+                self.worker_output("Multiple accessions match by sequence hash: %s."%(", ".join(sorted(result))))
+                try:
+                    query_glycan = gmp.toGlycan(seq)
                 except GlycanParseError:
-                    error.append("Unable to parse")
+                    self.put_error("Unable to parse")
+                    continue
 
-                if len(error) == 0:
+                result1 = []
+                for acc in result:
                     try:
-                        query_glycan_mass = round2str(query_glycan.underivitized_molecular_weight())
-                    except (LookupError,RepeatGlycanError):
-                        error.append("Error in calculating mass")
-
-                if len(error) == 0:
-                    potential_accs = glycan_by_mass.get(query_glycan_mass,[])
-
-                    for acc in sorted(potential_accs):
                         glycan = gmp.toGlycan(wurcss[acc])
-                        if gie.eq(query_glycan, glycan):
-                            result.append(acc)
-                            hash2acc[seqh].add(acc)
+                    except GlycanParseError:
+                        continue
+                    if gie.eq(query_glycan, glycan):
+                         result1.append(acc)
+                if len(result1) > 0:
+                    result = result1
+                    if len(result1) > 1:
+                        self.worker_output("Multiple sequence hash accessions are equal to the query: %s."%(", ".join(sorted(result))))
+                else:
+                    self.worker_output("No sequence hash accessions are equal to the query.")
 
             result1 = []
             for acc in result:
@@ -137,27 +146,9 @@ class GlyLookup(APIFrameworkWithFrontEnd):
                     r['sequences'].append(dict(seq=seq,hash=seqh,format='GlycoCT',source='UserInput'))
                 elif not wurcsfromgtcacc and seq.startswith('WURCS'):
                     r['sequences'].append(dict(seq=seq,hash=seqh,format='WURCS',source='UserInput'))
- 
                 result1.append(r)
-
-            calculation_end_time = time.time()
-            calculation_time_cost = calculation_end_time - calculation_start_time
-
-            self.output(2, "Worker-%s finished computing job (%s)" % (pid, list_id))
-
-            res = {
-                "id": list_id,
-                "start time": calculation_start_time,
-                "end time": calculation_end_time,
-                "runtime": calculation_time_cost,
-                "error": error,
-                "result": result1
-            }
-
-            self.output(2, "Job (%s): %s" % (list_id, res))
-
-            result_queue.put(res)
-
+            
+            self.put_result(result1)
 
     def pre_start(self, para):
 
@@ -211,9 +202,6 @@ class GlyLookup(APIFrameworkWithFrontEnd):
         if os.path.exists(file_path):
             os.remove(file_path)
         os.rename(self.autopath("tmp.txt", newfile=True), file_path)
-
-
-
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()

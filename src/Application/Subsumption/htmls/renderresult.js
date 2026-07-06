@@ -14,13 +14,14 @@ function renderResultMore(){
     if (error.length > 0){
         let tmp = error.join(", ");
         result_container_status.innerHTML += "<p style='font-size: 25px; color: red; '>Error: "+tmp+"</p>";
+    } else {
+
+        result_container_additional.innerHTML +=  "" +
+            "View result in On-Demand alignment tool at " +
+            "<a href='https://gnome.glyomics.org/StructureBrowser.html?ondemandtaskid="+retrieve_result.id+"'>Structure Browser</a> and " +
+            "<a href='https://gnome.glyomics.org/CompositionBrowser.html?ondemandtaskid="+retrieve_result.id+"'>Composition Browser</a>" +
+            "<br>";
+        
     }
-
-    result_container_additional.innerHTML +=  "" +
-        "View result in On-Demand alignment tool at " +
-        "<a href='https://gnome.glyomics.org/StructureBrowser.html?ondemandtaskid="+retrieve_result.id+"'>Structure Browser</a> and " +
-        "<a href='https://gnome.glyomics.org/CompositionBrowser.html?ondemandtaskid="+retrieve_result.id+"'>Composition Browser</a>" +
-        "<br>";
-
 
 }

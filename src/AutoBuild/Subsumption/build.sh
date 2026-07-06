@@ -13,7 +13,7 @@ cp ../../Application/Subsumption/Subsumption.* ./
 cp ../../Application/Subsumption/glycans.tsv ./
 
 
-docker build -t glyomics/subsumption:$tag -t glyomics/subsumption:latest ./
+docker build --build-arg CACHEBUSTER=`date +%s` -t glyomics/subsumption:$tag -t glyomics/subsumption:latest ./
 # docker run -p 10984:10984 glyomics/subsumption:latest
 
 if [ "$tag" != "TEST" ];

@@ -1,3 +1,4 @@
+#!/bin/env python3.12
 
 import os
 import re
@@ -33,6 +34,9 @@ class Glymage(APIFramework):
 
 
     def form_task(self, p):
+        if not isinstance(p,dict):
+            raise ValueError("No parameter dictionary provided")
+        
         res = {}
 
         if "seq" in p:
@@ -122,11 +126,7 @@ class Glymage(APIFramework):
         res["opaque"] = opaque
         res["image_format"] = image_format
 
-        task_str = ""
-        for k in sorted(res.keys()):
-            task_str += "_%s:%s"%(k,res[k])
-        list_id = self.str2hash(task_str)
-        res["id"] = list_id
+        self.set_task_id(res)
 
         option_str = ""
         for k in sorted(res.keys()):
@@ -141,9 +141,9 @@ class Glymage(APIFramework):
         return res
 
 
-    def worker(self, pid, task_queue, result_queue, suicide_queue_pair, params):
+    def worker(self, pid):
 
-        self.output(2, "Worker-%s is starting up" % (pid))
+        self.start_worker(pid)
 
         # TODO
         self.data_folder = self._static_folder
@@ -161,16 +161,11 @@ class Glymage(APIFramework):
             cannonseq[acc.strip()] = seq.strip()
 
         gtc = pygly.GlycanResource.GlyTouCanNoPrefetch()
-        self.output(2, "Worker-%s is ready to take job" % (pid))
 
+        self.worker_ready()
+        
         while True:
-            task_detail = self.task_queue_get(task_queue, pid, suicide_queue_pair)
-
-            self.output(2, "Worker-%s is computing task: %s" % (pid, task_detail))
-
-            error = []
-            calculation_start_time = time.time()
-
+            task_detail = self.get_task()
 
             list_id = task_detail["id"]
             acc = task_detail["acc"]
@@ -213,7 +208,8 @@ class Glymage(APIFramework):
                     wurcs = gtc.getseq(acc, format="wurcs")
 
                 if wurcs == None:
-                    error.append("GlyTouCan Accession (%s) is not present in triple store" % acc)
+                    self.put_error("GlyTouCan Accession (%s) is not present in triple store" % acc)
+                    continue
                 else:
                     seq = wurcs
                     if task_detail["stdopts"]:
@@ -224,12 +220,13 @@ class Glymage(APIFramework):
             elif seq:
                 try:
                     seq = self.gmp.normalizedSequence(seq)
-                except GlycanParseError:
+                except (GlycanParseError,RuntimeError,TypeError):
                     pass
                 if task_detail["stdopts"]:
                     seq_hashes.append(("stdopts",self.str2hash(seq)))
             else:
-                error.append("No accession or sequence provided.")
+                self.put_error("No accession or sequence provided.")
+                continue
 
             seq_hashes.append(("anyopts",task_detail['optionhash']))
 
@@ -237,7 +234,7 @@ class Glymage(APIFramework):
                 gly = self.gmp.toGlycan(seq)
                 if gly and not gly.has_root():
                     ge.reducing_end(True)                    
-            except GlycanParseError:
+            except (GlycanParseError,RuntimeError,TypeError):
                 pass
                 
             str_image = ""
@@ -247,97 +244,91 @@ class Glymage(APIFramework):
             if acc:
                 tmpfilebase += (":"+acc)
 
-            if len(error) == 0:
+            tmp_image_file_name = "./%s/%s.%s" % (tmp_image_folder, tmpfilebase, image_format)
+            # print("Sequence:",seq,file=sys.stderr)
+            ge.writeImage(seq, tmp_image_file_name)
 
-                tmp_image_file_name = "./%s/%s.%s" % (tmp_image_folder, tmpfilebase, image_format)
-                print("Sequence:",seq,file=sys.stderr)
-                ge.writeImage(seq, tmp_image_file_name)
+            if not os.path.exists(tmp_image_file_name):
+                self.worker_output("Bad sequence:"+seq)
+                self.put_error("Could not generate image")
+                continue
 
-                try:
-                    str_image = open(tmp_image_file_name,'rb').read()
+            try:
+                str_image = open(tmp_image_file_name,'rb').read()
 
-                    image_md5_hash = self.bytes2hash(str_image)
-                    img_actual_path = self.data_folder + "/hash/%s.%s" % (image_md5_hash, image_format)
-                    shutil.copy(tmp_image_file_name, img_actual_path)
+                image_md5_hash = self.bytes2hash(str_image)
+                img_actual_path = self.data_folder + "/hash/%s.%s" % (image_md5_hash, image_format)
+                shutil.copy(tmp_image_file_name, img_actual_path)
 
-                    json_actual_path = None
+                json_actual_path = None
 
-                    if seq.startswith('WURCS=') and image_format == 'svg':
+                if seq.startswith('WURCS=') and image_format == 'svg':
 
-                        tmp_image_file_name = "./%s/%s.%s" % (tmp_image_folder, tmpfilebase, 'txt')
-                        with open(tmp_image_file_name,'w') as wh:
-                             wh.write(seq)
+                    tmp_image_file_name = "./%s/%s.%s" % (tmp_image_folder, tmpfilebase, 'txt')
+                    with open(tmp_image_file_name,'w') as wh:
+                            wh.write(seq)
 
-                        # tmp_image_file_name = "./%s/%s.%s" % (tmp_image_folder, tmpfilebase, 'svg')
-                        # with open(tmp_image_file_name,'wb') as wh:
-                        #      wh.write(str_image)
+                    # tmp_image_file_name = "./%s/%s.%s" % (tmp_image_folder, tmpfilebase, 'svg')
+                    # with open(tmp_image_file_name,'wb') as wh:
+                    #      wh.write(str_image)
 
-                        cmd="python3 pygly-scripts/resmap_tojson.py %s %s %s %s"%(tmp_image_folder,tmp_image_folder,tmp_image_folder,tmpfilebase)
-                        subprocess.run(cmd,shell=True)
+                    cmd="python3 pygly-scripts/resmap_tojson.py %s %s %s %s"%(tmp_image_folder,tmp_image_folder,tmp_image_folder,tmpfilebase)
+                    subprocess.run(cmd,shell=True)
 
-                        tmp_json_file_name = "./%s/%s.%s" % (tmp_image_folder, tmpfilebase, 'json')
-                        if os.path.exists(tmp_json_file_name):
-                            str_json = open(tmp_image_file_name,'rb').read()
-                            json_md5_hash = self.bytes2hash(str_json)
-                            json_actual_path = self.data_folder + "/hash/%s.%s" % (json_md5_hash, 'json')
-                            shutil.copy(tmp_json_file_name, json_actual_path)
+                    tmp_json_file_name = "./%s/%s.%s" % (tmp_image_folder, tmpfilebase, 'json')
+                    if os.path.exists(tmp_json_file_name):
+                        str_json = open(tmp_image_file_name,'rb').read()
+                        json_md5_hash = self.bytes2hash(str_json)
+                        json_actual_path = self.data_folder + "/hash/%s.%s" % (json_md5_hash, 'json')
+                        shutil.copy(tmp_json_file_name, json_actual_path)
 
-                except:
-                    error.append("Could not generate image...\n%s"%( traceback.format_exc(),))
+            except:
+                self.worker_output("Unexpected error!")
+                self.worker_output("Sequence:"+seq)
+                self.worker_output(traceback.format_exc())
+                self.put_error("Could not generate image")
+                continue
 
-            for fn in glob.glob("./%s/%s.*"%(tmp_image_folder, tmpfilebase)):
-                os.unlink(fn)
+            finally:
+                for fn in glob.glob("./%s/%s.*"%(tmp_image_folder, tmpfilebase)):
+                    os.unlink(fn)
 
             resultvalue = ""
-            if len(error) == 0:
+            for thetype,accorseq in seq_hashes:
+                try:
+                    if thetype == "stdopts":
+                        image_sym_path = os.path.join(self.data_folder, notation, display, accorseq + "." + image_format)
+                        if not resultvalue:
+                            resultvalue = image_sym_path
+                    else:
+                        image_sym_path = os.path.join(self.data_folder, "hash", accorseq + "." + image_format)                            
+                        if not resultvalue:
+                            resultvalue = image_sym_path
+                    if not os.path.exists(image_sym_path):
+                        os.link(os.path.abspath(img_actual_path), os.path.abspath(image_sym_path))
+                        # print("%s -> %s"%(image_sym_path,img_actual_path))
 
-                for thetype,accorseq in seq_hashes:
-                    try:
+                except:
+                    self.put_error("Could not generate image")
+                    self.worker_output("Issue in make symbolic link (%s)\n%s" % (image_sym_path, traceback.format_exc()))
+                    continue
+                    
+
+                try:
+                    if json_actual_path:
                         if thetype == "stdopts":
-                            image_sym_path = os.path.join(self.data_folder, notation, display, accorseq + "." + image_format)
-                            if not resultvalue:
-                                resultvalue = image_sym_path
+                            json_sym_path = os.path.join(self.data_folder, notation, display, accorseq + "." + 'json')
                         else:
-                            image_sym_path = os.path.join(self.data_folder, "hash", accorseq + "." + image_format)                            
-                            if not resultvalue:
-                                resultvalue = image_sym_path
-                        if not os.path.exists(image_sym_path):
-                            os.link(os.path.abspath(img_actual_path), os.path.abspath(image_sym_path))
-                            print("%s -> %s"%(image_sym_path,img_actual_path))
+                            json_sym_path = os.path.join(self.data_folder, "hash", accorseq + "." + 'json')
+                        if not os.path.exists(json_sym_path):
+                            os.link(os.path.abspath(json_actual_path), os.path.abspath(json_sym_path))
+                            # print("%s -> %s"%(json_sym_path,json_actual_path))
+                except:
+                    self.put_error("Could not generate image")
+                    self.worker_output("Issue in make symbolic link (%s)\n%s" % (json_sym_path, traceback.format_exc()))
+                    continue
 
-                    except:
-                        error.append("Issue in make symbolic link (%s)\n%s" % (image_sym_path, traceback.format_exc()))
-
-                    try:
-                        if json_actual_path:
-                            if thetype == "stdopts":
-                                json_sym_path = os.path.join(self.data_folder, notation, display, accorseq + "." + 'json')
-                            else:
-                                json_sym_path = os.path.join(self.data_folder, "hash", accorseq + "." + 'json')
-                            if not os.path.exists(json_sym_path):
-                                os.link(os.path.abspath(json_actual_path), os.path.abspath(json_sym_path))
-                                print("%s -> %s"%(json_sym_path,json_actual_path))
-                    except:
-                        error.append("Issue in make symbolic link (%s)\n%s" % (json_sym_path, traceback.format_exc()))
-
-            calculation_end_time = time.time()
-            calculation_time_cost = calculation_end_time - calculation_start_time
-
-            self.output(2, "Worker-%s finished computing job (%s)" % (pid, list_id))
-
-            res = {
-                "id": list_id,
-                "start time": calculation_start_time,
-                "end time": calculation_end_time,
-                "runtime": calculation_time_cost,
-                "error": error,
-                "result": resultvalue,
-            }
-            self.output(2, "Job (%s): %s" % (list_id, res))
-            if len(res['error']) > 0:
-                for err in res['error']:
-                    self.output(2, "Error:\n%s" % (err,))
-            result_queue.put(res)
+            self.put_result(resultvalue)
 
     def error_image(self,force_error=False):
         try:
@@ -409,7 +400,7 @@ class Glymage(APIFramework):
         elif image_format == 'json':
             return "application/json"
 
-    def image_generation(self, query, query_type, notation='snfg', display='extended', image_format=None):
+    def image_generation(self, query, query_type, notation='snfg', display='extended', image_format=None, **dummy):
 
         result_path = ""
 
@@ -515,15 +506,15 @@ class Glymage(APIFramework):
 
         @app.route('/js/<path:path>')
         def serve_js(path):
-            return flask.send_from_directory('js', path)
+            return flask.send_from_directory('js', path, max_age=86400)
 
         @app.route('/css/<path:path>')
         def serve_css(path):
-            return flask.send_from_directory('css', path)
+            return flask.send_from_directory('css', path, max_age=86400)
 
         @app.route('/demo/<path:path>')
         def serve_demo(path):
-            return flask.send_from_directory('demo', path)
+            return flask.send_from_directory('demo', path, max_age=86400)
 
         @app.route('/getimage', methods=["GET", "POST"])
         @app.route('/getimage/<query>', methods=["GET"])

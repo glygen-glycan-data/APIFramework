@@ -30,6 +30,11 @@ do
     continue
   fi
 
+  if [ $d = "./Register" ]; then
+    # Currently disabled...
+    continue
+  fi
+
   echo "BUILDING:" $d
 
   cd $d

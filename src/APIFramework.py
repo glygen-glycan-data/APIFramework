@@ -16,6 +16,7 @@ import urllib.request
 import random
 import string
 import datetime
+import glob
 import multiprocessing
 import multiprocessing.queues
 
@@ -66,7 +67,6 @@ class SharedCounter(object):
     def value(self):
         return self.count.value
 
-
 class MacOSQueue(multiprocessing.queues.Queue):
 
     def __init__(self, *args, **kwargs):
@@ -106,13 +106,12 @@ class APIFramework(object):
 
         self._verbose_level = 100
 
-        self._host = "localhost"
-        self._port = 10980
+        self._host = "0.0.0.0"
+        self._port = None
         self._debug = False
 
         self._max_worker_num = 1
         self._min_worker_num = 1
-        self._clean_start = True
         self._file_based_job = False
 
         self._app_name = "APIFramework"
@@ -122,25 +121,22 @@ class APIFramework(object):
         # self._output_file_folder = self.abspath("output")
 
         self._allowed_file_ext = ["txt", "doc", "docx", "pdf", "jpg", "png"]
-        self._allow_cors = False
+        self._allow_cors = True
 
         self._worker_para = {}
 
-        self.result_cache = {}
+        self.result_cache = {} # only updated in flask process
         self.task_queue   = multiprocessing.Queue()
         self.result_queue = multiprocessing.Queue()
-        self.flask_queue  = multiprocessing.Queue()
         self.request_suicide_queue = multiprocessing.Queue()
         self.approve_suicide_queue = multiprocessing.Queue()
 
-        self._static_folder = None
-        self._static_url = None
+        self._static_folder = 'static'
+        self._static_url = '/static'
 
-        self._template_folder = None
-        self._home_html = None
+        self._template_folder = "htmls"
+        self._home_html = "index.html"
         self._file_upload_finished_html = None
-
-        self._status_saving_location = None
 
         self._worker_started = False
         self._last_worker_process_id = 0
@@ -148,6 +144,10 @@ class APIFramework(object):
         self._google_analytics_tag_id = ""
 
         self._glymage_base_url = "https://glymage.glyomics.org"
+        self._glymage_dev_email = ""
+        self._frontend_dev_email = ""
+        self._taskidlength = 11
+        self._useridlength = 5
 
     # Proper APIs for changing config
     def host(self):
@@ -193,6 +193,7 @@ class APIFramework(object):
 
     def set_app_name(self, an):
         self._app_name = an
+        self.set_frontend_dev_email(self._app_name+"FrontEnd@glyomics.org")
 
     def google_analytics_tag_id(self):
         return self._google_analytics_tag_id
@@ -200,8 +201,17 @@ class APIFramework(object):
     def glymage_base_url(self):
         return self._glymage_base_url
     
+    def set_glymage_dev_email(self, email):
+        self._glymage_dev_email = email
+
+    def set_frontend_dev_email(self, email):
+        self._frontend_dev_email = email
+
     def glymage_dev_email(self):
-        return self._app_name+"FrontEnd@glyomics.org"
+        return self._glymage_dev_email
+    
+    def frontend_dev_email(self):
+        return self._frontend_dev_email
 
     def set_google_analytics_tag_id(self, tag):
         assert type(tag) == str
@@ -226,12 +236,6 @@ class APIFramework(object):
 
     # def set_output_file_folder(self, fp):
     #     self._output_file_folder = self.abspath(fp)
-
-    def status_saving_location(self):
-        return self._status_saving_location
-
-    def set_status_saving_location(self, fp):
-        self._status_saving_location = self.autopath(fp, newfile=True)
 
     def allowed_file_ext(self):
         return self._allowed_file_ext
@@ -261,20 +265,8 @@ class APIFramework(object):
         res = os.path.join(base, fp)
         return res
 
-    def datapath(self, fp):
-        # Getting things from /data folder inside docker
-        base = "/data"
-        res = os.path.join(base, fp)
-        return res
-
     def autopath(self, fp, newfile=False):
         res = self.abspath(fp)
-        dtp = self.datapath(fp)
-
-        if self.inside_docker():
-            if os.path.exists(dtp) or newfile:
-                res = dtp
-
         return res
 
     def bool(self, s):
@@ -312,11 +304,19 @@ class APIFramework(object):
     def parse_config(self, config_file_name):
 
         config = configparser.ConfigParser()
+        self.output(1, "Reading config: "+config_file_name)
         if hasattr(config,"read_file"):
             config.read_file(open(config_file_name))
         else:
             config.readfp(open(config_file_name))
-
+        
+        assert config_file_name.endswith('.ini')
+        base = config_file_name.rsplit('.',1)[0]
+        for fn in glob.glob(os.path.split(base)[0]+"/*-local.ini"):
+            if fn != config_file_name:
+                self.output(1, "Reading config: "+fn)
+                config.read_file(open(fn))
+        
         res = {}
         for each_section in config.sections():
             res[each_section] = {}
@@ -345,9 +345,6 @@ class APIFramework(object):
             if "min_cpu_core" in res["basic"]:
                 self.set_min_worker_num(int(res["basic"]["min_cpu_core"]))
 
-            if "clean_start" in res["basic"]:
-                self._clean_start = self.bool(res["basic"]["clean_start"])
-
             if "file_based_job" in res["basic"]:
                 self._file_based_job = self.bool(res["basic"]["file_based_job"])
 
@@ -356,9 +353,6 @@ class APIFramework(object):
 
             # if "output_file_folder" in res["basic"]:
             #     self.set_output_file_folder(res["basic"]["output_file_folder"])
-
-            if "status_saving_location" in res["basic"]:
-                self.set_status_saving_location(res["basic"]["status_saving_location"])
 
             if "template_folder" in res["basic"]:
                 self._template_folder = res["basic"]["template_folder"]
@@ -397,6 +391,12 @@ class APIFramework(object):
                 if res["basic"]["app_name"] in res:
                     self._worker_para = res[res["basic"]["app_name"]]
 
+            if "glymage_dev_email" in res["basic"]:
+                self.set_glymage_dev_email(res["basic"]["glymage_dev_email"])
+
+            if "frontend_dev_email" in res["basic"]:
+                self.set_frontend_dev_email(res["basic"]["frontend_dev_email"])
+
             #if "" in res["docker"]:
             #    self._xxxxx = res["docker"][""]
 
@@ -427,13 +427,16 @@ class APIFramework(object):
         if "WEBSERVICE_BASIC_GLYMAGE_BASE_URL" in os.environ:
             self.set_glymage_base_url(os.environ["WEBSERVICE_BASIC_GLYMAGE_BASE_URL"])
 
+        if "WEBSERVICE_BASIC_GLYMAGE_DEV_EMAIL" in os.environ:
+            self.set_glymage_dev_email(os.environ["WEBSERVICE_BASIC_GLYMAGE_DEV_EMAIL"])
+
+        if "WEBSERVICE_BASIC_FRONTEND_DEV_EMAIL" in os.environ:
+            self.set_frontend_dev_email(os.environ["WEBSERVICE_BASIC_FRONTEND_DEV_EMAIL"])
+
         for k, v in os.environ.items():
             if k.startswith("WEBSERVICE_APP_"):
                 newk = k[15:].lower()
-
                 self._worker_para[newk] = v
-
-
         return
 
 
@@ -463,6 +466,7 @@ class APIFramework(object):
 
         self.load_route(flask_app)
 
+        assert self.port(), "Port not set!"
         flask_app.run(self.host(), self.port(),  self.debug())
 
 
@@ -494,12 +498,12 @@ class APIFramework(object):
         return ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(l))
 
     @staticmethod
-    def bytes2hash(s):
-        return hashlib.md5(s).hexdigest()
+    def bytes2hash(s,digits=32):
+        return hashlib.md5(s).hexdigest()[:digits]
 
     @staticmethod
-    def str2hash(s):
-        return hashlib.md5(s.encode('utf8')).hexdigest()
+    def str2hash(s,digits=32):
+        return hashlib.md5(s.encode('utf8')).hexdigest()[:digits]
 
     def submit(self):
         if flask.request.method in ['GET', 'POST']:
@@ -512,13 +516,19 @@ class APIFramework(object):
             response = flask.jsonify("Please submit with actual tasks")
             return response
 
-        if "tasks" in p:
-            raw_tasks = json.loads(p["tasks"])
-        elif "task" in p:
-            raw_tasks = [json.loads(p["task"])]
-        elif "q" in p:
-            raw_tasks = json.loads(p["q"])
-
+        try:
+            if "tasks" in p:
+                raw_tasks = json.loads(p["tasks"])
+            elif "task" in p:
+                raw_tasks = [json.loads(p["task"])]
+            elif "q" in p:
+                raw_tasks = json.loads(p["q"])
+        except json.decoder.JSONDecodeError:
+            response = flask.jsonify("Bad JSON format for task(s)")
+            return response
+        
+        if not isinstance(raw_tasks,list):
+            return flask.jsonify("Bad format for task(s)")
 
         developer_email = ""
         developer_email_valid = False
@@ -527,22 +537,27 @@ class APIFramework(object):
             email_valid = re.compile(r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$')
             developer_email_valid = bool(email_valid.match(developer_email))
         else:
-            self.output(1, "No email address is provided for task(%s)" % raw_tasks)
+            self.output(1, "No developer email address is provided with task(s): %s" % raw_tasks)
             response = flask.jsonify("Please provide your E-mail address. Use developer_email field.")
             return response
 
         if not developer_email_valid:
-            self.output(1, "Invalid email(%s) for task(%s)" % (developer_email, raw_tasks))
-            response = flask.jsonify("Please provide valid E-mail address")
+            self.output(1, "Invalid developer email (%s) for task(s): %s" % (developer_email, raw_tasks))
+            response = flask.jsonify("Please provide valid E-mail address.")
             return response
 
-        userid = self.str2hash(developer_email)[:20]
+        userid = self.str2hash(developer_email)
         
         nocache = (p.get('nocache') == 'true')
 
         res = []
         for raw_task in raw_tasks:
-            task_detail = self.form_task(raw_task)
+            try:
+                task_detail = self.form_task(raw_task)
+            except (AttributeError, TypeError, ValueError):
+                raise APIParameterError(
+                    "Bad job parmeters (%s)"
+                    % task_detail)
 
             if "id" not in task_detail:
                 raise APIParameterError(
@@ -550,7 +565,7 @@ class APIFramework(object):
                     % task_detail)
 
             if nocache:
-                task_detail['id'] = self.str2hash(self.random_str(20))
+                self.set_task_id(task_detail,random=True)
 
             returned_task_detail = copy.deepcopy(task_detail)
 
@@ -560,12 +575,11 @@ class APIFramework(object):
                 del returned_task_detail["id"]
                 continue
             else:
-                returned_task_detail["id"] = returned_task_detail["id"] + userid
+                self.set_task_id(returned_task_detail,user=developer_email)
 
             task_id = task_detail["id"]
             status = {
                 "id": task_id,
-                "initial_user_id": userid,
                 "submission_original": raw_task,
                 "submission_detail": task_detail,
                 "finished": False,
@@ -577,10 +591,11 @@ class APIFramework(object):
                 if self.result_cache[task_id]['finished']:
                     if "stat" in self.result_cache[task_id]:
                         self.result_cache[task_id]["stat"]["cached"] = True
+                    res[-1]['incache'] = True
             else:
                 self.task_queue.put(task_detail)
                 self.result_cache[task_id] = status
-            self.output(1, "Job received by API: %s" % (task_detail))
+            self.output(1, "Job received by API: %s (developer_email: %s)" % (task_detail,developer_email))
 
         response = flask.jsonify(res)
         return response
@@ -590,7 +605,7 @@ class APIFramework(object):
         if flask.request.method in ['GET', 'POST']:
             p = self.api_para()
         else:
-            response = flask.jsonify("METHOD %s is not suppoted" % flask.request.method)
+            response = flask.jsonify("METHOD %s is not supported" % flask.request.method)
             return response
 
         if "list_ids" not in p and \
@@ -615,29 +630,28 @@ class APIFramework(object):
             try:
                 timeout = float(p["timeout"])
                 if timeout < 0:
-                    timeout = -timeout
+                    timeout = 0
                 if timeout > 10:
                     timeout = 10
             except:
                 pass
 
-
         res = []
         query_start_timestamp = time.time()
-        for query_round in range(30):
+        delay = 0.2
+        for query_round in range(int(math.ceil(timeout/delay))+1):
             res = []
             got_all = True
             self.update_results(getall=True)
 
             for tmp in task_ids:
                 # Assume MD5
-                task_id = tmp[:32]
-                user_id = tmp[32:]
+                task_id = self.get_task_id(tmp)
 
                 if task_id in self.result_cache:
                     r = copy.deepcopy(self.result_cache[task_id])
                 else:
-                    res.append({"error": "task_id %s not found" % task_id})
+                    res.append({"id": tmp, "finished": True, "status": "ERROR", "result": [], "error": ["task_id %s not found" % tmp]})
                     continue
 
                 # cached = True
@@ -653,7 +667,7 @@ class APIFramework(object):
 
                 del r["submission_original"]
                 del r["submission_detail"]
-                del r["initial_user_id"]
+                # del r["initial_user_id"]
 
                 r["id"] = tmp
                 # r["task"]["id"] = tmp
@@ -664,19 +678,19 @@ class APIFramework(object):
                    pass
 
                 try:
-                    del r["stat"]["start time"]
-                    del r["stat"]["end time"]
+                    del r["stat"]["starttime"]
+                    del r["stat"]["endtime"]
                 except:
                     pass
 
                 res.append(r)
 
 
-            if time.time() - query_start_timestamp > timeout:
+            if timeout == 0 or (time.time() - query_start_timestamp) > timeout:
                 break
             if got_all:
                 break
-            time.sleep(0.5)
+            time.sleep(delay)
 
 
         response = flask.jsonify(res)
@@ -718,10 +732,10 @@ class APIFramework(object):
             }
 
             if task_id in self.result_cache:
-                print(self.result_cache[task_id])
                 if self.result_cache[task_id]['finished']:
                     if "stat" in self.result_cache[task_id]:
                         self.result_cache[task_id]["stat"]["cached"] = True
+                    self.result_cache[task_id]["incache"] = True
             else:
                 self.task_queue.put(task_detail)
                 self.result_cache[task_id] = status
@@ -771,37 +785,46 @@ class APIFramework(object):
 
     # FLASK helper functions
     def form_task(self, params):
+        if not isinstance(params,dict):
+            raise ValueError("No parameter dictionary provided")
+        
         task = {}
-        task_str = ""
         for par in self.task_params:
             if par in params:
-                task[par] = params[par].strip()
+                try:
+                    task[par] = params[par].strip()
+                except (AttributeError,TypeError,ValueError):
+                    task[par] = params[par]
             elif self.task_params[par] != None:
-                task[par] = self.task_params[par].strip()
-            task_str += "_" + task[par]
-        task["id"] = self.str2hash(task_str)
+                try:
+                    task[par] = self.task_params[par].strip()
+                except (AttributeError,TypeError,ValueError):
+                    task[par] = self.task_params[par]
+        self.set_task_id(task)
         return task
+    
+    def set_task_id(self,task,random=False,user=None):
+        if not random and not user:
+            assert "id" not in task
+            task_str = json.dumps(task, sort_keys=True)
+            task["id"] = self.str2hash("; ".join(task_str),self._taskidlength)
+        elif user:
+            userid = self.str2hash(user,self._useridlength)
+            task["id"] = task["id"]+userid
+        elif random:
+            task["id"] = self.str2hash(self.random_str(32),self._taskidlength)
+    
+    def get_task_id(self,retrieve_id):
+        return retrieve_id[:self._taskidlength]
 
     # @staticmethod
     def api_para(self):
-        self.result_cache_clear()
         if flask.request.method == "GET":
             return flask.request.args
         elif flask.request.method == "POST":
             return flask.request.form
         else:
             raise APIErrorBase
-
-
-    def result_cache_clear(self):
-        # result_cache lives with FLASK process, so simple result_cache = {} in main process doen't work
-        try:
-            res = self.flask_queue.get_nowait()
-            l = len(self.result_cache)
-            self.result_cache = {}
-            self.output(1, "Clear result cache, previously stored %s record(s)" % l)
-        except queue.Empty:
-            pass
 
     def update_results(self, getall=False):
 
@@ -817,8 +840,8 @@ class APIFramework(object):
                 res = self.result_queue.get_nowait()
 
                 self.result_cache[res["id"]]["stat"] = {
-                    "start time": res["start time"],
-                    "end time": res["end time"],
+                    "starttime": res["starttime"],
+                    "endtime": res["endtime"],
                     "runtime": res["runtime"],
                     "cached": False
                 }
@@ -911,29 +934,20 @@ class APIFramework(object):
         self._worker_started = True
         self.manipulate_dirs()
 
-        if not self._clean_start and self.status_saving_location() != None:
-            if os.path.exists(self.status_saving_location()):
-                self.result_cache = json.load(open(self.status_saving_location()))
-
         self.output(0, "Starting workers")
         self._deamon_process_pool = self.new_worker_processes()
 
-        if self._clean_start:
 
-            self.output(0, "Downloading necessary data... please wait")
-            self.pre_start(self._worker_para)
-            self.output(0, "Download phase finished")
+        self.output(0, "Downloading necessary data... please wait")
+        self.pre_start(self._worker_para)
+        self.output(0, "Download phase finished")
 
-            self.flask_queue.put("CLEAR")
 
-            self.output(0, "Terminating previous workers with outdated data")
-            self.terminate_all()
+        self.output(0, "Terminating previous workers with outdated data")
+        self.terminate_all()
 
-            self.output(0, "Starting workers with updated data")
-            self._deamon_process_pool = self.new_worker_processes()
-        else:
-            pass
-
+        self.output(0, "Starting workers with updated data")
+        self._deamon_process_pool = self.new_worker_processes()
 
         self.monitor()
 
@@ -949,12 +963,12 @@ class APIFramework(object):
 
         proc = multiprocessing.Process(
             target=self.worker,
-            args=(pid, self.task_queue, self.result_queue, suicide_queue, self._worker_para)
+            args=(pid,)
         )
 
         proc.start()
 
-        self.output(0, "Worker-%s is created" % (pid))
+        self.output(0, "Worker-%s: Created" % (pid))
 
         return pid, proc
 
@@ -967,7 +981,26 @@ class APIFramework(object):
 
         return process_pool
 
-    def task_queue_get(self, task_queue, pid, suicide_queue):
+    def start_worker(self,pid):
+        self._pid_ = pid
+        self.worker_output("Starting up")
+
+    def worker_output(self,message,level=2):
+        self.output(level, "Worker-%s: %s" % (self._pid_,message))
+
+    def worker_ready(self):
+        self.worker_output("Ready to take job")
+
+    def get_param(self,key,default=None):
+        return self._worker_para.get(key,default) 
+
+    def get_filename_param(self,key,default=None):
+        fn = self.get_param(key,default)
+        if not fn:
+            raise LookupError(f"Filename parameter {key} must be specified.")
+        return self.autopath(fn)
+
+    def get_task(self):
 
         i = 0
         counter = 0
@@ -977,8 +1010,9 @@ class APIFramework(object):
             i += 1
 
             try:
-                task_detail = task_queue.get_nowait()
-                # task_detail = task_queue.get_nowait(block=True)
+                task_detail = self.task_queue.get_nowait()
+                self.worker_output("Computing task: %s" % (task_detail,))
+                self._task_ = (task_detail['id'],time.time())            
                 return task_detail
             except queue.Empty:
                 time.sleep(1)
@@ -1000,17 +1034,46 @@ class APIFramework(object):
                     else:
                         next_report += 3600
 
-                    self.output(2, "Worker-%s has been idling for %s" % (pid, time_str))
-                suicide_queue[0].put(pid)
+                    self.output(2, "Worker-%s has been idling for %s" % (self._pid_, time_str))
+                self.request_suicide_queue.put(self._pid_)
 
             try:
-                approval = suicide_queue[1].get_nowait()
+                approval = self.approve_suicide_queue.get_nowait()
                 if approval:
-                    self.output(2, "Worker-%s received KILL-SIGNAL, Bye." % pid)
+                    self.output(2, "Worker-%s received KILL-SIGNAL, Bye." % self._pid_)
                     sys.exit()
             except queue.Empty:
                 continue
 
+    def put_result(self,result):
+        calculation_end_time = time.time()
+        self.worker_output("Finished computing job (%s)" % (self._task_[0],))
+        calculation_time_cost = calculation_end_time - self._task_[1]
+        res = {
+            "id": self._task_[0],
+            "starttime": self._task_[1],
+            "endtime": calculation_end_time,
+            "runtime": calculation_time_cost,
+            "error": [],
+            "result": result
+            }
+        self.worker_output("Job (%s) Complete: %s" % (self._task_[0], res))
+        self.result_queue.put(res)
+
+    def put_error(self,error):
+        calculation_end_time = time.time()
+        self.worker_output("Finished computing job (%s)" % (self._task_[0],))
+        calculation_time_cost = calculation_end_time - self._task_[1]
+        res = {
+            "id": self._task_[0],
+            "starttime": self._task_[1],
+            "endtime": calculation_end_time,
+            "runtime": calculation_time_cost,
+            "error": [error],
+            "result": []
+            }
+        self.worker_output("Job (%s) Failed: %s" % (self._task_[0], res))
+        self.result_queue.put(res)
 
     def get_queue_length(self):
         url = "http://%s:%s/queue_length" % (self.host(), self.port())
@@ -1048,7 +1111,7 @@ class APIFramework(object):
 
             if require_new_worker:
 
-                self.output(0, "Need more worker...")
+                self.output(0, "Need more workers...")
                 new_pid, new_proc = self.new_worker_process()
                 self._deamon_process_pool[new_pid] = new_proc
 
@@ -1073,11 +1136,8 @@ class APIFramework(object):
             except queue.Empty:
                 pass
 
-
     def cleanup(self):
         atexit.register(self.terminate_all)
-        atexit.register(self.dump_status)
-
 
     def terminate_all(self):
         for i, p in list(self._deamon_process_pool.items()):
@@ -1085,25 +1145,9 @@ class APIFramework(object):
             p.terminate()
             del self._deamon_process_pool[i]
 
-    def dump_status(self):
-        if self.status_saving_location() != None:
-            useful_result = {}
-            for task_id, task in self.result_cache.items():
-                if task["finished"]:
-                    useful_result[task_id] = task
-
-            json.dump(
-                useful_result,
-                open(self.status_saving_location(), "w"),
-                indent=2
-            )
-
-
 class APIFrameworkWithFrontEnd(APIFramework):
 
     def load_modular_front_end(self, app):
-
-        self.data_folder = "./image"
 
         google_tracking_js = ""
         if self.google_analytics_tag_id() not in [None, ""]:
@@ -1114,72 +1158,60 @@ class APIFrameworkWithFrontEnd(APIFramework):
             "app_name_lower": self._app_name.lower(),
             "google_analytics_html": google_tracking_js,
             "glymage_base_url": self.glymage_base_url(),
-            "glymage_dev_email": self.glymage_dev_email()
+            "glymage_dev_email": self.glymage_dev_email(),
+            "frontend_dev_email": self.frontend_dev_email()
         }
 
-        # TODO better routing management
-
-        @app.route('/', methods=["GET", "POST"])
+        @app.route('/')
         def home():
             return flask.render_template(self._home_html, **kwarg)
 
-        @app.route('/header', methods=["GET", "POST"])
+        @app.route('/header')
         def header():
             return flask.render_template("./header.html", **kwarg)
 
-        @app.route('/footer', methods=["GET", "POST"])
+        @app.route('/footer')
         def footer():
             return flask.render_template("./footer.html", **kwarg)
 
-        @app.route('/help', methods=["GET", "POST"])
+        @app.route('/help')
         def help():
-            return flask.render_template("./help.html", **kwarg)
-
-        @app.route('/example', methods=["GET", "POST"])
+            return flask.send_from_directory('htmls', 'help.html', max_age=86400)
+            
+        @app.route('/example')
         def example():
-            return flask.render_template("./example.html", **kwarg)
+            return flask.send_from_directory('htmls', 'example.html', max_age=86400)
 
-        @app.route('/submitoption', methods=["GET", "POST"])
+        @app.route('/submitoption')
         def submitoption():
-            return flask.render_template("./submitoption.html", **kwarg)
+            return flask.send_from_directory('htmls', 'submitoption.html', max_age=86400)
 
-        @app.route('/about', methods=["GET", "POST"])
+        @app.route('/about')
         def about():
             return flask.render_template("./about.html", **kwarg)
+        
+        @app.route('/glycoapi.js')
+        def glycoapijs():
+            return flask.send_from_directory('htmls', 'glycoapi.js', max_age=86400)
 
-        @app.route('/glycoapi.js', methods=["GET", "POST"])
-        def glycoapi():
-            content = flask.render_template("./glycoapi.js", **kwarg)
-            response = flask.make_response(content)
-            response.mimetype = 'application/javascript'
-            return response
-
-        @app.route('/renderresult.js', methods=["GET", "POST"])
+        @app.route('/renderresult.js')
         def renderresult():
-            content = flask.render_template("./renderresult.js", **kwarg) 
-            response = flask.make_response(content)
-            response.mimetype = 'application/javascript'
-            return response
+            return flask.send_from_directory('htmls', 'renderresult.js', max_age=86400)
 
-        @app.route('/renderer.js', methods=["GET", "POST"])
+        @app.route('/renderer.js')
         def renderer():
-            content = flask.render_template("./renderer.js", **kwarg)
-            response = flask.make_response(content)
-            response.mimetype = 'application/javascript'
-            return response
+            return flask.send_from_directory('htmls', 'renderer.js', max_age=86400)
 
-        @app.route('/head.js', methods=["GET", "POST"])
+        @app.route('/head.js')
         def head():
             content = flask.render_template("./head.js", **kwarg)
             response = flask.make_response(content)
             response.mimetype = 'application/javascript'
             return response
 
-        @app.route('/robots.txt', methods=["GET", "POST"])
+        @app.route('/robots.txt')
         def robots():
-            response = flask.make_response(open("./htmls/robots.txt").read())
-            response.mimetype = 'text/plain'
-            return response
+            return flask.send_from_directory('htmls', 'robots.txt', max_age=86400)
 
     def google_analytics_script(self):
         tag = self.google_analytics_tag_id()

@@ -12,17 +12,13 @@ cp -r -L ../../Application/GlyLookup/htmls ./htmls
 cp ../../Application/GlyLookup/GlyLookup.* ./
 cp ../../Application/GlyLookup/glycans.tsv ./
 
-
-docker build -t glyomics/glylookup:$tag -t glyomics/glylookup:latest ./
+docker build --build-arg CACHEBUSTER=`date +%s` -t glyomics/glylookup:$tag -t glyomics/glylookup:latest ./
 # docker run -p 10981:10981 glyomics/glylookup:latest
 
-if [ "$tag" != "TEST" ];
-  then
+if [ "$tag" != "TEST" ]; then
     docker push glyomics/glylookup:$tag
     docker push glyomics/glylookup:latest
 fi
-
-
 
 rm -rf htmls
 rm GlyLookup.*
