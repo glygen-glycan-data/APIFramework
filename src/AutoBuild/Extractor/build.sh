@@ -40,7 +40,10 @@ fi
 # COMMIT="032ce0fc6c4ccb54d8d0ebc4678bad3b23910b42"
 # COMMIT="d25e55e021c32550f7cdf619fb7d752a763f16c4"
 # COMMIT="78c4fc6bc9bf8d9cdb6c67bb933c64d9355f1fc9"
-COMMIT="df49c4869eaa094c4929a80fb1738c5f6e403e31"
+# COMMIT="df49c4869eaa094c4929a80fb1738c5f6e403e31"
+# COMMIT="3d01eb973150160973d4b4ff40c5bb026ea0222d"
+# COMMIT="d5b69b6a80702a69fc423f4821ae1bdfe99cb5b6"
+COMMIT="1c9a4a4f5e1ffa6c56c4999701feea5e38fdbd2d"
 
 wget https://github.com/glygen-glycan-data/GlycanImageExtract2/archive/${COMMIT}.zip -O ImgExtractor.zip
 unzip -o ImgExtractor.zip
@@ -69,7 +72,7 @@ mv PDFigCapX-main PDFigCapX
 rm -rf PDFigCapX.zip
 
 # Run the Python script to pull from Drive - but only the models needed for the webapplication
-( cd ./BKGlycanExtractor/config; python3.12 ./getfromgdrive.py --pipelines 'MultipleGlycanImage-YOLOFinders;SingleGlycanImage-YOLOFinders')
+( cd ./BKGlycanExtractor/config; python3.12 ./getfromgdrive.py --pipelines 'MultipleGlycanImage-YOLOFinders;SingleGlycanImage-YOLOFinders;MultipleGlycanImage-YOLOFindersV3;MultipleGlycanImage-YOLOFindersV2;MultipleGlycanImage-YOLOFindersV4')
 
 # docker build -t glyomics/extractor:$tag -t glyomics/extractor:latest ./
 # $(date +%s) is the Unix timestamp
