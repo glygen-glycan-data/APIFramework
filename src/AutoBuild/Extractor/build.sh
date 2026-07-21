@@ -45,7 +45,8 @@ fi
 # COMMIT="d5b69b6a80702a69fc423f4821ae1bdfe99cb5b6"
 # COMMIT="1c9a4a4f5e1ffa6c56c4999701feea5e38fdbd2d"
 # COMMIT="263a6c7ab22e1bbdce811cdb42dc917b03fd218a"
-COMMIT="cce613189b2f6eadc1749fc30545dd8a3263aea0"
+# COMMIT="cce613189b2f6eadc1749fc30545dd8a3263aea0"
+COMMIT="62e4cd1b859290be91968243d7cc1e3f7b5e14d4"
 
 wget https://github.com/glygen-glycan-data/GlycanImageExtract2/archive/${COMMIT}.zip -O ImgExtractor.zip
 unzip -o ImgExtractor.zip
