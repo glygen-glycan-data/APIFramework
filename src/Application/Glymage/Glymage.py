@@ -246,10 +246,19 @@ class Glymage(APIFramework):
 
             tmp_image_file_name = "./%s/%s.%s" % (tmp_image_folder, tmpfilebase, image_format)
             # print("Sequence:",seq,file=sys.stderr)
-            ge.writeImage(seq, tmp_image_file_name)
+            try:
+                ge.writeImage(seq, tmp_image_file_name)
+            except pygly.GlycanImage.GlycanImageTimeout as e:
+                self.worker_output(f"Could not generate image - timeout")
+                self.put_error(f"Could not generate image - timeout")
+                continue
+            except pygly.GlycanImage.GlycanImageBadSequence as e:
+                self.worker_output(f"Could not generate image - bad sequence")
+                self.put_error(f"Could not generate image - unsupported sequence")
+                continue
 
             if not os.path.exists(tmp_image_file_name):
-                self.worker_output("Bad sequence:"+seq)
+                self.worker_output("Could not generate image:")
                 self.put_error("Could not generate image")
                 continue
 
