@@ -589,9 +589,21 @@ class APIFramework(object):
 
             if task_id in self.result_cache:
                 if self.result_cache[task_id]['finished']:
-                    if "stat" in self.result_cache[task_id]:
-                        self.result_cache[task_id]["stat"]["cached"] = True
-                    res[-1]['incache'] = True
+                    if self.result_cache[task_id]['status'] == "OK":
+                        if "stat" in self.result_cache[task_id]:
+                            self.result_cache[task_id]["stat"]["cached"] = True
+                        res[-1]['incache'] = True
+                    elif self.result_cache[task_id]['status'] == "ERROR":
+                        tenminsago = (time.time()-10*60) # seconds
+                        if ("stat" in self.result_cache[task_id]) and ("timeout" in self.result_cache[task_id]["error"][0]) and (self.result_cache[task_id]["stat"]["endtime"] < tenminsago):
+                            self.task_queue.put(task_detail)
+                            self.result_cache[task_id] = status
+                        else:
+                            if "stat" in self.result_cache[task_id]:
+                                self.result_cache[task_id]["stat"]["cached"] = True
+                            res[-1]['incache'] = True
+                    else:
+                        raise RuntimeError("Bad status for task")
             else:
                 self.task_queue.put(task_detail)
                 self.result_cache[task_id] = status
