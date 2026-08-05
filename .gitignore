@@ -222,6 +222,8 @@ src/Application/GlyLookup/status.json
 
 src/Application/Glymage/image
 src/Application/Glymage/work
+src/Application/Glymage/work.bak
+src/Application/Glymage/attic
 src/Application/Glymage/pygly
 src/Application/Glymage/pygly-scripts
 src/Application/Glymage/status.json
