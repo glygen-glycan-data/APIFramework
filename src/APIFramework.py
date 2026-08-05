@@ -587,31 +587,38 @@ class APIFramework(object):
                 "result": {}
             }
 
-            if task_id in self.result_cache:
-                if self.result_cache[task_id]['finished']:
-                    if self.result_cache[task_id]['status'] == "OK":
-                        if "stat" in self.result_cache[task_id]:
-                            self.result_cache[task_id]["stat"]["cached"] = True
-                        res[-1]['incache'] = True
-                    elif self.result_cache[task_id]['status'] == "ERROR":
-                        tenminsago = (time.time()-10*60) # seconds
-                        if ("stat" in self.result_cache[task_id]) and ("timeout" in self.result_cache[task_id]["error"][0]) and (self.result_cache[task_id]["stat"]["endtime"] < tenminsago):
-                            self.task_queue.put(task_detail)
-                            self.result_cache[task_id] = status
-                        else:
-                            if "stat" in self.result_cache[task_id]:
-                                self.result_cache[task_id]["stat"]["cached"] = True
-                            res[-1]['incache'] = True
-                    else:
-                        raise RuntimeError("Bad status for task")
+            retcached = False
+            queuejob = False
+            if task_id not in self.result_cache:
+                queuejob = True
             else:
+                result = self.result_cache[task_id]
+                if result['finished']:
+                    if result.get('expires',1e+20) < time.time():
+                        queuejob = True
+                    else:
+                        retcached = True
+                else:
+                    # do nothing
+                    pass
+            
+            assert not retcached or not queuejob 
+            
+            if queuejob:
                 self.task_queue.put(task_detail)
                 self.result_cache[task_id] = status
+            elif retcached:
+                result = self.result_cache[task_id]
+                result['stat']['cached'] = True
+                res[-1]['incache'] = True
+            else:
+                # do nothing
+                pass
+            
             self.output(1, "Job received by API: %s (developer_email: %s)" % (task_detail,developer_email))
 
         response = flask.jsonify(res)
         return response
-
 
     def retrieve(self):
         if flask.request.method in ['GET', 'POST']:
@@ -860,7 +867,7 @@ class APIFramework(object):
 
                 self.result_cache[res["id"]]["error"] = res["error"]
                 self.result_cache[res["id"]]["result"] = res["result"]
-                self.result_cache[res["id"]]["status"] = res.get("status","OK" if len(res["error"]) == 0 else "ERROR")
+                self.result_cache[res["id"]]["status"] = res["status"]
 
                 self.result_cache[res["id"]]['finished'] = True
             except queue.Empty:
@@ -1057,7 +1064,7 @@ class APIFramework(object):
             except queue.Empty:
                 continue
 
-    def put_result(self,result):
+    def put_result(self,result,expires=None):
         calculation_end_time = time.time()
         self.worker_output("Finished computing job (%s)" % (self._task_[0],))
         calculation_time_cost = calculation_end_time - self._task_[1]
@@ -1067,12 +1074,15 @@ class APIFramework(object):
             "endtime": calculation_end_time,
             "runtime": calculation_time_cost,
             "error": [],
-            "result": result
+            "result": result,
+            "status": "OK"
             }
+        if expires:
+            res["expires"] = (time.time()+expires)
         self.worker_output("Job (%s) Complete: %s" % (self._task_[0], res))
         self.result_queue.put(res)
 
-    def put_error(self,error):
+    def put_error(self,error,expires=None):
         calculation_end_time = time.time()
         self.worker_output("Finished computing job (%s)" % (self._task_[0],))
         calculation_time_cost = calculation_end_time - self._task_[1]
@@ -1082,8 +1092,11 @@ class APIFramework(object):
             "endtime": calculation_end_time,
             "runtime": calculation_time_cost,
             "error": [error],
-            "result": []
+            "result": [],
+            "status": "ERROR"
             }
+        if expires:
+            res["expires"] = (time.time()+expires)
         self.worker_output("Job (%s) Failed: %s" % (self._task_[0], res))
         self.result_queue.put(res)
 
