@@ -260,6 +260,7 @@ class Glymage(APIFramework):
                         break
                     else:
                         time.sleep(10*attempts)
+                        continue
                 except pygly.GlycanImage.GlycanImageBadSequence as e:
                     self.worker_output(f"Could not generate image - bad sequence")
                     self.put_error(f"Could not generate image - unsupported sequence")
