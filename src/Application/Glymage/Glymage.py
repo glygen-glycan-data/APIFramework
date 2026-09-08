@@ -222,6 +222,10 @@ class Glymage(APIFramework):
                     seq = self.gmp.normalizedSequence(seq)
                 except (GlycanParseError,RuntimeError,TypeError):
                     pass
+                if not seq:
+                    self.worker_output(f"Could not generate image - bad normalized sequence")
+                    self.put_error(f"Could not generate image - unsupported sequence")
+                    continue
                 if task_detail["stdopts"]:
                     seq_hashes.append(("stdopts",self.str2hash(seq)))
             else:
