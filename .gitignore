@@ -234,3 +234,4 @@ src/Application/Glymage/htmls/submit.html
 src/Application/Glymage/glymage_images.*.done
 
 src/Test/
+**/cache/
