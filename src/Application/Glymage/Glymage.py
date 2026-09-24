@@ -265,9 +265,19 @@ class Glymage(APIFramework):
                     else:
                         time.sleep(10*attempts)
                         continue
-                except pygly.GlycanImage.GlycanImageBadSequence as e:
-                    self.worker_output(f"Could not generate image - bad sequence")
-                    self.put_error(f"Could not generate image - unsupported sequence")
+                except pygly.GlycanImage.GlycanImageBadWURCS as e:
+                    self.worker_output(f"Could not generate image - WURCS parse error: {e.error}")
+                    self.put_error(f"Could not generate image - WURCS parse error: {e.error}")
+                    newtask=True
+                    break
+                except pygly.GlycanImage.GlycanImageBadGlycoCT as e:
+                    self.worker_output(f"Could not generate image - bad GlycoCT sequence")
+                    self.put_error(f"Could not generate image - unsupported GlycoCT sequence")
+                    newtask=True
+                    break
+                except pygly.GlycanImage.GlycanImageError as e:
+                    self.worker_output(f"Could not generate image - unexpected output")
+                    self.put_error(f"Could not generate image - unexpected output")
                     newtask=True
                     break
                 break
