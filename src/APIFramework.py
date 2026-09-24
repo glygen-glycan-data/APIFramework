@@ -125,7 +125,12 @@ class APIFramework(object):
 
         self._worker_para = {}
 
-        self.result_cache = {} # only updated in flask process
+        self.result_cache = {}     # only updated in flask process
+        self._task_detail_ = None  # full task dict for the currently-executing worker job
+        self._result_cache_dir = "cache"  # None = disabled; set via result_cache_dir ini key
+        self._global_cache_expires = multiprocessing.Value('d', 0.0)
+        self._invalidate_cache_on_startup     = True
+        self._invalidate_cache_on_data_update = True
         self.task_queue   = multiprocessing.Queue()
         self.result_queue = multiprocessing.Queue()
         self.request_suicide_queue = multiprocessing.Queue()
@@ -397,6 +402,16 @@ class APIFramework(object):
             if "frontend_dev_email" in res["basic"]:
                 self.set_frontend_dev_email(res["basic"]["frontend_dev_email"])
 
+            if "result_cache_dir" in res["basic"]:
+                v = res["basic"]["result_cache_dir"].strip()
+                self._result_cache_dir = self.autopath(v) if v else None
+
+            if "invalidate_cache_on_startup" in res["basic"]:
+                self._invalidate_cache_on_startup = self.bool(res["basic"]["invalidate_cache_on_startup"])
+
+            if "invalidate_cache_on_data_update" in res["basic"]:
+                self._invalidate_cache_on_data_update = self.bool(res["basic"]["invalidate_cache_on_data_update"])
+
             #if "" in res["docker"]:
             #    self._xxxxx = res["docker"][""]
 
@@ -578,14 +593,7 @@ class APIFramework(object):
                 self.set_task_id(returned_task_detail,user=developer_email)
 
             task_id = task_detail["id"]
-            status = {
-                "id": task_id,
-                "submission_original": raw_task,
-                "submission_detail": task_detail,
-                "finished": False,
-                "stat": {},
-                "result": {}
-            }
+            status = self.make_result_cache_entry(task_detail, raw_task)
 
             retcached = False
             queuejob = False
@@ -594,7 +602,7 @@ class APIFramework(object):
             else:
                 result = self.result_cache[task_id]
                 if result['finished']:
-                    if result.get('expires',1e+20) < time.time():
+                    if result.get('expires',1e+20) < time.time() or self._is_globally_expired(result):
                         queuejob = True
                     else:
                         retcached = True
@@ -667,11 +675,19 @@ class APIFramework(object):
                 # Assume MD5
                 task_id = self.get_task_id(tmp)
 
-                if task_id in self.result_cache:
-                    r = copy.deepcopy(self.result_cache[task_id])
-                else:
+                if task_id not in self.result_cache:
                     res.append({"id": tmp, "finished": True, "status": "ERROR", "result": [], "error": ["task_id %s not found" % tmp]})
                     continue
+
+                cached_entry = self.result_cache[task_id]
+                if cached_entry["finished"] and (
+                        cached_entry.get("expires", 1e+20) < time.time() or self._is_globally_expired(cached_entry)):
+                    task_detail = cached_entry["submission_detail"]
+                    raw_task = cached_entry["submission_original"]
+                    self.result_cache[task_id] = self.make_result_cache_entry(task_detail, raw_task)
+                    self.task_queue.put(task_detail)
+
+                r = copy.deepcopy(self.result_cache[task_id])
 
                 # cached = True
                 # if r["initial_user_id"] == user_id:
@@ -741,14 +757,7 @@ class APIFramework(object):
 
                 return response
 
-            status = {
-                "id": task_id,
-                "submission_original": {},
-                "submission_detail": task_detail,
-                "finished": False,
-                "stat": {},
-                "result": {}
-            }
+            status = self.make_result_cache_entry(task_detail, {})
 
             if task_id in self.result_cache:
                 if self.result_cache[task_id]['finished']:
@@ -836,6 +845,104 @@ class APIFramework(object):
     def get_task_id(self,retrieve_id):
         return retrieve_id[:self._taskidlength]
 
+    def make_result_cache_entry(self, task_detail, raw_task=None, res=None):
+        if raw_task is None:
+            raw_task = {k: v for k, v in task_detail.items() if k != "id"}
+        entry = {
+            "id": task_detail["id"],
+            "submission_original": raw_task,
+            "submission_detail": task_detail,
+            "finished": res is not None,
+            "stat": {},
+            "result": {}
+        }
+        if res is not None:
+            entry["stat"] = {
+                "starttime": res.get("starttime"),
+                "endtime": res.get("endtime"),
+                "runtime": res.get("runtime"),
+                "cached": False
+            }
+            entry["result"] = res.get("result")
+            entry["error"] = res.get("error")
+            entry["status"] = res.get("status")
+            if "expires" in res:
+                entry["expires"] = res["expires"]
+        return entry
+
+    def result_cache_file(self):
+        cache_dir = self._result_cache_dir
+        os.makedirs(cache_dir, exist_ok=True)
+        return os.path.join(cache_dir, "cache.%d.jsonl" % self._pid_)
+
+    def _set_global_cache_expires(self, t):
+        self._global_cache_expires.value = t
+        if self._result_cache_dir is not None:
+            meta_fn = os.path.join(self._result_cache_dir, "meta.json")
+            try:
+                with open(meta_fn, "w") as f:
+                    json.dump({"global_cache_expires": t}, f)
+            except Exception as e:
+                self.output(1, "Failed to save global cache expires: %s" % e)
+
+    def _is_globally_expired(self, entry):
+        return entry.get("stat", {}).get("starttime", 0) < self._global_cache_expires.value
+
+    def load_result_cache(self):
+        if self._result_cache_dir is None:
+            return
+        cache_dir = self._result_cache_dir
+        os.makedirs(cache_dir, exist_ok=True)
+        meta_fn = os.path.join(cache_dir, "meta.json")
+        if os.path.exists(meta_fn):
+            try:
+                with open(meta_fn) as f:
+                    meta = json.load(f)
+                    loaded = meta.get("global_cache_expires", 0.0)
+                    if loaded > self._global_cache_expires.value:
+                        self._global_cache_expires.value = loaded
+            except Exception as e:
+                self.output(1, "Failed to load global cache expires: %s" % e)
+        consolidated_fn = os.path.join(cache_dir, "cache.jsonl")
+        worker_files = glob.glob(os.path.join(cache_dir, "cache.*.jsonl"))
+        all_files = ([consolidated_fn] if os.path.exists(consolidated_fn) else []) + worker_files
+        for fn in all_files:
+            with open(fn, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        rc_entry = json.loads(line)
+                        task_id = rc_entry.get("id")
+                        if task_id:
+                            self.result_cache[task_id] = rc_entry
+                    except json.JSONDecodeError:
+                        pass
+        self.output(1, "Loaded %d results from %d file(s)" % (len(self.result_cache), len(all_files)))
+        if self.result_cache:
+            try:
+                with open(consolidated_fn, "w") as f:
+                    for rc_entry in self.result_cache.values():
+                        f.write(json.dumps(rc_entry) + "\n")
+                for fn in worker_files:
+                    try:
+                        os.remove(fn)
+                    except Exception as e:
+                        self.output(1, "Failed to remove worker cache file %s: %s" % (fn, e))
+            except Exception as e:
+                self.output(1, "Failed to consolidate cache: %s" % e)
+
+    def save_result_cache_entry(self, task_detail, res):
+        if self._result_cache_dir is None:
+            return
+        fn = self.result_cache_file()
+        try:
+            with open(fn, "a") as f:
+                f.write(json.dumps(self.make_result_cache_entry(task_detail, res=res)) + "\n")
+        except Exception as e:
+            self.worker_output("Failed to save result cache entry: %s" % e)
+
     # @staticmethod
     def api_para(self):
         if flask.request.method == "GET":
@@ -868,6 +975,9 @@ class APIFramework(object):
                 self.result_cache[res["id"]]["error"] = res["error"]
                 self.result_cache[res["id"]]["result"] = res["result"]
                 self.result_cache[res["id"]]["status"] = res["status"]
+
+                if "expires" in res:
+                    self.result_cache[res["id"]]["expires"] = res["expires"]
 
                 self.result_cache[res["id"]]['finished'] = True
             except queue.Empty:
@@ -947,6 +1057,10 @@ class APIFramework(object):
         for k,v in self._worker_para.items():
             self.output(0, "%s(worker para): %s" % (k,v))
 
+        self.load_result_cache()
+        if self._invalidate_cache_on_startup:
+            self._set_global_cache_expires(time.time())
+
         flask_process = multiprocessing.Process(target=self.flask_start, args=(0, self.task_queue, self.result_queue, self._worker_para))
         flask_process.start()
 
@@ -964,6 +1078,8 @@ class APIFramework(object):
 
         self.output(0, "Terminating previous workers with outdated data")
         self.terminate_all()
+        if self._invalidate_cache_on_data_update:
+            self._set_global_cache_expires(time.time())
 
         self.output(0, "Starting workers with updated data")
         self._deamon_process_pool = self.new_worker_processes()
@@ -1031,7 +1147,8 @@ class APIFramework(object):
             try:
                 task_detail = self.task_queue.get_nowait()
                 self.worker_output("Computing task: %s" % (task_detail,))
-                self._task_ = (task_detail['id'],time.time())            
+                self._task_ = (task_detail['id'],time.time())
+                self._task_detail_ = task_detail
                 return task_detail
             except queue.Empty:
                 time.sleep(1)
@@ -1080,6 +1197,8 @@ class APIFramework(object):
         if expires:
             res["expires"] = (time.time()+expires)
         self.worker_output("Job (%s) Complete: %s" % (self._task_[0], res))
+        if self._task_detail_ is not None:
+            self.save_result_cache_entry(self._task_detail_, res)
         self.result_queue.put(res)
 
     def put_error(self,error,expires=None):
@@ -1098,6 +1217,8 @@ class APIFramework(object):
         if expires:
             res["expires"] = (time.time()+expires)
         self.worker_output("Job (%s) Failed: %s" % (self._task_[0], res))
+        if self._task_detail_ is not None:
+            self.save_result_cache_entry(self._task_detail_, res)
         self.result_queue.put(res)
 
     def get_queue_length(self):
