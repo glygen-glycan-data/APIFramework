@@ -168,6 +168,7 @@ class Glymage(APIFramework):
             task_detail = self.get_task()
 
             list_id = task_detail["id"]
+            task_id = task_detail["task_id"]
             acc = task_detail["acc"]
             if task_detail.get("seq"):
                 seq = task_detail["seq"]
@@ -330,8 +331,8 @@ class Glymage(APIFramework):
                 for fn in glob.glob("./%s/%s.*"%(tmp_image_folder, tmpfilebase)):
                     os.unlink(fn)
 
-            resultvalue = ""
-            for thetype,accorseq in seq_hashes:
+            resultvalue = "image/hash/"+task_id+ "." + image_format
+            for thetype,accorseq in seq_hashes + [("",task_id)]:
                 try:
                     if thetype == "stdopts":
                         image_sym_path = os.path.join(self.data_folder, notation, display, accorseq + "." + image_format)
@@ -349,7 +350,6 @@ class Glymage(APIFramework):
                     self.put_error("Could not generate image")
                     self.worker_output("Issue in make symbolic link (%s)\n%s" % (image_sym_path, traceback.format_exc()))
                     continue
-                    
 
                 try:
                     if json_actual_path:
@@ -374,9 +374,7 @@ class Glymage(APIFramework):
             notfoundurl = str(flask.request.url)
             content = notfoundurl.split("/")
             imageword = content[3]
-            notation = content[4]
-            display = content[5]
-            filename = content[6]
+            filename = content[-1]
 
             acc, image_format = filename.split(".")
             if image_format not in ["png","svg","jpg","jpeg"]:
@@ -385,24 +383,32 @@ class Glymage(APIFramework):
             if imageword != "image":
                 raise RuntimeError
 
-            if notation not in ["snfg"]:
+            notation = content[4]
+            if notation not in ["snfg","hash"]:
                 raise RuntimeError
 
-            if display not in ["compact", "extended"]:
-                raise RuntimeError
+            if notation == "snfg":
 
-            acc = acc.upper()
-            if not self.glytoucan_accession_detection(acc):
-                raise RuntimeError
+                display = content[5]
+                if display not in ["compact", "extended"]:
+                    raise RuntimeError
+                
+                acc = acc.upper()
+                if not self.glytoucan_accession_detection(acc):
+                    raise RuntimeError
 
-            option = {
-                "notation": notation,
-                "display": display,
-                "image_format": image_format,
-            }
-            return self.image_generation(acc,"accession",**option)
+                option = {
+                    "notation": notation,
+                    "display": display,
+                    "image_format": image_format,
+                }
+                return self.image_generation(acc,"accession",**option)
+            else:
+
+                return self.image_generation(acc,"task",image_format=image_format)
 
         except:
+
             fp = self.abspath(os.path.join(self._static_folder, "error.png"))
             image_format = (flask.request.url).split(".")[-1]
             if image_format == "json":
@@ -463,13 +469,17 @@ class Glymage(APIFramework):
         if query_type == "task":
             task_id = query
 
-            task_details = self.result_cache.get(task_id[:32],{})
-           
-            result_path = task_details.get('result')
-            if result_path and os.path.exists(result_path):
+            task_details = self.result_cache.get(self.get_task_id(task_id))
+            if task_details is None:
+                return self.error_image(force_error=True)
+            if not image_format:
+                image_format = task_details['submission_detail']['image_format']
+            result_path = "image/hash/%s.%s"%(task_id,image_format)
+            expired = self.result_is_expired(task_details)
+            if result_path and os.path.exists(result_path) and not expired:
                 return flask.send_file(result_path, mimetype=self.mimetype(image_format))
 
-            if task_details.get('submission_detail',{}).get('stdopts',False):
+            if task_details['submission_detail'].get('stdopts',False):
                 subdets = task_details.get('submission_detail',{})
                 locater = None
                 if subdets.get('seq'):
@@ -481,6 +491,11 @@ class Glymage(APIFramework):
                     result_path = os.path.join(self.data_folder, notation, display, locater + "." + image_format)
                     if os.path.exists(result_path):
                          return flask.send_file(result_path, mimetype=self.mimetype(image_format))
+
+            task_detail = task_details["submission_detail"]
+            raw_task = task_details["submission_original"]
+            self.result_cache[self.get_task_id(task_id)] = self.make_result_cache_entry(task_detail, raw_task)
+            self.task_queue.put(task_detail)
 
         else:
             # See if the image already exists
@@ -496,6 +511,7 @@ class Glymage(APIFramework):
 
             # Nope, submit the task
             task_id = self.image_generation_submit(option)
+            result_path = "image/hash/%s.%s"%(task_id,image_format)
 
         delay = 0.1
         time.sleep(delay)
@@ -511,12 +527,12 @@ class Glymage(APIFramework):
                 errors = response_obj.get("error",[])
                 break
             if response_obj["finished"]:
-                result_path = response_obj["result"]
                 errors = response_obj.get("error",[])
+                # result_path = response_obj["result"]
                 if image_format == None:
                     # force image format from task
                     image_format = response_obj["task"]["image_format"]
-                result_path = result_path.rsplit('.',1)[0] + "." + image_format
+                    result_path = result_path.rsplit('.',1)[0] + "." + image_format
                 break
 
             delay = min(delay*2,2)
@@ -598,7 +614,7 @@ class Glymage(APIFramework):
                     query_type = "accession"
                 elif re.search(r'^[0-9a-f]{32}$',query.split('.')[0]):
                     query_type = "accession" # actually sequence hash
-                elif re.search(r'^[0-9a-f]{52}$',query.split('.')[0]):
+                elif re.search(r'^[0-9a-f]{16}$',query.split('.')[0]):
                     query_type = "task"
 
             if query == "" or query_type == "":
