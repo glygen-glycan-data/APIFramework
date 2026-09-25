@@ -235,3 +235,7 @@ src/Application/Glymage/glymage_images.*.done
 
 src/Test/
 **/cache/
+.devcontainer/
+.devcontainer/
+**/*-local.ini
+src/Application/GlyLookup/htmls/index1.html
