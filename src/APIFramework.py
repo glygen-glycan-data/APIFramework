@@ -1057,6 +1057,9 @@ class APIFramework(object):
 
     def start(self):
 
+        docker_tag = os.environ.get("DOCKER_TAG")
+        if docker_tag is not None:
+            self.output(0, "Docker tag: %s" % docker_tag)
         self.output(0, "Host: %s" % self._host)
         self.output(0, "Port: %s" % self._port)
         self.output(0, "Min_Worker_Num: %s" % self._min_worker_num)

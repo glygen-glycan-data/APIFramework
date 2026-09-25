@@ -12,7 +12,8 @@ cp -r -L ../../Application/GlyLookup/htmls ./htmls
 cp ../../Application/GlyLookup/GlyLookup.* ./
 cp ../../Application/GlyLookup/glycans.tsv ./
 
-docker build --build-arg CACHEBUSTER=`date +%s` -t glyomics/glylookup:$tag -t glyomics/glylookup:latest ./
+docker build --build-arg CACHEBUSTER=`date +%s` --build-arg IMAGE_TAG=$tag \
+             -t glyomics/glylookup:$tag -t glyomics/glylookup:latest ./
 # docker run -p 10981:10981 glyomics/glylookup:latest
 
 if [ "$tag" != "TEST" ]; then

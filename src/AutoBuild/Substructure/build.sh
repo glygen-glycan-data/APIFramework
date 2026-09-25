@@ -12,7 +12,8 @@ cp ../../Application/Substructure/Substructure.* ./
 cp ../../Application/Substructure/*.tsv ./
 
 
-docker build --build-arg CACHEBUSTER=`date +%s` -t glyomics/substructure:$tag -t glyomics/substructure:latest ./
+docker build --build-arg CACHEBUSTER=`date +%s` --build-arg IMAGE_TAG=$tag \
+             -t glyomics/substructure:$tag -t glyomics/substructure:latest ./
 
 if [ "$tag" != "TEST" ];
   then

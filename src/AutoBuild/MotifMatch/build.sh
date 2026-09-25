@@ -13,7 +13,8 @@ cp ../../Application/MotifMatch/MotifMatch.* ./
 cp ../../Application/MotifMatch/motif.tsv ./
 
 
-docker build --build-arg CACHEBUSTER=`date +%s` -t glyomics/motifmatch:$tag -t glyomics/motifmatch:latest ./
+docker build --build-arg CACHEBUSTER=`date +%s` --build-arg IMAGE_TAG=$tag \
+             -t glyomics/motifmatch:$tag -t glyomics/motifmatch:latest ./
 
 if [ "$tag" != "TEST" ];
   then

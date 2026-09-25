@@ -10,7 +10,8 @@ fi
 cp -r -L ../../Application/Converter/htmls ./htmls
 cp ../../Application/Converter/Converter.* ./
 
-docker build --build-arg CACHEBUSTER=`date +%s` -t glyomics/converter:$tag -t glyomics/converter:latest ./
+docker build --build-arg CACHEBUSTER=`date +%s` --build-arg IMAGE_TAG=$tag \
+             -t glyomics/converter:$tag -t glyomics/converter:latest ./
 # docker run -p 10986:10986 glyomics/converter:latest
 
 if [ "$tag" != "TEST" ];

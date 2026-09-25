@@ -1,5 +1,7 @@
 FROM glyomics/apiframework:latest
 ARG CACHEBUSTER=1
+ARG IMAGE_TAG=unknown
+ENV DOCKER_TAG=$IMAGE_TAG
 ENV XDG_CACHE_HOME=/tmp/.cache
 RUN mkdir -p /code /code/image
 RUN python -m pip install requests
