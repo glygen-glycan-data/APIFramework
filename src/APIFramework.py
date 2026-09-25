@@ -591,7 +591,8 @@ class APIFramework(object):
                 continue
             else:
                 self.set_task_id(returned_task_detail,user=developer_email)
-
+                task_detail["task_id"] = returned_task_detail["id"]
+                
             task_id = task_detail["id"]
             status = self.make_result_cache_entry(task_detail, raw_task)
 
@@ -602,7 +603,7 @@ class APIFramework(object):
             else:
                 result = self.result_cache[task_id]
                 if result['finished']:
-                    if result.get('expires',1e+20) < time.time() or self._is_globally_expired(result):
+                    if self.result_is_expired(result):
                         queuejob = True
                     else:
                         retcached = True
@@ -680,8 +681,7 @@ class APIFramework(object):
                     continue
 
                 cached_entry = self.result_cache[task_id]
-                if cached_entry["finished"] and (
-                        cached_entry.get("expires", 1e+20) < time.time() or self._is_globally_expired(cached_entry)):
+                if cached_entry["finished"] and self.result_is_expired(cached_entry):
                     task_detail = cached_entry["submission_detail"]
                     raw_task = cached_entry["submission_original"]
                     self.result_cache[task_id] = self.make_result_cache_entry(task_detail, raw_task)
@@ -709,6 +709,11 @@ class APIFramework(object):
                  
                 try:
                    del r["task"]["id"]
+                except:
+                   pass
+
+                try:
+                   del r["task"]["task_id"]
                 except:
                    pass
 
@@ -887,6 +892,9 @@ class APIFramework(object):
 
     def _is_globally_expired(self, entry):
         return entry.get("stat", {}).get("starttime", 0) < self._global_cache_expires.value
+
+    def result_is_expired(self, entry):
+        return (entry.get('expires',1e+20) < time.time()) or self._is_globally_expired(entry)
 
     def load_result_cache(self):
         if self._result_cache_dir is None:
